@@ -1,0 +1,509 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ─────────────────────────────────────────────
+// HALITE PLATFORM ADMIN
+// ─────────────────────────────────────────────
+
+model HaliteAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("halite_admins")
+}
+
+// ─────────────────────────────────────────────
+// BRANDS
+// ─────────────────────────────────────────────
+
+model Brand {
+  id           String      @id @default(cuid())
+  name         String
+  slug         String      @unique
+  apiKey       String      @unique @default(cuid())
+  plan         BrandPlan   @default(STARTER)
+  active       Boolean     @default(true)
+  focusAreas   BeautyArea[]
+
+  // Shopify integration
+  shopifyShop          String? @unique
+  shopifyToken         String?
+  shopifyWebhookSecret String?
+
+  // Branding
+  logoUrl      String?
+  primaryColor String? @default("#000000")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admins         BrandAdmin[]
+  products       Product[]
+  endUsers       EndUser[]
+  quizSessions   QuizSession[]
+  catalogUploads CatalogUpload[]
+  quizConfig     QuizConfig?
+
+  @@map("brands")
+}
+
+enum BrandPlan {
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+enum BeautyArea {
+  SKINCARE
+  BODY
+  HAIR
+  MAKEUP
+  FRAGRANCE
+  NAILS
+  WELLNESS
+  SUN_CARE
+  LIP_CARE
+  EYE_CARE
+}
+
+model BrandAdmin {
+  id        String    @id @default(cuid())
+  brandId   String
+  email     String    @unique
+  password  String
+  name      String
+  role      AdminRole @default(MEMBER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_admins")
+}
+
+enum AdminRole {
+  OWNER
+  MEMBER
+}
+
+// ─────────────────────────────────────────────
+// QUIZ CONFIG (per brand)
+// ─────────────────────────────────────────────
+
+model QuizConfig {
+  id                String     @id @default(cuid())
+  brandId           String     @unique
+  enabledAreas      BeautyArea[]
+  // JSON: hide/reorder/relabel default questions per area
+  questionOverrides Json       @default("{}")
+  // JSON: brand-specific add-on questions
+  customQuestions   Json       @default("[]")
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_configs")
+}
+
+// ─────────────────────────────────────────────
+// CATALOG
+// ─────────────────────────────────────────────
+
+model CatalogUpload {
+  id          String        @id @default(cuid())
+  brandId     String
+  fileName    String
+  fileUrl     String
+  format      CatalogFormat
+  status      UploadStatus  @default(PENDING)
+  rowCount    Int?
+  errorLog    Json?
+  createdAt   DateTime      @default(now())
+  processedAt DateTime?
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("catalog_uploads")
+}
+
+enum CatalogFormat {
+  CSV
+  JSON
+  SHOPIFY_SYNC
+}
+
+enum UploadStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model Product {
+  id               String          @id @default(cuid())
+  brandId          String
+  externalId       String?
+  name             String
+  description      String?
+  category         ProductCategory
+  subcategory      String?
+  beautyArea       BeautyArea      @default(SKINCARE)
+  concerns         SkinConcern[]
+  fitzpatrickTypes Int[]
+  skinTypes        SkinType[]
+  ingredients      String[]
+  keyIngredients   String[]
+  price            Float
+  currency         String          @default("USD")
+  imageUrl         String?
+  productUrl       String?
+  inStock          Boolean         @default(true)
+  metadata         Json?
+  /// @db.VectorType(1536) — populated async after ingestion
+  embedding        Unsupported("vector(1536)")?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  routineSteps    RoutineStep[]
+  checkInProducts CheckInProduct[]
+
+  @@unique([brandId, externalId])
+  @@map("products")
+}
+
+enum ProductCategory {
+  // Skincare — face
+  CLEANSER
+  TONER
+  SERUM
+  MOISTURIZER
+  EYE_CREAM
+  SPF
+  MASK
+  EXFOLIANT
+  FACIAL_OIL
+  MIST
+  SPOT_TREATMENT
+  // Body
+  BODY_WASH
+  BODY_MOISTURIZER
+  BODY_OIL
+  BODY_SCRUB
+  BODY_TREATMENT
+  BODY_SPF
+  // Hair
+  SHAMPOO
+  CONDITIONER
+  HAIR_MASK
+  SCALP_TREATMENT
+  LEAVE_IN
+  HAIR_OIL
+  STYLING
+  // Makeup
+  PRIMER
+  FOUNDATION
+  CONCEALER
+  BLUSH_BRONZER
+  EYE_MAKEUP
+  LIP_COLOR
+  SETTING_SPRAY
+  SETTING_POWDER
+  COLOR_CORRECTOR
+  // Fragrance
+  EAU_DE_PARFUM
+  EAU_DE_TOILETTE
+  BODY_MIST_SCENTED
+  HAIR_MIST
+  // Nails
+  NAIL_TREATMENT
+  NAIL_COLOR
+  CUTICLE_OIL
+  BASE_COAT
+  TOP_COAT
+  // Wellness
+  SUPPLEMENT
+  COLLAGEN
+  // Lip
+  LIP_BALM
+  LIP_TREATMENT
+  LIP_PLUMPER
+  // Eye & Brow
+  LASH_SERUM
+  BROW_SERUM
+  EYE_PATCHES
+  // Generic
+  BALM
+  OTHER
+}
+
+enum SkinConcern {
+  ACNE
+  HYPERPIGMENTATION
+  AGING
+  SENSITIVITY
+  DRYNESS
+  OILINESS
+  REDNESS
+  DULLNESS
+  UNEVEN_TEXTURE
+  DARK_CIRCLES
+  PORES
+  DEHYDRATION
+}
+
+enum SkinType {
+  DRY
+  OILY
+  COMBINATION
+  NORMAL
+  SENSITIVE
+}
+
+// ─────────────────────────────────────────────
+// END USERS (CONSUMERS)
+// ─────────────────────────────────────────────
+
+model EndUser {
+  id         String  @id @default(cuid())
+  brandId    String
+  externalId String?
+  email      String?
+  firstName  String?
+  lastName   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  beautyProfile   UserBeautyProfile?
+  quizSessions    QuizSession[]
+  routines        Routine[]
+  checkIns        CheckIn[]
+
+  @@unique([brandId, externalId])
+  @@map("end_users")
+}
+
+// Replaces SkinProfile — covers all beauty areas
+model UserBeautyProfile {
+  id        String @id @default(cuid())
+  endUserId String @unique
+
+  // Focus areas this user has completed profiles for
+  completedAreas BeautyArea[]
+
+  // ── Location & Climate ─────────────────────
+  city             String?
+  country          String?
+  countryCode      String?
+  lat              Float?
+  lng              Float?
+  timezone         String?
+  detectedCurrency String?   @default("USD")
+  climateTag       ClimateType?
+  climateSnapshot  Json?     // raw 30d forecast data from WeatherAPI
+
+  // ── Routine preference ─────────────────────
+  routineFormat        RoutineFormat?
+  selectedCategories   ProductCategory[]
+
+  // ── Spend ──────────────────────────────────
+  spendMin      Float?
+  spendMax      Float?
+  spendCurrency String? @default("USD")
+
+  // ── Shared lifestyle ───────────────────────
+  waterIntakeMl  Float?
+  sleepHours     Float?
+  stressLevel    Int?    // 1–5
+
+  // ── Skincare profile ───────────────────────
+  ageRange        String?   // under_18 | 18_24 | 25_34 | 35_44 | 45_54 | 55_64 | 65_plus
+  fitzpatrickType Int?
+  skinType        SkinType?
+  skinConcerns    SkinConcern[]
+
+  // ── Body profile (JSON — B1–B4 answers) ────
+  bodyProfile Json?
+
+  // ── Hair profile (JSON — H1–H6 answers) ────
+  hairProfile Json?
+
+  // ── Makeup profile (JSON — M1–M6 answers) ──
+  makeupProfile Json?
+
+  // ── Other area profiles ────────────────────
+  fragranceProfile Json?
+  nailsProfile     Json?
+  wellnessProfile  Json?
+  sunCareProfile   Json?
+  lipProfile       Json?
+  eyeProfile       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  endUser EndUser @relation(fields: [endUserId], references: [id], onDelete: Cascade)
+
+  @@map("user_beauty_profiles")
+}
+
+enum ClimateType {
+  TROPICAL
+  DRY_ARID
+  TEMPERATE
+  CONTINENTAL
+  POLAR
+  MEDITERRANEAN
+}
+
+enum HumidityLevel {
+  LOW
+  MODERATE
+  HIGH
+}
+
+enum RoutineFormat {
+  SINGLE
+  ROUTINE
+}
+
+// ─────────────────────────────────────────────
+// QUIZ
+// ─────────────────────────────────────────────
+
+model QuizSession {
+  id              String     @id @default(cuid())
+  brandId         String
+  endUserId       String?
+  selectedAreas   BeautyArea[]
+  answers         Json
+  completed       Boolean    @default(false)
+  completedAt     DateTime?
+  createdAt       DateTime   @default(now())
+
+  brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  endUser EndUser? @relation(fields: [endUserId], references: [id])
+  routines Routine[]
+
+  @@map("quiz_sessions")
+}
+
+// ─────────────────────────────────────────────
+// ROUTINES
+// ─────────────────────────────────────────────
+
+model Routine {
+  id            String     @id @default(cuid())
+  endUserId     String
+  quizSessionId String
+  focusArea     BeautyArea
+  version       Int        @default(1)
+  rationale     String?
+  aiPromptTokens Int?
+  reorderDue    DateTime?
+  supersededBy  String?
+  activeTo      DateTime?
+  createdAt     DateTime   @default(now())
+
+  endUser     EndUser       @relation(fields: [endUserId], references: [id], onDelete: Cascade)
+  quizSession QuizSession   @relation(fields: [quizSessionId], references: [id])
+  steps       RoutineStep[]
+
+  @@map("routines")
+}
+
+model RoutineStep {
+  id          String    @id @default(cuid())
+  routineId   String
+  productId   String
+  timeOfDay   TimeOfDay
+  step        Int
+  instruction String?
+  createdAt   DateTime  @default(now())
+
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([routineId, timeOfDay, step])
+  @@map("routine_steps")
+}
+
+enum TimeOfDay {
+  AM
+  PM
+  BOTH
+  WASH_DAY
+  BETWEEN_WASH
+  DAILY
+  WEEKLY
+}
+
+// ─────────────────────────────────────────────
+// OUTCOME TRACKER
+// ─────────────────────────────────────────────
+
+model CheckIn {
+  id         String       @id @default(cuid())
+  endUserId  String
+  date       DateTime     @default(now())
+  skinRating Int
+  photoUrl   String?
+  symptoms   SkinSymptom[]
+  notes      String?
+  compliant  Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+
+  endUser  EndUser          @relation(fields: [endUserId], references: [id], onDelete: Cascade)
+  products CheckInProduct[]
+
+  @@map("check_ins")
+}
+
+enum SkinSymptom {
+  BREAKOUT
+  DRYNESS
+  REDNESS
+  IRRITATION
+  PURGING
+  OILINESS
+  DULLNESS
+  IMPROVEMENT
+  GLOW
+  HYDRATED
+  TEXTURE_SMOOTH
+  HYPERPIGMENTATION_FADING
+}
+
+model CheckInProduct {
+  id        String           @id @default(cuid())
+  checkInId String
+  productId String
+  used      Boolean          @default(true)
+  reaction  ProductReaction?
+
+  checkIn CheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("check_in_products")
+}
+
+enum ProductReaction {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}

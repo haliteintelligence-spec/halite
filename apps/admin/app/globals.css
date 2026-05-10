@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Halite Amber ─────────────────────────────── */
+    --amber-50:  #fef9ee;
+    --amber-100: #fdf0d0;
+    --amber-200: #fadfa1;
+    --amber-300: #f7c86b;
+    --amber-400: #f4a832;
+    --amber-500: #f09118;
+    --amber-600: #e07810;
+    --amber-700: #b95e11;
+    --amber-800: #954a15;
+    --amber-900: #793d14;
+    --amber-950: #451f07;
+
+    /* ── Melanin palette (Fitzpatrick I–VI) ──────── */
+    --melanin-i:   #f9e8d0;
+    --melanin-ii:  #e8c99a;
+    --melanin-iii: #c8976a;
+    --melanin-iv:  #a0693a;
+    --melanin-v:   #7a4228;
+    --melanin-vi:  #4a2015;
+
+    /* ── Typography ──────────────────────────────── */
+    --font-display: var(--font-playfair);
+    --font-sans:    var(--font-inter);
+
+    /* ── Warm surface palette ────────────────────── */
+    --bg:         #fdf8f5;
+    --bg-surface: #ffffff;
+    --bg-muted:   #f5f0eb;
+    --border:     #e8ddd3;
+    --border-sub: #f0e8df;
+    --text-1:     #1c1410;
+    --text-2:     #6b4f3a;
+    --text-3:     #9c8878;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+  }
+}

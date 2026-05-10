@@ -1,0 +1,10 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm --filter @halite/dashboard build",
+  "outputDirectory": "apps/dashboard/.next",
+  "installCommand": "pnpm install",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@halite-api-url",
+    "NEXT_PUBLIC_ROOT_DOMAIN": "@halite-root-domain"
+  }
+}

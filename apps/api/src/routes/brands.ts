@@ -1,0 +1,238 @@
+import type { FastifyInstance } from 'fastify'
+import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+import { prisma } from '@halite/db'
+import { requireHaliteAdmin, requireBrandAdmin } from '../lib/auth.js'
+import { ApiError } from '../lib/errors.js'
+import { embedBrandProducts, embedProduct, findSimilarProducts } from '../lib/embeddings.js'
+
+const createBrandSchema = z.object({
+  name: z.string().min(2),
+  slug: z
+    .string()
+    .min(2)
+    .regex(/^[a-z0-9-]+$/),
+  plan: z.enum(['STARTER', 'GROWTH', 'ENTERPRISE']).default('STARTER'),
+  ownerEmail: z.string().email(),
+  ownerName: z.string(),
+  ownerPassword: z.string().min(8),
+  logoUrl: z.string().url().optional(),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+})
+
+export async function brandRoutes(server: FastifyInstance) {
+  // ── Public: resolve brand by slug (quiz page / widget) ────────────
+  server.get(
+    '/slug/:slug',
+    async (request) => {
+      const { slug } = request.params as { slug: string }
+      const brand = await prisma.brand.findUnique({
+        where: { slug },
+        select: { id: true, name: true, focusAreas: true, logoUrl: true, primaryColor: true, active: true },
+      })
+      if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
+      return { brand }
+    }
+  )
+
+  // ── Public: issue anonymous end-user token (hosted quiz page) ─────
+  server.post(
+    '/slug/:slug/quiz/token',
+    async (request, reply) => {
+      const { slug } = request.params as { slug: string }
+      const { externalId, email } = z.object({
+        externalId: z.string().optional(),
+        email: z.string().email().optional(),
+      }).parse(request.body)
+
+      const brand = await prisma.brand.findUnique({ where: { slug } })
+      if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
+
+      const uid = externalId ?? `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const endUser = await prisma.endUser.upsert({
+        where: { brandId_externalId: { brandId: brand.id, externalId: uid } },
+        update: { email: email ?? undefined },
+        create: { brandId: brand.id, externalId: uid, email },
+      })
+
+      const token = server.jwt.sign(
+        { role: 'end_user', userId: endUser.id, brandId: brand.id },
+        { expiresIn: '30d' }
+      )
+      return reply.send({ token, userId: endUser.id, brandId: brand.id })
+    }
+  )
+
+  // ── Halite Admin: list all brands ──────────────────────────────────
+  server.get(
+    '/',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const brands = await prisma.brand.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: { select: { endUsers: true, products: true } },
+          admins: { where: { role: 'OWNER' }, select: { email: true, name: true } },
+        },
+      })
+      return { brands }
+    }
+  )
+
+  // ── Halite Admin: create brand ─────────────────────────────────────
+  server.post(
+    '/',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const data = createBrandSchema.parse(request.body)
+
+      const existing = await prisma.brand.findUnique({ where: { slug: data.slug } })
+      if (existing) throw new ApiError(409, 'Slug already taken')
+
+      const hashedPassword = await bcrypt.hash(data.ownerPassword, 12)
+
+      const brand = await prisma.brand.create({
+        data: {
+          name: data.name,
+          slug: data.slug,
+          plan: data.plan,
+          logoUrl: data.logoUrl,
+          primaryColor: data.primaryColor,
+          admins: {
+            create: {
+              email: data.ownerEmail,
+              name: data.ownerName,
+              password: hashedPassword,
+              role: 'OWNER',
+            },
+          },
+        },
+        include: { admins: { select: { id: true, email: true, name: true, role: true } } },
+      })
+
+      return reply.status(201).send({ brand })
+    }
+  )
+
+  // ── Halite Admin: get single brand ────────────────────────────────
+  server.get(
+    '/:brandId',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        include: {
+          admins: { select: { id: true, email: true, name: true, role: true } },
+          _count: { select: { endUsers: true, products: true, quizSessions: true } },
+        },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      return { brand }
+    }
+  )
+
+  // ── Halite Admin: update brand ────────────────────────────────────
+  server.patch(
+    '/:brandId',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        name: z.string().optional(),
+        plan: z.enum(['STARTER', 'GROWTH', 'ENTERPRISE']).optional(),
+        active: z.boolean().optional(),
+        logoUrl: z.string().url().optional(),
+        primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      })
+      const data = schema.parse(request.body)
+      const brand = await prisma.brand.update({ where: { id: brandId }, data })
+      return { brand }
+    }
+  )
+
+  // ── Brand Admin: get own brand profile ────────────────────────────
+  server.get(
+    '/:brandId/profile',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        include: { _count: { select: { endUsers: true, products: true } } },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      // Omit sensitive fields
+      const { shopifyToken, apiKey, ...safe } = brand
+      return { brand: safe }
+    }
+  )
+
+  // ── Brand Admin: rotate API key ───────────────────────────────────
+  server.post(
+    '/:brandId/rotate-api-key',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const newKey = crypto.randomUUID()
+      await prisma.brand.update({ where: { id: brandId }, data: { apiKey: newKey } })
+      return { apiKey: newKey }
+    }
+  )
+
+  // ── Brand Admin: trigger embedding run for all products ───────────
+  server.post(
+    '/:brandId/products/embed',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+
+      if (!process.env.OPENAI_API_KEY) {
+        throw new ApiError(503, 'Embedding service not configured (missing OPENAI_API_KEY)')
+      }
+
+      // Run async — return job accepted immediately
+      embedBrandProducts(brandId).catch((err) => {
+        console.error(`Embedding job failed for brand ${brandId}:`, err)
+      })
+
+      return reply.status(202).send({ status: 'accepted', message: 'Embedding job started' })
+    }
+  )
+
+  // ── Brand Admin: embed single product ─────────────────────────────
+  server.post(
+    '/:brandId/products/:productId/embed',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId, productId } = request.params as { brandId: string; productId: string }
+
+      if (!process.env.OPENAI_API_KEY) {
+        throw new ApiError(503, 'Embedding service not configured (missing OPENAI_API_KEY)')
+      }
+
+      const product = await prisma.product.findFirst({ where: { id: productId, brandId } })
+      if (!product) throw new ApiError(404, 'Product not found')
+
+      await embedProduct(productId)
+      return reply.status(200).send({ status: 'ok', productId })
+    }
+  )
+
+  // ── Brand Admin: find similar products ────────────────────────────
+  server.get(
+    '/:brandId/products/:productId/similar',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, productId } = request.params as { brandId: string; productId: string }
+      const { limit } = (request.query as { limit?: string })
+      const n = Math.min(parseInt(limit ?? '5', 10) || 5, 20)
+
+      const product = await prisma.product.findFirst({ where: { id: productId, brandId } })
+      if (!product) throw new ApiError(404, 'Product not found')
+
+      const similar = await findSimilarProducts(brandId, productId, n)
+      return { similar }
+    }
+  )
+}

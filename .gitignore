@@ -1,0 +1,10 @@
+node_modules
+.turbo
+.env
+.env.local
+.env.*.local
+dist
+.next
+*.log
+.DS_Store
+prisma/migrations/*.sql

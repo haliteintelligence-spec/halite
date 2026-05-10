@@ -1,0 +1,105 @@
+// ISO 3166-1 alpha-2 and alpha-3 country codes
+// Maps to largest city (for climate purposes) + currency
+
+export interface CountryEntry {
+  name: string
+  alpha2: string
+  alpha3: string
+  largestCity: string
+  lat: number
+  lng: number
+  currency: string
+  timezone: string
+}
+
+export const COUNTRIES: CountryEntry[] = [
+  { name: 'Afghanistan', alpha2: 'AF', alpha3: 'AFG', largestCity: 'Kabul', lat: 34.5553, lng: 69.2075, currency: 'AFN', timezone: 'Asia/Kabul' },
+  { name: 'Albania', alpha2: 'AL', alpha3: 'ALB', largestCity: 'Tirana', lat: 41.3317, lng: 19.8319, currency: 'ALL', timezone: 'Europe/Tirane' },
+  { name: 'Algeria', alpha2: 'DZ', alpha3: 'DZA', largestCity: 'Algiers', lat: 36.7372, lng: 3.0865, currency: 'DZD', timezone: 'Africa/Algiers' },
+  { name: 'Argentina', alpha2: 'AR', alpha3: 'ARG', largestCity: 'Buenos Aires', lat: -34.6037, lng: -58.3816, currency: 'ARS', timezone: 'America/Argentina/Buenos_Aires' },
+  { name: 'Australia', alpha2: 'AU', alpha3: 'AUS', largestCity: 'Sydney', lat: -33.8688, lng: 151.2093, currency: 'AUD', timezone: 'Australia/Sydney' },
+  { name: 'Austria', alpha2: 'AT', alpha3: 'AUT', largestCity: 'Vienna', lat: 48.2082, lng: 16.3738, currency: 'EUR', timezone: 'Europe/Vienna' },
+  { name: 'Bangladesh', alpha2: 'BD', alpha3: 'BGD', largestCity: 'Dhaka', lat: 23.8103, lng: 90.4125, currency: 'BDT', timezone: 'Asia/Dhaka' },
+  { name: 'Belgium', alpha2: 'BE', alpha3: 'BEL', largestCity: 'Brussels', lat: 50.8503, lng: 4.3517, currency: 'EUR', timezone: 'Europe/Brussels' },
+  { name: 'Bolivia', alpha2: 'BO', alpha3: 'BOL', largestCity: 'Santa Cruz', lat: -17.7863, lng: -63.1812, currency: 'BOB', timezone: 'America/La_Paz' },
+  { name: 'Brazil', alpha2: 'BR', alpha3: 'BRA', largestCity: 'São Paulo', lat: -23.5505, lng: -46.6333, currency: 'BRL', timezone: 'America/Sao_Paulo' },
+  { name: 'Cameroon', alpha2: 'CM', alpha3: 'CMR', largestCity: 'Douala', lat: 4.0511, lng: 9.7679, currency: 'XAF', timezone: 'Africa/Douala' },
+  { name: 'Canada', alpha2: 'CA', alpha3: 'CAN', largestCity: 'Toronto', lat: 43.6532, lng: -79.3832, currency: 'CAD', timezone: 'America/Toronto' },
+  { name: 'Chile', alpha2: 'CL', alpha3: 'CHL', largestCity: 'Santiago', lat: -33.4489, lng: -70.6693, currency: 'CLP', timezone: 'America/Santiago' },
+  { name: 'China', alpha2: 'CN', alpha3: 'CHN', largestCity: 'Shanghai', lat: 31.2304, lng: 121.4737, currency: 'CNY', timezone: 'Asia/Shanghai' },
+  { name: 'Colombia', alpha2: 'CO', alpha3: 'COL', largestCity: 'Bogotá', lat: 4.7110, lng: -74.0721, currency: 'COP', timezone: 'America/Bogota' },
+  { name: 'Congo (DRC)', alpha2: 'CD', alpha3: 'COD', largestCity: 'Kinshasa', lat: -4.3217, lng: 15.3222, currency: 'CDF', timezone: 'Africa/Kinshasa' },
+  { name: 'Costa Rica', alpha2: 'CR', alpha3: 'CRI', largestCity: 'San José', lat: 9.9281, lng: -84.0907, currency: 'CRC', timezone: 'America/Costa_Rica' },
+  { name: 'Côte d\'Ivoire', alpha2: 'CI', alpha3: 'CIV', largestCity: 'Abidjan', lat: 5.3600, lng: -4.0083, currency: 'XOF', timezone: 'Africa/Abidjan' },
+  { name: 'Czech Republic', alpha2: 'CZ', alpha3: 'CZE', largestCity: 'Prague', lat: 50.0755, lng: 14.4378, currency: 'CZK', timezone: 'Europe/Prague' },
+  { name: 'Denmark', alpha2: 'DK', alpha3: 'DNK', largestCity: 'Copenhagen', lat: 55.6761, lng: 12.5683, currency: 'DKK', timezone: 'Europe/Copenhagen' },
+  { name: 'Ecuador', alpha2: 'EC', alpha3: 'ECU', largestCity: 'Guayaquil', lat: -2.1894, lng: -79.8891, currency: 'USD', timezone: 'America/Guayaquil' },
+  { name: 'Egypt', alpha2: 'EG', alpha3: 'EGY', largestCity: 'Cairo', lat: 30.0444, lng: 31.2357, currency: 'EGP', timezone: 'Africa/Cairo' },
+  { name: 'Ethiopia', alpha2: 'ET', alpha3: 'ETH', largestCity: 'Addis Ababa', lat: 9.0320, lng: 38.7469, currency: 'ETB', timezone: 'Africa/Addis_Ababa' },
+  { name: 'Finland', alpha2: 'FI', alpha3: 'FIN', largestCity: 'Helsinki', lat: 60.1699, lng: 24.9384, currency: 'EUR', timezone: 'Europe/Helsinki' },
+  { name: 'France', alpha2: 'FR', alpha3: 'FRA', largestCity: 'Paris', lat: 48.8566, lng: 2.3522, currency: 'EUR', timezone: 'Europe/Paris' },
+  { name: 'Germany', alpha2: 'DE', alpha3: 'DEU', largestCity: 'Berlin', lat: 52.5200, lng: 13.4050, currency: 'EUR', timezone: 'Europe/Berlin' },
+  { name: 'Ghana', alpha2: 'GH', alpha3: 'GHA', largestCity: 'Accra', lat: 5.6037, lng: -0.1870, currency: 'GHS', timezone: 'Africa/Accra' },
+  { name: 'Greece', alpha2: 'GR', alpha3: 'GRC', largestCity: 'Athens', lat: 37.9838, lng: 23.7275, currency: 'EUR', timezone: 'Europe/Athens' },
+  { name: 'Guatemala', alpha2: 'GT', alpha3: 'GTM', largestCity: 'Guatemala City', lat: 14.6349, lng: -90.5069, currency: 'GTQ', timezone: 'America/Guatemala' },
+  { name: 'Hong Kong', alpha2: 'HK', alpha3: 'HKG', largestCity: 'Hong Kong', lat: 22.3193, lng: 114.1694, currency: 'HKD', timezone: 'Asia/Hong_Kong' },
+  { name: 'Hungary', alpha2: 'HU', alpha3: 'HUN', largestCity: 'Budapest', lat: 47.4979, lng: 19.0402, currency: 'HUF', timezone: 'Europe/Budapest' },
+  { name: 'India', alpha2: 'IN', alpha3: 'IND', largestCity: 'Mumbai', lat: 19.0760, lng: 72.8777, currency: 'INR', timezone: 'Asia/Kolkata' },
+  { name: 'Indonesia', alpha2: 'ID', alpha3: 'IDN', largestCity: 'Jakarta', lat: -6.2088, lng: 106.8456, currency: 'IDR', timezone: 'Asia/Jakarta' },
+  { name: 'Iran', alpha2: 'IR', alpha3: 'IRN', largestCity: 'Tehran', lat: 35.6892, lng: 51.3890, currency: 'IRR', timezone: 'Asia/Tehran' },
+  { name: 'Iraq', alpha2: 'IQ', alpha3: 'IRQ', largestCity: 'Baghdad', lat: 33.3152, lng: 44.3661, currency: 'IQD', timezone: 'Asia/Baghdad' },
+  { name: 'Ireland', alpha2: 'IE', alpha3: 'IRL', largestCity: 'Dublin', lat: 53.3498, lng: -6.2603, currency: 'EUR', timezone: 'Europe/Dublin' },
+  { name: 'Israel', alpha2: 'IL', alpha3: 'ISR', largestCity: 'Jerusalem', lat: 31.7683, lng: 35.2137, currency: 'ILS', timezone: 'Asia/Jerusalem' },
+  { name: 'Italy', alpha2: 'IT', alpha3: 'ITA', largestCity: 'Rome', lat: 41.9028, lng: 12.4964, currency: 'EUR', timezone: 'Europe/Rome' },
+  { name: 'Jamaica', alpha2: 'JM', alpha3: 'JAM', largestCity: 'Kingston', lat: 17.9970, lng: -76.7936, currency: 'JMD', timezone: 'America/Jamaica' },
+  { name: 'Japan', alpha2: 'JP', alpha3: 'JPN', largestCity: 'Tokyo', lat: 35.6762, lng: 139.6503, currency: 'JPY', timezone: 'Asia/Tokyo' },
+  { name: 'Jordan', alpha2: 'JO', alpha3: 'JOR', largestCity: 'Amman', lat: 31.9454, lng: 35.9284, currency: 'JOD', timezone: 'Asia/Amman' },
+  { name: 'Kenya', alpha2: 'KE', alpha3: 'KEN', largestCity: 'Nairobi', lat: -1.2921, lng: 36.8219, currency: 'KES', timezone: 'Africa/Nairobi' },
+  { name: 'Kuwait', alpha2: 'KW', alpha3: 'KWT', largestCity: 'Kuwait City', lat: 29.3759, lng: 47.9774, currency: 'KWD', timezone: 'Asia/Kuwait' },
+  { name: 'Lebanon', alpha2: 'LB', alpha3: 'LBN', largestCity: 'Beirut', lat: 33.8938, lng: 35.5018, currency: 'LBP', timezone: 'Asia/Beirut' },
+  { name: 'Malaysia', alpha2: 'MY', alpha3: 'MYS', largestCity: 'Kuala Lumpur', lat: 3.1390, lng: 101.6869, currency: 'MYR', timezone: 'Asia/Kuala_Lumpur' },
+  { name: 'Mexico', alpha2: 'MX', alpha3: 'MEX', largestCity: 'Mexico City', lat: 19.4326, lng: -99.1332, currency: 'MXN', timezone: 'America/Mexico_City' },
+  { name: 'Morocco', alpha2: 'MA', alpha3: 'MAR', largestCity: 'Casablanca', lat: 33.5731, lng: -7.5898, currency: 'MAD', timezone: 'Africa/Casablanca' },
+  { name: 'Mozambique', alpha2: 'MZ', alpha3: 'MOZ', largestCity: 'Maputo', lat: -25.9692, lng: 32.5732, currency: 'MZN', timezone: 'Africa/Maputo' },
+  { name: 'Netherlands', alpha2: 'NL', alpha3: 'NLD', largestCity: 'Amsterdam', lat: 52.3676, lng: 4.9041, currency: 'EUR', timezone: 'Europe/Amsterdam' },
+  { name: 'New Zealand', alpha2: 'NZ', alpha3: 'NZL', largestCity: 'Auckland', lat: -36.8485, lng: 174.7633, currency: 'NZD', timezone: 'Pacific/Auckland' },
+  { name: 'Nigeria', alpha2: 'NG', alpha3: 'NGA', largestCity: 'Lagos', lat: 6.5244, lng: 3.3792, currency: 'NGN', timezone: 'Africa/Lagos' },
+  { name: 'Norway', alpha2: 'NO', alpha3: 'NOR', largestCity: 'Oslo', lat: 59.9139, lng: 10.7522, currency: 'NOK', timezone: 'Europe/Oslo' },
+  { name: 'Pakistan', alpha2: 'PK', alpha3: 'PAK', largestCity: 'Karachi', lat: 24.8607, lng: 67.0011, currency: 'PKR', timezone: 'Asia/Karachi' },
+  { name: 'Panama', alpha2: 'PA', alpha3: 'PAN', largestCity: 'Panama City', lat: 8.9936, lng: -79.5197, currency: 'PAB', timezone: 'America/Panama' },
+  { name: 'Peru', alpha2: 'PE', alpha3: 'PER', largestCity: 'Lima', lat: -12.0464, lng: -77.0428, currency: 'PEN', timezone: 'America/Lima' },
+  { name: 'Philippines', alpha2: 'PH', alpha3: 'PHL', largestCity: 'Manila', lat: 14.5995, lng: 120.9842, currency: 'PHP', timezone: 'Asia/Manila' },
+  { name: 'Poland', alpha2: 'PL', alpha3: 'POL', largestCity: 'Warsaw', lat: 52.2297, lng: 21.0122, currency: 'PLN', timezone: 'Europe/Warsaw' },
+  { name: 'Portugal', alpha2: 'PT', alpha3: 'PRT', largestCity: 'Lisbon', lat: 38.7223, lng: -9.1393, currency: 'EUR', timezone: 'Europe/Lisbon' },
+  { name: 'Qatar', alpha2: 'QA', alpha3: 'QAT', largestCity: 'Doha', lat: 25.2854, lng: 51.5310, currency: 'QAR', timezone: 'Asia/Qatar' },
+  { name: 'Romania', alpha2: 'RO', alpha3: 'ROU', largestCity: 'Bucharest', lat: 44.4268, lng: 26.1025, currency: 'RON', timezone: 'Europe/Bucharest' },
+  { name: 'Russia', alpha2: 'RU', alpha3: 'RUS', largestCity: 'Moscow', lat: 55.7558, lng: 37.6173, currency: 'RUB', timezone: 'Europe/Moscow' },
+  { name: 'Saudi Arabia', alpha2: 'SA', alpha3: 'SAU', largestCity: 'Riyadh', lat: 24.7136, lng: 46.6753, currency: 'SAR', timezone: 'Asia/Riyadh' },
+  { name: 'Senegal', alpha2: 'SN', alpha3: 'SEN', largestCity: 'Dakar', lat: 14.7167, lng: -17.4677, currency: 'XOF', timezone: 'Africa/Dakar' },
+  { name: 'Singapore', alpha2: 'SG', alpha3: 'SGP', largestCity: 'Singapore', lat: 1.3521, lng: 103.8198, currency: 'SGD', timezone: 'Asia/Singapore' },
+  { name: 'South Africa', alpha2: 'ZA', alpha3: 'ZAF', largestCity: 'Johannesburg', lat: -26.2041, lng: 28.0473, currency: 'ZAR', timezone: 'Africa/Johannesburg' },
+  { name: 'South Korea', alpha2: 'KR', alpha3: 'KOR', largestCity: 'Seoul', lat: 37.5665, lng: 126.9780, currency: 'KRW', timezone: 'Asia/Seoul' },
+  { name: 'Spain', alpha2: 'ES', alpha3: 'ESP', largestCity: 'Madrid', lat: 40.4168, lng: -3.7038, currency: 'EUR', timezone: 'Europe/Madrid' },
+  { name: 'Sri Lanka', alpha2: 'LK', alpha3: 'LKA', largestCity: 'Colombo', lat: 6.9271, lng: 79.8612, currency: 'LKR', timezone: 'Asia/Colombo' },
+  { name: 'Sweden', alpha2: 'SE', alpha3: 'SWE', largestCity: 'Stockholm', lat: 59.3293, lng: 18.0686, currency: 'SEK', timezone: 'Europe/Stockholm' },
+  { name: 'Switzerland', alpha2: 'CH', alpha3: 'CHE', largestCity: 'Zurich', lat: 47.3769, lng: 8.5417, currency: 'CHF', timezone: 'Europe/Zurich' },
+  { name: 'Taiwan', alpha2: 'TW', alpha3: 'TWN', largestCity: 'Taipei', lat: 25.0330, lng: 121.5654, currency: 'TWD', timezone: 'Asia/Taipei' },
+  { name: 'Tanzania', alpha2: 'TZ', alpha3: 'TZA', largestCity: 'Dar es Salaam', lat: -6.7924, lng: 39.2083, currency: 'TZS', timezone: 'Africa/Dar_es_Salaam' },
+  { name: 'Thailand', alpha2: 'TH', alpha3: 'THA', largestCity: 'Bangkok', lat: 13.7563, lng: 100.5018, currency: 'THB', timezone: 'Asia/Bangkok' },
+  { name: 'Trinidad and Tobago', alpha2: 'TT', alpha3: 'TTO', largestCity: 'Port of Spain', lat: 10.6549, lng: -61.5019, currency: 'TTD', timezone: 'America/Port_of_Spain' },
+  { name: 'Tunisia', alpha2: 'TN', alpha3: 'TUN', largestCity: 'Tunis', lat: 36.8190, lng: 10.1658, currency: 'TND', timezone: 'Africa/Tunis' },
+  { name: 'Turkey', alpha2: 'TR', alpha3: 'TUR', largestCity: 'Istanbul', lat: 41.0082, lng: 28.9784, currency: 'TRY', timezone: 'Europe/Istanbul' },
+  { name: 'Uganda', alpha2: 'UG', alpha3: 'UGA', largestCity: 'Kampala', lat: 0.3476, lng: 32.5825, currency: 'UGX', timezone: 'Africa/Kampala' },
+  { name: 'Ukraine', alpha2: 'UA', alpha3: 'UKR', largestCity: 'Kyiv', lat: 50.4501, lng: 30.5234, currency: 'UAH', timezone: 'Europe/Kiev' },
+  { name: 'United Arab Emirates', alpha2: 'AE', alpha3: 'ARE', largestCity: 'Dubai', lat: 25.2048, lng: 55.2708, currency: 'AED', timezone: 'Asia/Dubai' },
+  { name: 'United Kingdom', alpha2: 'GB', alpha3: 'GBR', largestCity: 'London', lat: 51.5074, lng: -0.1278, currency: 'GBP', timezone: 'Europe/London' },
+  { name: 'United States', alpha2: 'US', alpha3: 'USA', largestCity: 'New York City', lat: 40.7128, lng: -74.0060, currency: 'USD', timezone: 'America/New_York' },
+  { name: 'Uruguay', alpha2: 'UY', alpha3: 'URY', largestCity: 'Montevideo', lat: -34.9011, lng: -56.1645, currency: 'UYU', timezone: 'America/Montevideo' },
+  { name: 'Venezuela', alpha2: 'VE', alpha3: 'VEN', largestCity: 'Caracas', lat: 10.4806, lng: -66.9036, currency: 'VES', timezone: 'America/Caracas' },
+  { name: 'Vietnam', alpha2: 'VN', alpha3: 'VNM', largestCity: 'Ho Chi Minh City', lat: 10.8231, lng: 106.6297, currency: 'VND', timezone: 'Asia/Ho_Chi_Minh' },
+  { name: 'Zimbabwe', alpha2: 'ZW', alpha3: 'ZWE', largestCity: 'Harare', lat: -17.8292, lng: 31.0522, currency: 'USD', timezone: 'Africa/Harare' },
+]
+
+// O(1) lookups
+export const BY_ALPHA2 = new Map(COUNTRIES.map((c) => [c.alpha2, c]))
+export const BY_ALPHA3 = new Map(COUNTRIES.map((c) => [c.alpha3, c]))
