@@ -3,55 +3,113 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LayoutDashboard, Package, Users, BarChart2, Settings, MessageCircle } from 'lucide-react'
+import {
+  LayoutGrid,
+  Users,
+  FlaskConical,
+  TrendingUp,
+  BarChart3,
+  Sparkles,
+  Package,
+  LogOut,
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const nav = [
-  { href: '', label: 'Overview', icon: LayoutDashboard },
-  { href: '/catalog', label: 'Catalog', icon: Package },
-  { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/insights', label: 'Insights', icon: BarChart2 },
-  { href: '/crystal', label: 'Crystal AI', icon: MessageCircle },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '',              label: 'Overview',      icon: LayoutGrid,   section: null },
+  { href: '/consumers',    label: 'Consumer',      icon: Users,        section: 'Intelligence' },
+  { href: '/products',     label: 'Products',      icon: Package,      section: 'Intelligence' },
+  { href: '/ingredients',  label: 'Ingredients',   icon: FlaskConical, section: 'Intelligence' },
+  { href: '/market',       label: 'Market',        icon: TrendingUp,   section: 'Intelligence' },
+  { href: '/benchmarking', label: 'Benchmarking',  icon: BarChart3,    section: 'Intelligence' },
+  { href: '/ai-lab',       label: 'AI Lab',        icon: Sparkles,     section: 'Lab' },
 ]
 
 export function SideNav({ slug }: { slug: string }) {
   const pathname = usePathname()
+  const router = useRouter()
   const base = `/${slug}`
 
+  const overview = nav.filter(n => !n.section)
+  const intelligence = nav.filter(n => n.section === 'Intelligence')
+  const lab = nav.filter(n => n.section === 'Lab')
+
+  function handleLogout() {
+    document.cookie = 'halite_token=; path=/; max-age=0'
+    router.push(`/${slug}/login`)
+  }
+
+  function NavItem({ href, label, icon: Icon }: typeof nav[0]) {
+    const to = `${base}${href}`
+    const active = pathname === to || (href !== '' && pathname.startsWith(to))
+    return (
+      <Link
+        href={to}
+        className={clsx(
+          'group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all',
+          active
+            ? 'text-white'
+            : 'text-ink-3 hover:text-white/80'
+        )}
+        style={active ? { background: 'var(--clay)', color: 'white' } : {}}
+      >
+        <Icon
+          size={14}
+          className={clsx('flex-shrink-0', active ? 'text-white' : 'text-ink-3 group-hover:text-white/80')}
+        />
+        {label}
+        {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />}
+      </Link>
+    )
+  }
+
   return (
-    <aside className="w-56 bg-white border-r flex flex-col" style={{ borderColor: 'var(--border)' }}>
-      <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
-        <span className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--text-3)' }}>
+    <aside
+      className="w-52 flex-shrink-0 flex flex-col h-screen sticky top-0"
+      style={{ background: 'var(--ink)' }}
+    >
+      {/* Brand header */}
+      <div className="px-5 pt-6 pb-5 border-b border-white/8">
+        <p className="text-[9px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">
           Halite Intelligence
-        </span>
-        <p className="text-sm font-semibold mt-0.5 capitalize" style={{ color: 'var(--text-1)' }}>{slug}</p>
+        </p>
+        <p className="text-sm font-semibold text-white capitalize leading-tight">{slug}</p>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {nav.map(({ href, label, icon: Icon }) => {
-          const to = `${base}${href}`
-          const active = pathname === to || (href !== '' && pathname.startsWith(to))
-          return (
-            <Link
-              key={href}
-              href={to}
-              className={clsx(
-                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                active
-                  ? 'bg-[#1c1410] text-white'
-                  : 'hover:bg-[#f5f0eb]'
-              )}
-              style={active ? {} : { color: 'var(--text-2)' }}
-            >
-              <Icon size={15} />
-              {label}
-            </Link>
-          )
-        })}
+      {/* Nav sections */}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
+        <div className="space-y-0.5">
+          {overview.map(item => <NavItem key={item.href} {...item} />)}
+        </div>
+
+        <div>
+          <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30 px-3 mb-2">
+            Intelligence
+          </p>
+          <div className="space-y-0.5">
+            {intelligence.map(item => <NavItem key={item.href} {...item} />)}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30 px-3 mb-2">
+            Lab
+          </p>
+          <div className="space-y-0.5">
+            {lab.map(item => <NavItem key={item.href} {...item} />)}
+          </div>
+        </div>
       </nav>
 
-      <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--border)', color: 'var(--text-3)' }}>
-        <p className="text-[11px]">Powered by Halite</p>
+      {/* Footer */}
+      <div className="px-3 py-4 border-t border-white/8">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-[13px] text-white/40 hover:text-white/70 transition-colors"
+        >
+          <LogOut size={14} />
+          Sign out
+        </button>
       </div>
     </aside>
   )

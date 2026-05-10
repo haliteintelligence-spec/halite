@@ -4,19 +4,6 @@
 
 @layer base {
   :root {
-    /* ── Halite Amber ─────────────────────────────── */
-    --amber-50:  #fef9ee;
-    --amber-100: #fdf0d0;
-    --amber-200: #fadfa1;
-    --amber-300: #f7c86b;
-    --amber-400: #f4a832;
-    --amber-500: #f09118;
-    --amber-600: #e07810;
-    --amber-700: #b95e11;
-    --amber-800: #954a15;
-    --amber-900: #793d14;
-    --amber-950: #451f07;
-
     /* ── Melanin palette (Fitzpatrick I–VI) ──────── */
     --melanin-i:   #f9e8d0;
     --melanin-ii:  #e8c99a;
@@ -29,28 +16,45 @@
     --font-display: var(--font-playfair);
     --font-sans:    var(--font-inter);
 
-    /* ── Warm surface palette ────────────────────── */
-    --bg:         #fdf8f5;
-    --bg-surface: #ffffff;
-    --bg-muted:   #f5f0eb;
-    --border:     #e8ddd3;
-    --border-sub: #f0e8df;
-    --text-1:     #1c1410;
-    --text-2:     #6b4f3a;
-    --text-3:     #9c8878;
+    /* ── Intelligence Design System ──────────────── */
+    --ink:          #0f0e0d;
+    --ink-2:        #2e2a27;
+    --ink-3:        #6b5e55;
+    --porcelain:    #f8f6f3;
+    --porcelain-2:  #f1ece6;
+    --surface:      #ffffff;
+    --clay:         #bf7a5a;
+    --clay-light:   #f3e4da;
+    --clay-dim:     #8a5540;
+    --gold:         #c8923a;
+    --gold-light:   #fdf3e3;
+    --sage:         #6b9e78;
+    --sage-light:   #e9f4ec;
+    --blush:        #c07070;
+    --blush-light:  #f7edec;
+    --border:       #e4dcd4;
+    --border-sub:   #ede7e0;
+
+    /* ── Aliases (auth pages + legacy) ───────────── */
+    --bg:         var(--porcelain);
+    --bg-surface: var(--surface);
+    --bg-muted:   var(--porcelain-2);
+    --text-1:     var(--ink);
+    --text-2:     var(--ink-2);
+    --text-3:     var(--ink-3);
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
-  html {
-    font-family: var(--font-sans), system-ui, sans-serif;
-  }
+  html { font-family: var(--font-sans), system-ui, sans-serif; }
 
   body {
-    background-color: var(--bg);
-    color: var(--text-1);
+    background-color: var(--porcelain);
+    color: var(--ink);
     -webkit-font-smoothing: antialiased;
   }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 }
