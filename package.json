@@ -13,7 +13,9 @@
     "type-check": "turbo type-check",
     "db:generate": "turbo db:generate",
     "db:migrate": "turbo db:migrate",
-    "db:studio": "pnpm --filter @halite/db studio"
+    "db:studio": "pnpm --filter @halite/db studio",
+    "widget:build": "pnpm --filter @halite/widget build",
+    "widget:dev": "pnpm --filter @halite/widget dev"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

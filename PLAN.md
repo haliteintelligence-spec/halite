@@ -321,15 +321,16 @@ Each chart has: visualization, AI insight paragraph, "What to do" recommendation
 Each chart gets a dedicated Claude call generating its insight. Claude is given:
 - The chart dataset (structured JSON)
 - The brand's product catalog summary (prompt-cached)
-- Instructions to be specific, actionable, and concise (3–4 sentences)
+- Instructions to be specific, actionable, and concise 
 
 - [ ] `src/lib/ai-insights.ts` — shared Claude call wrapper with prompt caching
 - [ ] Insights regenerated on chart refresh, cached in DB (`insights_cache` table)
+- [ ] Insights should be broken into 3 parts: data/information summary, how brand can use data for customer targeting/retention/product formulation etc. and things brand should take note of
 - [ ] Insight displayed inline below each chart with a "Regenerate" button
 
 ### 4D — Crystal (Brand Agent)
 
-Crystal is a Claude agent preloaded with everything about the brand — chat interface in the dashboard sidebar.
+Crystal is a Claude agent preloaded with everything about the brand — chat interface in the dashboard sidebar. There is also a record of all Crystal chats by brand that the brand admin can refer to at any point in time.
 
 **Crystal's context (prompt-cached):**
 - Full product catalog (name, category, concerns, ingredients, price)

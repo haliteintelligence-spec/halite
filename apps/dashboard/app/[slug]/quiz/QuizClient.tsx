@@ -50,7 +50,32 @@ interface LocationData {
   currency: string
 }
 
-type Phase = 'intro' | 'starting' | 'area_select' | 'questions' | 'submitting' | 'done' | 'error'
+type Phase = 'intro' | 'starting' | 'area_select' | 'questions' | 'submitting' | 'done' | 'routine' | 'error'
+
+interface RoutineStep {
+  id: string
+  timeOfDay: string
+  step: number
+  instruction?: string
+  product: {
+    id: string
+    name: string
+    category: string
+    description?: string
+    price: number
+    currency: string
+    imageUrl?: string
+    productUrl?: string
+    keyIngredients?: string[]
+  }
+}
+
+interface Routine {
+  id: string
+  focusArea: string
+  rationale?: string
+  steps: RoutineStep[]
+}
 
 function flattenFlow(flow: QuizFlow): QuizQuestion[] {
   return flow.blocks.flatMap((b) => b.questions)
@@ -71,7 +96,9 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
   const [selectedAreas, setSelectedAreas] = useState<string[]>([])
   const [areaSelector, setAreaSelector] = useState<{ question: string; options: QuizOption[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [routine, setRoutine] = useState<Routine | null>(null)
   const saveRef = useRef<Promise<void>>(Promise.resolve())
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function handleStart() {
     setPhase('starting')
@@ -216,10 +243,32 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
         body: '{}',
       })
       setPhase('done')
+      // Start polling for the routine (Claude generates it async)
+      pollForRoutine(userToken!, brandId, 0)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong')
       setPhase('error')
     }
+  }
+
+  function pollForRoutine(token: string, bid: string, attempts: number) {
+    if (attempts > 20) return // give up after ~40s
+    pollRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${apiUrl}/brands/${bid}/me/routine`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const { routine: r } = await res.json() as { routine: Routine }
+          if (r?.steps?.length > 0) {
+            setRoutine(r)
+            setPhase('routine')
+            return
+          }
+        }
+      } catch {}
+      pollForRoutine(token, bid, attempts + 1)
+    }, 2000)
   }
 
   const totalQuestions = flatQuestions.length
@@ -324,25 +373,33 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
             </div>
           )}
 
-          {/* ── Done ── */}
+          {/* ── Done (polling) ── */}
           {phase === 'done' && (
-            <div className="text-center space-y-7">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
-                style={{ background: 'var(--bg-muted)' }}
-              >
-                <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div className="space-y-3">
-                <h2 className="font-display text-3xl" style={{ color: 'var(--text-1)' }}>You're all set</h2>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                  Your personalized routine is being prepared. Check back shortly — your
-                  recommendations will be ready soon.
+            <div className="text-center space-y-6">
+              <Spinner />
+              <div className="space-y-2">
+                <h2 className="font-display text-2xl" style={{ color: 'var(--text-1)' }}>
+                  Building your routine…
+                </h2>
+                <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                  Our AI is matching products to your skin profile
                 </p>
               </div>
+              <div className="flex justify-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full animate-pulse"
+                    style={{ background: 'var(--text-3)', animationDelay: `${i * 200}ms` }}
+                  />
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* ── Routine ── */}
+          {phase === 'routine' && routine && (
+            <RoutineDisplay routine={routine} brand={brand} />
           )}
 
           {/* ── Error ── */}
@@ -700,6 +757,129 @@ function ScaleInput({
           <span>{max}</span>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Routine display ───────────────────────────────────────────────────────────
+
+function RoutineDisplay({ routine, brand }: { routine: Routine; brand: BrandInfo }) {
+  const grouped = routine.steps.reduce<Record<string, RoutineStep[]>>((acc, step) => {
+    const key = step.timeOfDay
+    if (!acc[key]) acc[key] = []
+    acc[key].push(step)
+    return acc
+  }, {})
+
+  const timeLabels: Record<string, string> = {
+    AM: 'Morning Routine',
+    PM: 'Evening Routine',
+    DAILY: 'Daily',
+    WASH_DAY: 'Wash Day',
+    BETWEEN_WASH: 'Between Washes',
+    WEEKLY: 'Weekly Treatment',
+  }
+
+  const area = routine.focusArea.charAt(0) + routine.focusArea.slice(1).toLowerCase().replace('_', ' ')
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ background: 'var(--bg-muted)' }}
+        >
+          <svg className="w-5 h-5" style={{ color: 'var(--text-1)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="font-display text-3xl" style={{ color: 'var(--text-1)' }}>
+          Your {area} Routine
+        </h2>
+        <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+          Personalised by {brand.name} · {routine.steps.length} product{routine.steps.length !== 1 ? 's' : ''}
+        </p>
+      </div>
+
+      {/* AI Rationale */}
+      {routine.rationale && (
+        <div
+          className="rounded-2xl p-4 text-sm leading-relaxed"
+          style={{ background: 'var(--bg-muted)', color: 'var(--text-2)' }}
+        >
+          {routine.rationale}
+        </div>
+      )}
+
+      {/* Steps by time of day */}
+      {Object.entries(grouped).map(([timeOfDay, steps]) => (
+        <div key={timeOfDay} className="space-y-3">
+          <h3 className="text-xs font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
+            {timeLabels[timeOfDay] ?? timeOfDay}
+          </h3>
+          <div className="space-y-2">
+            {steps.sort((a, b) => a.step - b.step).map((step, i) => (
+              <div
+                key={step.id}
+                className="flex gap-4 p-4 rounded-2xl border bg-white"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5"
+                  style={{ background: 'var(--bg-muted)', color: 'var(--text-3)' }}
+                >
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
+                    {step.product.name}
+                  </p>
+                  <p className="text-xs mt-0.5 capitalize" style={{ color: 'var(--text-3)' }}>
+                    {step.product.category.toLowerCase().replace('_', ' ')}
+                    {step.product.price > 0 && (
+                      <span> · {step.product.currency === 'USD' ? '$' : step.product.currency}{step.product.price.toFixed(0)}</span>
+                    )}
+                  </p>
+                  {step.instruction && (
+                    <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-2)' }}>
+                      {step.instruction}
+                    </p>
+                  )}
+                  {step.product.keyIngredients && step.product.keyIngredients.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {step.product.keyIngredients.slice(0, 3).map(ing => (
+                        <span
+                          key={ing}
+                          className="text-[10px] px-2 py-0.5 rounded-full"
+                          style={{ background: 'var(--bg-muted)', color: 'var(--text-3)' }}
+                        >
+                          {ing}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {step.product.productUrl && (
+                    <a
+                      href={step.product.productUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-xs mt-2 font-medium hover:opacity-70 transition-opacity"
+                      style={{ color: 'var(--text-1)' }}
+                    >
+                      Shop →
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <p className="text-center text-xs pb-4" style={{ color: 'var(--text-3)' }}>
+        Routine generated by Halite AI · {brand.name}
+      </p>
     </div>
   )
 }
