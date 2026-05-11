@@ -12,6 +12,7 @@ import { quizLocationRoutes } from './routes/quiz-location.js'
 import { endUserRoutes } from './routes/end-users.js'
 import { shopifyRoutes } from './routes/shopify.js'
 import { analyticsRoutes } from './routes/analytics.js'
+import { adminRoutes } from './routes/admin.js'
 import { errorHandler } from './lib/errors.js'
 
 const server = Fastify({
@@ -62,6 +63,7 @@ async function bootstrap() {
   await server.register(endUserRoutes, { prefix: '/brands' })
   await server.register(analyticsRoutes, { prefix: '/brands' })
   await server.register(shopifyRoutes, { prefix: '/shopify' })
+  await server.register(adminRoutes)
 
   server.setErrorHandler(errorHandler)
 

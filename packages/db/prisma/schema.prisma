@@ -55,6 +55,7 @@ model Brand {
   quizSessions   QuizSession[]
   catalogUploads CatalogUpload[]
   quizConfig     QuizConfig?
+  invoices       Invoice[]
 
   @@map("brands")
 }
@@ -510,4 +511,31 @@ enum ProductReaction {
   POSITIVE
   NEUTRAL
   NEGATIVE
+}
+
+// ─────────────────────────────────────────────
+// BILLING
+// ─────────────────────────────────────────────
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+}
+
+model Invoice {
+  id        String        @id @default(cuid())
+  brandId   String
+  brand     Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  amount    Float
+  currency  String        @default("USD")
+  status    InvoiceStatus @default(DRAFT)
+  period    String
+  dueDate   DateTime
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("invoices")
 }

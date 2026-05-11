@@ -21,6 +21,7 @@ export {
   ProductCategory,
   SkinConcern,
   SkinType,
+  InvoiceStatus,
   ClimateType,
   RoutineFormat,
   TimeOfDay,
