@@ -40,6 +40,23 @@ export interface Routine {
   steps: RoutineStep[]
 }
 
+export interface CheckInProduct {
+  productId: string
+  used: boolean
+  reaction?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE'
+  product: { id: string; name: string }
+}
+
+export interface CheckIn {
+  id: string
+  date: string
+  skinRating: number
+  symptoms: string[]
+  notes?: string
+  compliant: boolean
+  products: CheckInProduct[]
+}
+
 export interface WidgetConfig {
   apiKey: string
   apiUrl: string

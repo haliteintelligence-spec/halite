@@ -179,5 +179,78 @@ export function getStyles(accent: string): string {
     .hlw-error-icon { font-size: 32px; margin-bottom: 12px; }
     .hlw-error-text { font-size: 15px; color: #1a1a1a; font-weight: 500; margin-bottom: 6px; }
     .hlw-error-sub { font-size: 13px; color: #888; }
+
+    /* ── Check-in styles ── */
+    .hlw-rating-row {
+      display: flex; gap: 8px; margin-bottom: 24px;
+    }
+    .hlw-rating-btn {
+      flex: 1; padding: 14px 0; border-radius: 12px;
+      border: 1.5px solid #e8e8e8; background: #fff;
+      cursor: pointer; font-size: 18px; transition: border-color 0.15s, background 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .hlw-rating-btn span { font-size: 10px; color: #aaa; font-weight: 500; }
+    .hlw-rating-btn:hover { border-color: ${accent}; background: ${accent}10; }
+    .hlw-rating-btn.selected { border-color: ${accent}; background: ${accent}18; }
+    .hlw-rating-btn.selected span { color: ${accent}; }
+    .hlw-symptom-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px;
+    }
+    .hlw-symptom-btn {
+      padding: 10px 12px; border-radius: 10px;
+      border: 1.5px solid #e8e8e8; background: #fff; cursor: pointer;
+      font-size: 12px; font-weight: 500; color: #555; text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .hlw-symptom-btn:hover { border-color: ${accent}; }
+    .hlw-symptom-btn.selected { border-color: ${accent}; background: ${accent}14; color: ${accent}; }
+    .hlw-symptom-btn.positive { border-color: #e8e8e8; }
+    .hlw-symptom-btn.positive.selected { border-color: #4caf82; background: #4caf8214; color: #4caf82; }
+    .hlw-section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase; color: #aaa; margin-bottom: 10px;
+    }
+    .hlw-product-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+    .hlw-product-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 12px;
+      border: 1.5px solid #f0f0f0; background: #fafafa;
+    }
+    .hlw-product-name { flex: 1; font-size: 13px; color: #333; font-weight: 500; }
+    .hlw-reaction-btns { display: flex; gap: 4px; }
+    .hlw-reaction-btn {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 1.5px solid #e8e8e8; background: #fff;
+      cursor: pointer; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .hlw-reaction-btn.active-pos { border-color: #4caf82; background: #4caf8220; }
+    .hlw-reaction-btn.active-neu { border-color: #aaa; background: #aaa20; }
+    .hlw-reaction-btn.active-neg { border-color: #e57373; background: #e5737320; }
+    .hlw-notes-input {
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 1.5px solid #e8e8e8; font-size: 13px; font-family: inherit;
+      resize: none; outline: none; box-sizing: border-box;
+      transition: border-color 0.15s;
+    }
+    .hlw-notes-input:focus { border-color: ${accent}; }
+    .hlw-success {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 48px 24px; gap: 12px; text-align: center;
+    }
+    .hlw-success-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: ${accent}18; display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+    .hlw-success-title { font-size: 17px; font-weight: 600; color: #1a1a1a; }
+    .hlw-success-sub { font-size: 13px; color: #888; max-width: 260px; }
+    .hlw-streak {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 100px;
+      background: ${accent}15; font-size: 13px; font-weight: 600; color: ${accent};
+    }
   `
 }

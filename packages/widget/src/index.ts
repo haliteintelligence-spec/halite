@@ -1,5 +1,6 @@
 import { HaliteApi } from './api'
 import { QuizController } from './quiz'
+import { CheckInController } from './checkin'
 import { getStyles } from './styles'
 
 interface HaliteWidgetConfig {
@@ -10,7 +11,7 @@ interface HaliteWidgetConfig {
 
 class HaliteWidgetInstance {
   private api: HaliteApi
-  private controller!: QuizController
+  private controller!: QuizController | CheckInController
   private overlay: HTMLElement | null = null
   private body: HTMLElement | null = null
   private progress: HTMLElement | null = null
@@ -31,22 +32,29 @@ class HaliteWidgetInstance {
     document.head.appendChild(style)
   }
 
-  open() {
+  open(mode: 'quiz' | 'checkin' = 'quiz') {
     if (this.overlay) return
     this.overlay = this.buildModal()
     document.body.appendChild(this.overlay)
     document.body.style.overflow = 'hidden'
 
-    this.controller = new QuizController(
-      this.api,
-      (node) => this.renderBody(node),
-      (pct) => this.setProgress(pct),
-      (fn) => this.setBack(fn),
-    )
+    this.controller = mode === 'checkin'
+      ? new CheckInController(
+          this.api,
+          (node) => this.renderBody(node),
+          (pct) => this.setProgress(pct),
+          (fn) => this.setBack(fn),
+        )
+      : new QuizController(
+          this.api,
+          (node) => this.renderBody(node),
+          (pct) => this.setProgress(pct),
+          (fn) => this.setBack(fn),
+        )
 
     this.api.init()
       .then(() => this.controller.start())
-      .catch(() => this.controller.renderLoading('Connecting…', 'Having trouble reaching the server.'))
+      .catch(() => (this.controller as QuizController).renderLoading('Connecting…', 'Having trouble reaching the server.'))
   }
 
   private buildModal(): HTMLElement {
@@ -173,12 +181,17 @@ function init(config: HaliteWidgetConfig) {
 
   const instance = new HaliteWidgetInstance(resolved)
 
-  // Attach to all [data-halite-quiz] triggers
+  // Attach to all [data-halite-quiz] and [data-halite-checkin] triggers
   function attachTriggers() {
     document.querySelectorAll<HTMLElement>('[data-halite-quiz]').forEach(el => {
       if (el.dataset.hlwBound) return
       el.dataset.hlwBound = '1'
-      el.addEventListener('click', () => instance.open())
+      el.addEventListener('click', () => instance.open('quiz'))
+    })
+    document.querySelectorAll<HTMLElement>('[data-halite-checkin]').forEach(el => {
+      if (el.dataset.hlwBound) return
+      el.dataset.hlwBound = '1'
+      el.addEventListener('click', () => instance.open('checkin'))
     })
   }
 
