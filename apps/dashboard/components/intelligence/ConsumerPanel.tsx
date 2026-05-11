@@ -5,153 +5,194 @@ import { AIBadge } from '@/components/ui/AIBadge'
 import { Sparkline } from '@/components/charts/Sparkline'
 import { SkinToneBar, SkinToneGrid } from '@/components/charts/SkinToneBar'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts'
+import type { AnalyticsData } from '@/lib/api'
 
-const checkInTrend = [120, 145, 138, 162, 171, 158, 189, 204, 197, 218, 231, 247]
+type Props = {
+  consumers: AnalyticsData['consumers']
+  checkIns: AnalyticsData['checkIns']
+  totalConsumers: number
+}
 
-const skinTypes = [
-  { label: 'Combo', value: 35, tone: 'iii' as const },
-  { label: 'Dry',   value: 28, tone: 'ii' as const },
-  { label: 'Oily',  value: 22, tone: 'iv' as const },
-  { label: 'Normal',value: 15, tone: 'i' as const },
-]
+const CONCERN_LABELS: Record<string, string> = {
+  ACNE: 'Acne / Breakouts',
+  HYPERPIGMENTATION: 'Hyperpigmentation',
+  AGING: 'Anti-aging',
+  SENSITIVITY: 'Sensitivity',
+  DRYNESS: 'Dryness',
+  OILINESS: 'Oiliness',
+  REDNESS: 'Redness',
+  DULLNESS: 'Dullness',
+  UNEVEN_TEXTURE: 'Uneven texture',
+  DARK_CIRCLES: 'Dark circles',
+  PORES: 'Pores',
+  DEHYDRATION: 'Dehydration',
+}
 
-const fitzpatrickData = [
-  { tone: 'i',   label: 'I',   count: 228,  pct: 8,  engagement: 3.1 },
-  { tone: 'ii',  label: 'II',  count: 399,  pct: 14, engagement: 3.4 },
-  { tone: 'iii', label: 'III', count: 626,  pct: 22, engagement: 4.1 },
-  { tone: 'iv',  label: 'IV',  count: 797,  pct: 28, engagement: 4.8 },
-  { tone: 'v',   label: 'V',   count: 512,  pct: 18, engagement: 4.5 },
-  { tone: 'vi',  label: 'VI',  count: 285,  pct: 10, engagement: 4.3 },
-]
+const SKIN_TYPE_LABELS: Record<string, string> = {
+  DRY: 'Dry', OILY: 'Oily', COMBINATION: 'Combo', NORMAL: 'Normal', SENSITIVE: 'Sensitive',
+}
 
-const concerns = [
-  { concern: 'Hyperpigmentation', pct: 67 },
-  { concern: 'Dryness',          pct: 54 },
-  { concern: 'Acne / Breakouts', pct: 43 },
-  { concern: 'Anti-aging',       pct: 38 },
-  { concern: 'Sensitivity',      pct: 31 },
-  { concern: 'Uneven texture',   pct: 24 },
-]
+const TONE_KEYS = ['i', 'ii', 'iii', 'iv', 'v', 'vi'] as const
 
-const ageData = [
-  { group: '18–24', n: 412 },
-  { group: '25–34', n: 891 },
-  { group: '35–44', n: 743 },
-  { group: '45–54', n: 521 },
-  { group: '55+',   n: 280 },
-]
+export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
+  const skinTypeBar = consumers.skinTypes.map((st, i) => ({
+    label: SKIN_TYPE_LABELS[st.type] ?? st.type,
+    value: Math.max(st.pct, 1),
+    tone: TONE_KEYS[Math.min(i * 2, 5)],
+  }))
 
-export function ConsumerPanel() {
+  const dominantFitz = consumers.fitzpatrick.reduce(
+    (best, f) => f.count > best.count ? f : best,
+    consumers.fitzpatrick[0] ?? { type: 0, pct: 0, count: 0 }
+  )
+  const topConcern = consumers.concerns[0]
+
+  const weekChange = checkIns.lastWeek > 0
+    ? Math.round(((checkIns.thisWeek - checkIns.lastWeek) / checkIns.lastWeek) * 100)
+    : null
+
+  const sortedAgeRanges = [...consumers.ageRanges].sort((a, b) => b.n - a.n)
+
   return (
     <div className="space-y-4">
       {/* Skin Tone Distribution */}
       <InsightCard
         title="Skin Tone Distribution"
-        subtitle="Fitzpatrick scale · 2,847 consumers"
+        subtitle={`Fitzpatrick scale · ${totalConsumers} consumer${totalConsumers !== 1 ? 's' : ''}`}
         accent="clay"
       >
         <div className="space-y-4">
-          <SkinToneGrid data={fitzpatrickData} />
+          <SkinToneGrid
+            data={consumers.fitzpatrick.map(f => ({
+              tone: f.tone,
+              label: f.label,
+              count: f.count,
+              pct: f.pct,
+              engagement: 0,
+            }))}
+          />
           <div className="flex gap-4 pt-1">
-            {fitzpatrickData.map(d => (
-              <div key={d.tone} className="text-center flex-1">
+            {consumers.fitzpatrick.map(f => (
+              <div key={f.type} className="text-center flex-1">
                 <p className="text-[10px] font-semibold" style={{ color: 'var(--ink-3)' }}>
-                  {d.label}
+                  {f.type}
                 </p>
               </div>
             ))}
           </div>
-          <SkinToneBar data={skinTypes} showLabels={true} height={8} />
-          <AIBadge>
-            Fitzpatrick III–IV consumers account for 50% of your base and show the highest check-in
-            engagement (4.1–4.8×). Hyperpigmentation-focused products are underrepresented given
-            this distribution.
-          </AIBadge>
+          {skinTypeBar.length > 0 && <SkinToneBar data={skinTypeBar} showLabels height={8} />}
+          {dominantFitz.count > 0 && topConcern && (
+            <AIBadge>
+              Fitzpatrick {dominantFitz.type} is your most common skin tone ({dominantFitz.pct}% of consumers).{' '}
+              {CONCERN_LABELS[topConcern.concern] ?? topConcern.concern} is the top reported concern ({topConcern.pct}% of users).
+            </AIBadge>
+          )}
         </div>
       </InsightCard>
 
       {/* Check-in Activity */}
-      <InsightCard
-        title="Check-in Activity"
-        subtitle="Weekly · last 12 weeks"
-        accent="sage"
-      >
+      <InsightCard title="Check-in Activity" subtitle="Weekly · last 12 weeks" accent="sage">
         <div className="space-y-3">
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-2xl font-semibold" style={{ color: 'var(--ink)' }}>247</p>
+              <p className="text-2xl font-semibold" style={{ color: 'var(--ink)' }}>{checkIns.thisWeek}</p>
               <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>this week</p>
             </div>
-            <span
-              className="text-[11px] font-medium px-2 py-0.5 rounded"
-              style={{ background: 'var(--sage-light)', color: 'var(--sage)' }}
-            >
-              ↑ 6.5% vs last week
-            </span>
+            {weekChange !== null && (
+              <span
+                className="text-[11px] font-medium px-2 py-0.5 rounded"
+                style={{
+                  background: weekChange >= 0 ? 'var(--sage-light)' : 'var(--blush-light)',
+                  color: weekChange >= 0 ? 'var(--sage)' : 'var(--blush)',
+                }}
+              >
+                {weekChange >= 0 ? '↑' : '↓'} {Math.abs(weekChange)}% vs last week
+              </span>
+            )}
           </div>
-          <Sparkline data={checkInTrend} color="var(--sage)" height={56} showTooltip />
+          <Sparkline data={checkIns.weeklyTrend} color="var(--sage)" height={56} showTooltip />
         </div>
       </InsightCard>
 
       {/* Top Concerns */}
-      <InsightCard title="Top Consumer Concerns" subtitle="% of consumers reporting">
-        <div className="space-y-2.5">
-          {concerns.map(c => (
-            <div key={c.concern} className="space-y-1">
-              <div className="flex justify-between text-[12px]">
-                <span style={{ color: 'var(--ink-2)' }}>{c.concern}</span>
-                <span className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
-                  {c.pct}%
-                </span>
+      {consumers.concerns.length > 0 && (
+        <InsightCard title="Top Consumer Concerns" subtitle="% of consumers reporting">
+          <div className="space-y-2.5">
+            {consumers.concerns.slice(0, 6).map(c => (
+              <div key={c.concern} className="space-y-1">
+                <div className="flex justify-between text-[12px]">
+                  <span style={{ color: 'var(--ink-2)' }}>
+                    {CONCERN_LABELS[c.concern] ?? c.concern}
+                  </span>
+                  <span className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
+                    {c.pct}%
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: 'var(--porcelain-2)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${c.pct}%`, background: c.pct > 50 ? 'var(--clay)' : 'var(--border)' }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 rounded-full" style={{ background: 'var(--porcelain-2)' }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${c.pct}%`, background: c.pct > 50 ? 'var(--clay)' : 'var(--border)' }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </InsightCard>
+            ))}
+          </div>
+        </InsightCard>
+      )}
 
       {/* Age Distribution */}
-      <InsightCard title="Age Cohorts" subtitle="Active consumers by age group">
-        <ResponsiveContainer width="100%" height={120}>
-          <BarChart data={ageData} barSize={28} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
-            <XAxis
-              dataKey="group"
-              tick={{ fontSize: 10, fill: 'var(--ink-3)' }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              cursor={{ fill: 'var(--porcelain-2)' }}
-              content={({ payload }) =>
-                payload?.[0] ? (
-                  <div
-                    className="text-[11px] px-2.5 py-1.5 rounded-lg shadow-lg"
-                    style={{ background: 'var(--ink)', color: 'white' }}
-                  >
-                    {payload[0].payload.group}: <strong>{payload[0].value}</strong>
-                  </div>
-                ) : null
-              }
-            />
-            <Bar dataKey="n" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-              {ageData.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill={i === 1 ? 'var(--clay)' : 'var(--border)'}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        <p className="text-[11px] mt-2" style={{ color: 'var(--ink-3)' }}>
-          25–34 cohort is largest · 891 users
-        </p>
-      </InsightCard>
+      {consumers.ageRanges.length > 0 && (
+        <InsightCard title="Age Cohorts" subtitle="Active consumers by age group">
+          <ResponsiveContainer width="100%" height={120}>
+            <BarChart
+              data={consumers.ageRanges}
+              barSize={28}
+              margin={{ top: 4, right: 0, left: -20, bottom: 0 }}
+            >
+              <XAxis
+                dataKey="group"
+                tick={{ fontSize: 10, fill: 'var(--ink-3)' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                cursor={{ fill: 'var(--porcelain-2)' }}
+                content={({ payload }) =>
+                  payload?.[0] ? (
+                    <div
+                      className="text-[11px] px-2.5 py-1.5 rounded-lg shadow-lg"
+                      style={{ background: 'var(--ink)', color: 'white' }}
+                    >
+                      {payload[0].payload.group}: <strong>{payload[0].value}</strong>
+                    </div>
+                  ) : null
+                }
+              />
+              <Bar dataKey="n" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                {consumers.ageRanges.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.group === sortedAgeRanges[0]?.group ? 'var(--clay)' : 'var(--border)'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          {sortedAgeRanges[0] && (
+            <p className="text-[11px] mt-2" style={{ color: 'var(--ink-3)' }}>
+              {sortedAgeRanges[0].group} cohort is largest · {sortedAgeRanges[0].n} users
+            </p>
+          )}
+        </InsightCard>
+      )}
+
+      {consumers.concerns.length === 0 && consumers.ageRanges.length === 0 && (
+        <InsightCard title="Consumer Profiles" subtitle="">
+          <p className="text-[13px] py-4 text-center" style={{ color: 'var(--ink-3)' }}>
+            Consumer profile data will appear as users complete the quiz.
+          </p>
+        </InsightCard>
+      )}
     </div>
   )
 }

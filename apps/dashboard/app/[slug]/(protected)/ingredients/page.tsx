@@ -1,9 +1,11 @@
 import { IngredientLab } from '@/components/intelligence/IngredientLab'
+import { getAnalytics } from '@/lib/api'
 
 interface Props { params: Promise<{ slug: string }> }
 
-export default async function IngredientsPage({ params }: Props) {
-  const { slug } = await params
+export default async function IngredientsPage({ params: _ }: Props) {
+  const analytics = await getAnalytics()
+
   return (
     <div className="px-7 py-6">
       <div className="mb-6">
@@ -15,7 +17,11 @@ export default async function IngredientsPage({ params }: Props) {
           Ingredient intelligence index, coverage gaps & concern mapping
         </p>
       </div>
-      <IngredientLab />
+      {analytics ? (
+        <IngredientLab products={analytics.products} />
+      ) : (
+        <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load ingredient data.</p>
+      )}
     </div>
   )
 }

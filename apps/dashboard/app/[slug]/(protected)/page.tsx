@@ -6,6 +6,7 @@ import { MarketFeed } from '@/components/intelligence/MarketFeed'
 import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { Users, Package, FlaskConical, TrendingUp } from 'lucide-react'
+import { getAnalytics } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -13,16 +14,15 @@ interface Props {
 
 export default async function IntelligencePage({ params }: Props) {
   const { slug } = await params
+  const analytics = await getAnalytics()
+  const s = analytics?.summary
 
   return (
     <div className="min-h-full">
       {/* Page header */}
       <div
         className="sticky top-0 z-10 px-7 py-4 flex items-center justify-between"
-        style={{
-          background: 'var(--porcelain)',
-          borderBottom: '1px solid var(--border)',
-        }}
+        style={{ background: 'var(--porcelain)', borderBottom: '1px solid var(--border)' }}
       >
         <div>
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
@@ -39,11 +39,7 @@ export default async function IntelligencePage({ params }: Props) {
           >
             Last 30 days
           </div>
-          <div
-            className="w-2 h-2 rounded-full animate-pulse"
-            style={{ background: 'var(--sage)' }}
-            title="Live data"
-          />
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--sage)' }} title="Live data" />
         </div>
       </div>
 
@@ -52,96 +48,110 @@ export default async function IntelligencePage({ params }: Props) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <MetricTile
             label="Active Consumers"
-            value="2,847"
-            trend={{ delta: 12.4, label: 'MoM' }}
+            value={s ? s.totalConsumers.toLocaleString() : '—'}
             icon={<Users size={14} />}
           />
           <MetricTile
-            label="Rec Acceptance"
-            value="64%"
-            trend={{ delta: 3.2, label: 'vs last mo' }}
+            label="Routine Adoption"
+            value={s?.usageRate != null ? `${s.usageRate}%` : '—'}
             icon={<Package size={14} />}
           />
           <MetricTile
             label="Avg Satisfaction"
-            value="4.1/5"
-            trend={{ delta: 2.1, label: 'vs last mo' }}
+            value={s?.avgRating != null ? `${s.avgRating}/5` : '—'}
             icon={<FlaskConical size={14} />}
           />
           <MetricTile
             label="Routine Compliance"
-            value="61%"
-            trend={{ delta: -1.8, label: 'vs last mo' }}
+            value={s?.complianceRate != null ? `${s.complianceRate}%` : '—'}
             icon={<TrendingUp size={14} />}
           />
         </div>
 
-        {/* Summary AI insight */}
+        {/* Summary insight */}
         <AIBadge>
-          Your brand is outperforming on consumer engagement but has two critical gaps:
-          catalogue completeness (43% vs 67% industry avg) and missing azelaic acid coverage
-          for your hyperpigmentation-heavy consumer base. These are your highest-leverage actions.
+          {analytics?.consumers.concerns[0]
+            ? `${analytics.consumers.concerns[0].pct}% of your consumers report ${(analytics.consumers.concerns[0].concern as string).toLowerCase().replace(/_/g, ' ')} as a top concern. `
+            : ''}
+          {s?.complianceRate != null
+            ? `Routine compliance is ${s.complianceRate}% — ${s.complianceRate >= 70 ? 'above average. Keep reinforcing check-in habits.' : 'focus on education and simplifying routines to lift adherence.'}`
+            : 'Embed the quiz widget on your storefront to start building your consumer intelligence.'}
         </AIBadge>
 
         {/* Main 2-col intelligence grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Consumer + Product column */}
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
-                  Consumer Intelligence
-                </h2>
-                <a href={`/${slug}/consumers`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
-                  Full view →
-                </a>
+        {analytics ? (
+          <>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                      Consumer Intelligence
+                    </h2>
+                    <a href={`/${slug}/consumers`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
+                      Full view →
+                    </a>
+                  </div>
+                  <ConsumerPanel
+                    consumers={analytics.consumers}
+                    checkIns={analytics.checkIns}
+                    totalConsumers={analytics.summary.totalConsumers}
+                  />
+                </div>
               </div>
-              <ConsumerPanel />
-            </div>
-          </div>
 
-          {/* Product + Market column */}
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
-                  Product Performance
-                </h2>
-                <a href={`/${slug}/products`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
-                  Full view →
-                </a>
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                      Product Performance
+                    </h2>
+                    <a href={`/${slug}/products`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
+                      Full view →
+                    </a>
+                  </div>
+                  <ProductEngine products={analytics.products} usageRate={analytics.summary.usageRate} />
+                </div>
               </div>
-              <ProductEngine />
             </div>
-          </div>
-        </div>
 
-        {/* Ingredient + Market row */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
-                Ingredient Lab
-              </h2>
-              <a href={`/${slug}/ingredients`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
-                Full view →
-              </a>
-            </div>
-            <IngredientLab />
-          </div>
+            {/* Ingredient + Market row */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                    Ingredient Lab
+                  </h2>
+                  <a href={`/${slug}/ingredients`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
+                    Full view →
+                  </a>
+                </div>
+                <IngredientLab products={analytics.products} />
+              </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
-                Market Signals
-              </h2>
-              <a href={`/${slug}/market`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
-                Full view →
-              </a>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                    Market Signals
+                  </h2>
+                  <a href={`/${slug}/market`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
+                    Full view →
+                  </a>
+                </div>
+                <MarketFeed />
+              </div>
             </div>
-            <MarketFeed />
+          </>
+        ) : (
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+          >
+            <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+              Could not load analytics. Make sure the API is running.
+            </p>
           </div>
-        </div>
+        )}
 
         {/* Full-width benchmarking */}
         <div>

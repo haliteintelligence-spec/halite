@@ -3,149 +3,172 @@
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { FlaskConical } from 'lucide-react'
+import type { AnalyticsData } from '@/lib/api'
 
-const trending = [
-  { name: 'Niacinamide',       score: 94, trend: +18, concern: 'Hyperpigmentation, Pores' },
-  { name: 'Hyaluronic Acid',   score: 91, trend: +9,  concern: 'Dryness, Plumping' },
-  { name: 'Vitamin C (L-AA)',  score: 87, trend: +24, concern: 'Brightening, Antioxidant' },
-  { name: 'Retinol 0.3%',      score: 83, trend: +31, concern: 'Anti-aging, Texture' },
-  { name: 'Centella Asiatica', score: 79, trend: +42, concern: 'Sensitivity, Barrier' },
-  { name: 'Azelaic Acid',      score: 74, trend: +67, concern: 'Hyperpigmentation, Acne' },
-  { name: 'Ceramides',         score: 72, trend: +14, concern: 'Barrier repair, Dryness' },
-  { name: 'Peptides',          score: 68, trend: +22, concern: 'Anti-aging, Firming' },
-]
+type Props = {
+  products: AnalyticsData['products']
+}
 
-const gaps = [
-  { ingredient: 'Azelaic Acid',    mentions: 312, catalogCoverage: 0,  severity: 'high' },
-  { ingredient: 'Tranexamic Acid', mentions: 187, catalogCoverage: 1,  severity: 'high' },
-  { ingredient: 'Bakuchiol',       mentions: 143, catalogCoverage: 2,  severity: 'medium' },
-  { ingredient: 'Polyglutamic Acid', mentions: 98, catalogCoverage: 0, severity: 'medium' },
-]
+const CONCERN_LABELS: Record<string, string> = {
+  ACNE: 'Acne / Breakouts',
+  HYPERPIGMENTATION: 'Hyperpigmentation',
+  AGING: 'Anti-aging',
+  SENSITIVITY: 'Sensitivity',
+  DRYNESS: 'Dryness',
+  OILINESS: 'Oiliness',
+  REDNESS: 'Redness',
+  DULLNESS: 'Dullness',
+  UNEVEN_TEXTURE: 'Uneven texture',
+  DARK_CIRCLES: 'Dark circles',
+  PORES: 'Pores',
+  DEHYDRATION: 'Dehydration',
+}
 
-const efficacy = [
-  { concern: 'Hyperpigmentation', best: 'Vitamin C + Niacinamide', coverage: 78 },
-  { concern: 'Barrier Repair',    best: 'Ceramides + Centella',     coverage: 62 },
-  { concern: 'Anti-aging',        best: 'Retinol + Peptides',       coverage: 71 },
-  { concern: 'Acne',              best: 'Niacinamide + BHA',        coverage: 55 },
-  { concern: 'Dryness',           best: 'HA + Ceramides',           coverage: 84 },
-]
+export function IngredientLab({ products }: Props) {
+  const { topIngredients, concernCoverage } = products
 
-export function IngredientLab() {
+  const gaps = concernCoverage.filter(c => c.userPct >= 40 && c.coverage < 50)
+  const maxScore = Math.max(...topIngredients.map(i => i.score), 1)
+
   return (
     <div className="space-y-4">
-      {/* Trending Ingredients */}
-      <InsightCard
-        title="Ingredient Intelligence Index"
-        subtitle="Demand signal × your catalogue coverage"
-        accent="clay"
-      >
-        <div className="space-y-2.5">
-          {trending.map(ing => (
-            <div key={ing.name} className="flex items-center gap-3">
-              <div className="w-32 flex-shrink-0">
-                <p className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
-                  {ing.name}
-                </p>
-                <p className="text-[10px] truncate" style={{ color: 'var(--ink-3)' }}>
-                  {ing.concern}
-                </p>
+      {/* Top Ingredients */}
+      {topIngredients.length > 0 ? (
+        <InsightCard
+          title="Ingredient Intelligence Index"
+          subtitle="Key ingredients across your active routines"
+          accent="clay"
+        >
+          <div className="space-y-2.5">
+            {topIngredients.map(ing => (
+              <div key={ing.name} className="flex items-center gap-3">
+                <div className="w-36 flex-shrink-0">
+                  <p className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
+                    {ing.name}
+                  </p>
+                  {ing.concerns.length > 0 && (
+                    <p className="text-[10px] truncate" style={{ color: 'var(--ink-3)' }}>
+                      {ing.concerns.map(c => CONCERN_LABELS[c] ?? c).join(', ')}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="h-2 rounded-full" style={{ background: 'var(--porcelain-2)' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${(ing.score / maxScore) * 100}%`, background: 'var(--clay)' }}
+                    />
+                  </div>
+                </div>
+                <span
+                  className="text-[11px] font-semibold w-8 text-right tabular-nums"
+                  style={{ color: 'var(--clay-dim)' }}
+                >
+                  {ing.count}×
+                </span>
               </div>
-              <div className="flex-1">
-                <div className="h-2 rounded-full" style={{ background: 'var(--porcelain-2)' }}>
+            ))}
+          </div>
+          <p className="text-[10px] mt-3" style={{ color: 'var(--ink-3)' }}>
+            Count = number of active routines featuring this ingredient
+          </p>
+        </InsightCard>
+      ) : (
+        <InsightCard title="Ingredient Intelligence Index" subtitle="">
+          <p className="text-[13px] py-4 text-center" style={{ color: 'var(--ink-3)' }}>
+            Ingredient data will appear as routines are generated.
+          </p>
+        </InsightCard>
+      )}
+
+      {/* Coverage Gaps */}
+      {gaps.length > 0 && (
+        <InsightCard
+          title="Concern Coverage Gaps"
+          subtitle="High-prevalence concerns with low routine coverage"
+          accent="blush"
+        >
+          <div className="space-y-2">
+            {gaps.map(g => (
+              <div
+                key={g.concern}
+                className="flex items-center justify-between gap-3 p-3 rounded-xl"
+                style={{ background: g.coverage < 25 ? 'var(--blush-light)' : 'var(--porcelain-2)' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <FlaskConical
+                    size={13}
+                    style={{ color: g.coverage < 25 ? 'var(--blush)' : 'var(--ink-3)' }}
+                  />
+                  <div>
+                    <p className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
+                      {CONCERN_LABELS[g.concern] ?? g.concern}
+                    </p>
+                    <p className="text-[10px]" style={{ color: 'var(--ink-3)' }}>
+                      {g.userPct}% of users report this · {g.productCount} product{g.productCount !== 1 ? 's' : ''} cover it
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                  style={{
+                    background: g.coverage < 25 ? 'var(--blush)' : 'var(--gold)',
+                    color: 'white',
+                  }}
+                >
+                  {g.coverage < 25 ? 'high' : 'medium'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {gaps.some(g => g.coverage < 25) && (
+            <div className="mt-3">
+              <AIBadge>
+                {(() => {
+                  const worstGap = gaps.find(g => g.coverage < 25)
+                  return worstGap
+                    ? `${CONCERN_LABELS[worstGap.concern] ?? worstGap.concern} affects ${worstGap.userPct}% of your consumers but has low routine coverage. Expanding your catalogue for this concern could meaningfully improve recommendation quality.`
+                    : 'Consider adding products that address these under-covered concerns.'
+                })()}
+              </AIBadge>
+            </div>
+          )}
+        </InsightCard>
+      )}
+
+      {/* Concern Coverage Map */}
+      {concernCoverage.length > 0 && (
+        <InsightCard title="Concern Coverage Map" subtitle="How well your routines address each reported concern">
+          <div className="space-y-3">
+            {concernCoverage.slice(0, 6).map(c => (
+              <div key={c.concern} className="space-y-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span style={{ color: 'var(--ink-2)' }}>
+                    {CONCERN_LABELS[c.concern] ?? c.concern}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px]" style={{ color: 'var(--ink-3)' }}>
+                      {c.productCount} product{c.productCount !== 1 ? 's' : ''}
+                    </span>
+                    <span className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
+                      {c.coverage}%
+                    </span>
+                  </div>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: 'var(--porcelain-2)' }}>
                   <div
-                    className="h-full rounded-full"
-                    style={{ width: `${ing.score}%`, background: 'var(--clay)' }}
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${c.coverage}%`,
+                      background: c.coverage >= 75 ? 'var(--sage)' : c.coverage >= 50 ? 'var(--gold)' : 'var(--blush)',
+                    }}
                   />
                 </div>
               </div>
-              <span className="text-[11px] font-semibold w-6 text-right" style={{ color: 'var(--clay-dim)' }}>
-                {ing.score}
-              </span>
-              <span
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded tabular-nums w-12 text-right"
-                style={{ background: 'var(--sage-light)', color: 'var(--sage)' }}
-              >
-                ↑{ing.trend}%
-              </span>
-            </div>
-          ))}
-        </div>
-      </InsightCard>
-
-      {/* Coverage Gaps */}
-      <InsightCard
-        title="Catalogue Gap Analysis"
-        subtitle="High-demand ingredients missing from your catalogue"
-        accent="blush"
-      >
-        <div className="space-y-2">
-          {gaps.map(g => (
-            <div
-              key={g.ingredient}
-              className="flex items-center justify-between gap-3 p-3 rounded-xl"
-              style={{ background: g.severity === 'high' ? 'var(--blush-light)' : 'var(--porcelain-2)' }}
-            >
-              <div className="flex items-center gap-2.5">
-                <FlaskConical
-                  size={13}
-                  style={{ color: g.severity === 'high' ? 'var(--blush)' : 'var(--ink-3)' }}
-                />
-                <div>
-                  <p className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
-                    {g.ingredient}
-                  </p>
-                  <p className="text-[10px]" style={{ color: 'var(--ink-3)' }}>
-                    {g.mentions} consumer mentions · {g.catalogCoverage} product{g.catalogCoverage !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
-                style={{
-                  background: g.severity === 'high' ? 'var(--blush)' : 'var(--gold)',
-                  color: 'white',
-                }}
-              >
-                {g.severity}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3">
-          <AIBadge>
-            Azelaic Acid has 312 consumer mentions but zero catalogue coverage. Given your
-            Fitzpatrick III–IV skew and hyperpigmentation prevalence, this is a high-priority gap.
-          </AIBadge>
-        </div>
-      </InsightCard>
-
-      {/* Concern → Ingredient Efficacy */}
-      <InsightCard title="Concern Coverage Map" subtitle="How well your catalogue addresses each concern">
-        <div className="space-y-3">
-          {efficacy.map(e => (
-            <div key={e.concern} className="space-y-1.5">
-              <div className="flex justify-between text-[12px]">
-                <span style={{ color: 'var(--ink-2)' }}>{e.concern}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px]" style={{ color: 'var(--ink-3)' }}>{e.best}</span>
-                  <span className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
-                    {e.coverage}%
-                  </span>
-                </div>
-              </div>
-              <div className="h-1.5 rounded-full" style={{ background: 'var(--porcelain-2)' }}>
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${e.coverage}%`,
-                    background: e.coverage >= 75 ? 'var(--sage)' : e.coverage >= 60 ? 'var(--gold)' : 'var(--blush)',
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </InsightCard>
+            ))}
+          </div>
+        </InsightCard>
+      )}
     </div>
   )
 }

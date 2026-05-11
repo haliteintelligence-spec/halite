@@ -1,9 +1,11 @@
 import { ConsumerPanel } from '@/components/intelligence/ConsumerPanel'
+import { getAnalytics } from '@/lib/api'
 
 interface Props { params: Promise<{ slug: string }> }
 
-export default async function ConsumersPage({ params }: Props) {
-  const { slug } = await params
+export default async function ConsumersPage({ params: _ }: Props) {
+  const analytics = await getAnalytics()
+
   return (
     <div className="px-7 py-6">
       <div className="mb-6">
@@ -15,7 +17,15 @@ export default async function ConsumersPage({ params }: Props) {
           Deep consumer demographics, skin tone distribution & behaviour patterns
         </p>
       </div>
-      <ConsumerPanel />
+      {analytics ? (
+        <ConsumerPanel
+          consumers={analytics.consumers}
+          checkIns={analytics.checkIns}
+          totalConsumers={analytics.summary.totalConsumers}
+        />
+      ) : (
+        <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load consumer data.</p>
+      )}
     </div>
   )
 }
