@@ -201,6 +201,48 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Brand Admin: get API key ──────────────────────────────────────
+  server.get(
+    '/:brandId/api-key',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { apiKey: true } })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      return { apiKey: brand.apiKey }
+    }
+  )
+
+  // ── Brand Admin: get quiz config ──────────────────────────────────
+  server.get(
+    '/:brandId/quiz-config',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const config = await prisma.quizConfig.findUnique({ where: { brandId } })
+      return { config }
+    }
+  )
+
+  // ── Brand Admin: upsert quiz config ───────────────────────────────
+  server.put(
+    '/:brandId/quiz-config',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        enabledAreas: z.array(z.enum(['SKINCARE', 'BODY', 'HAIR', 'MAKEUP', 'FRAGRANCE', 'NAILS', 'WELLNESS', 'SUN_CARE', 'LIP_CARE', 'EYE_CARE'])),
+      })
+      const { enabledAreas } = schema.parse(request.body)
+      const config = await prisma.quizConfig.upsert({
+        where: { brandId },
+        update: { enabledAreas },
+        create: { brandId, enabledAreas },
+      })
+      return { config }
+    }
+  )
+
   // ── Brand Admin: trigger embedding run for all products ───────────
   server.post(
     '/:brandId/products/embed',

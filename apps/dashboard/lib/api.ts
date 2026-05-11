@@ -94,6 +94,31 @@ export async function getTokenAndBrandId(): Promise<{ token: string; brandId: st
   return { token, brandId: payload.brandId }
 }
 
+export interface WidgetConfig {
+  apiKey: string
+  primaryColor: string | null
+  quizConfig: { enabledAreas: string[] } | null
+}
+
+export async function getWidgetConfig(): Promise<WidgetConfig | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  const [keyData, configData, profileData] = await Promise.all([
+    apiFetch<{ apiKey: string }>(`/brands/${payload.brandId}/api-key`, token),
+    apiFetch<{ config: { enabledAreas: string[] } | null }>(`/brands/${payload.brandId}/quiz-config`, token),
+    apiFetch<{ brand: BrandProfile }>(`/brands/${payload.brandId}/profile`, token),
+  ])
+  if (!keyData) return null
+  return {
+    apiKey: keyData.apiKey,
+    primaryColor: profileData?.brand.primaryColor ?? null,
+    quizConfig: configData?.config ?? null,
+  }
+}
+
 export async function getAnalytics(): Promise<AnalyticsData | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value
