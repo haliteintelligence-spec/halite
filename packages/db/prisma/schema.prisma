@@ -354,6 +354,10 @@ model UserBeautyProfile {
   lipProfile       Json?
   eyeProfile       Json?
 
+  // ── AI Progress Narrative ──────────────────
+  progressNarrative   String?
+  narrativeUpdatedAt  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

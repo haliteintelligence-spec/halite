@@ -26,17 +26,18 @@ export class ProgressController {
   async start() {
     this.renderLoading()
     try {
-      const [checkIns, routine] = await Promise.all([
+      const [checkIns, routine, narrativeRes] = await Promise.all([
         this.api.getCheckIns(),
         this.api.getRoutine(),
+        this.api.getNarrative(),
       ])
-      this.renderDashboard(checkIns, routine)
+      this.renderDashboard(checkIns, routine, narrativeRes.narrative, narrativeRes.checkInsRequired)
     } catch {
       this.renderError()
     }
   }
 
-  private renderDashboard(checkIns: CheckIn[], routine: Routine | null) {
+  private renderDashboard(checkIns: CheckIn[], routine: Routine | null, narrative: string | null, checkInsRequired?: number) {
     this.setProgress(1)
     this.setBack(null)
 
@@ -65,6 +66,35 @@ export class ProgressController {
     statRow.appendChild(statTile('Average', avg.toFixed(1) + '/5', '#888'))
     statRow.appendChild(statTile('Streak', `🔥 ${streak}`, '#C17A47'))
     el.appendChild(statRow)
+
+    // ── AI Narrative ──────────────────────────────────────────────────
+    if (narrative) {
+      const narrativeCard = document.createElement('div')
+      narrativeCard.style.cssText = 'background:linear-gradient(135deg,#fdf6f0,#faf4ee);border:1.5px solid #f0e4d7;border-radius:16px;padding:16px;'
+      const narrativeHeader = document.createElement('div')
+      narrativeHeader.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:10px;'
+      narrativeHeader.innerHTML = `
+        <span style="font-size:13px;">✦</span>
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#C17A47;">AI Progress Report</span>
+      `
+      narrativeCard.appendChild(narrativeHeader)
+      const paragraphs = narrative.split('\n\n').filter(Boolean)
+      paragraphs.forEach(para => {
+        const p = document.createElement('p')
+        p.style.cssText = 'font-size:13px;color:#4a3728;line-height:1.6;margin:0 0 8px;'
+        p.textContent = para.trim()
+        narrativeCard.appendChild(p)
+      })
+      el.appendChild(narrativeCard)
+    } else if (checkInsRequired && checkInsRequired > 0) {
+      const teaser = document.createElement('div')
+      teaser.style.cssText = 'background:#fafafa;border:1.5px dashed #e8e8e8;border-radius:16px;padding:16px;text-align:center;'
+      teaser.innerHTML = `
+        <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin:0 0 4px;">AI Progress Report</p>
+        <p style="font-size:12px;color:#aaa;margin:0;">${checkInsRequired} more check-in${checkInsRequired !== 1 ? 's' : ''} to unlock your personalised AI analysis</p>
+      `
+      el.appendChild(teaser)
+    }
 
     // ── Sparkline ─────────────────────────────────────────────────────
     if (ratings.length > 1) {

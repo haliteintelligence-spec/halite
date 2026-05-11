@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@halite/db'
 import { requireBrandAdmin, requireEndUser } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
+import { generateProgressNarrative, shouldGenerateNarrative } from '../lib/narrative-generator.js'
 
 export async function endUserRoutes(server: FastifyInstance) {
   // Brand admin: list end users
@@ -94,6 +95,11 @@ export async function endUserRoutes(server: FastifyInstance) {
         include: { products: true },
       })
 
+      // Async narrative generation — non-blocking
+      shouldGenerateNarrative(userId).then(should => {
+        if (should) generateProgressNarrative(userId, brandId).catch(console.error)
+      })
+
       return reply.status(201).send({ checkIn })
     }
   )
@@ -136,6 +142,36 @@ export async function endUserRoutes(server: FastifyInstance) {
       })
       if (!routine) throw new ApiError(404, 'No active routine found')
       return { routine }
+    }
+  )
+
+  // End user: get AI progress narrative
+  server.get(
+    '/:brandId/me/narrative',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+      const { brandId } = request.params as { brandId: string }
+
+      const profile = await prisma.userBeautyProfile.findUnique({
+        where: { endUserId: userId },
+        select: { progressNarrative: true, narrativeUpdatedAt: true },
+      })
+
+      if (!profile?.progressNarrative) {
+        const count = await prisma.checkIn.count({ where: { endUserId: userId } })
+        if (count >= 4) {
+          await generateProgressNarrative(userId, brandId)
+          const updated = await prisma.userBeautyProfile.findUnique({
+            where: { endUserId: userId },
+            select: { progressNarrative: true, narrativeUpdatedAt: true },
+          })
+          return { narrative: updated?.progressNarrative ?? null, generatedAt: updated?.narrativeUpdatedAt ?? null }
+        }
+        return { narrative: null, generatedAt: null, checkInsRequired: Math.max(0, 4 - count) }
+      }
+
+      return { narrative: profile.progressNarrative, generatedAt: profile.narrativeUpdatedAt }
     }
   )
 }

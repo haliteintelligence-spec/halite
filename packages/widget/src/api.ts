@@ -137,6 +137,12 @@ export class HaliteApi {
     } catch { return [] }
   }
 
+  async getNarrative(): Promise<{ narrative: string | null; checkInsRequired?: number }> {
+    try {
+      return await this.get(`/brands/${this.brandId}/me/narrative`)
+    } catch { return { narrative: null } }
+  }
+
   private async get<T>(path: string): Promise<T> {
     const res = await fetch(`${this.apiUrl}${path}`, {
       headers: { Authorization: `Bearer ${this.token}` },

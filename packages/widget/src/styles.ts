@@ -247,6 +247,12 @@ export function getStyles(accent: string): string {
     }
     .hlw-success-title { font-size: 17px; font-weight: 600; color: #1a1a1a; }
     .hlw-success-sub { font-size: 13px; color: #888; max-width: 260px; }
+    .hlw-narrative-card {
+      background: linear-gradient(135deg, #fdf6f0, #faf4ee);
+      border: 1.5px solid #f0e4d7;
+      border-radius: 16px;
+      padding: 16px;
+    }
     .hlw-streak {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 6px 14px; border-radius: 100px;
