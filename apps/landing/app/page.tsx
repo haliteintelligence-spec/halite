@@ -805,9 +805,6 @@ export default function Landing() {
             <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.3)' }}>
               © 2026 Halite Intelligence. All rights reserved.
             </p>
-            <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.2)' }}>
-              Built with Claude ✦
-            </p>
           </div>
         </div>
       </footer>
