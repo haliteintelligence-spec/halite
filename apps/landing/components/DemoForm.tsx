@@ -13,7 +13,7 @@ const INTERESTS = [
 ]
 
 export function DemoForm() {
-  const [state, setState] = useState({ name: '', brand: '', email: '', website: '', message: '' })
+  const [state, setState] = useState({ name: '', brand: '', email: '', phone: '', website: '', message: '' })
   const [interests, setInterests] = useState<string[]>([])
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -89,14 +89,25 @@ export function DemoForm() {
         className={field}
         style={fieldStyle}
       />
-      <input
-        type="url"
-        placeholder="Website (optional)"
-        value={state.website}
-        onChange={e => setState(s => ({ ...s, website: e.target.value }))}
-        className={field}
-        style={fieldStyle}
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          required
+          type="tel"
+          placeholder="Phone number"
+          value={state.phone}
+          onChange={e => setState(s => ({ ...s, phone: e.target.value }))}
+          className={field}
+          style={fieldStyle}
+        />
+        <input
+          type="url"
+          placeholder="Website (optional)"
+          value={state.website}
+          onChange={e => setState(s => ({ ...s, website: e.target.value }))}
+          className={field}
+          style={fieldStyle}
+        />
+      </div>
 
       {/* Interests */}
       <div>

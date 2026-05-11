@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: Request) {
-  const { name, brand, email, website, interests, message } = await request.json()
+  const { name, brand, email, phone, website, interests, message } = await request.json()
 
   try {
     await resend.emails.send({
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
             <tr><td style="padding:8px 0;color:#8B6575;width:120px">Name</td><td style="padding:8px 0;font-weight:600">${name}</td></tr>
             <tr><td style="padding:8px 0;color:#8B6575">Brand</td><td style="padding:8px 0;font-weight:600">${brand}</td></tr>
             <tr><td style="padding:8px 0;color:#8B6575">Email</td><td style="padding:8px 0"><a href="mailto:${email}" style="color:#450F2A">${email}</a></td></tr>
+            <tr><td style="padding:8px 0;color:#8B6575">Phone</td><td style="padding:8px 0">${phone}</td></tr>
             <tr><td style="padding:8px 0;color:#8B6575">Website</td><td style="padding:8px 0">${website || '—'}</td></tr>
           </table>
           <div style="margin-top:20px">

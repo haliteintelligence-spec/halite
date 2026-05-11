@@ -123,6 +123,7 @@ export default function Landing() {
                 src={PHOTOS.hero}
                 alt="Editorial beauty portrait"
                 fill
+                sizes="(max-width: 1024px) 0vw, 45vw"
                 className="object-cover object-top"
                 priority
               />
@@ -293,7 +294,7 @@ export default function Landing() {
           {/* Feature 1: Routine Engine */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
             <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.routine} alt="Personalized skin routine" fill className="object-cover" />
+              <Image src={PHOTOS.routine} alt="Personalized skin routine" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
               <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.15)' }} />
             </div>
             <div>
@@ -345,7 +346,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="order-1 lg:order-2 relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.tracking} alt="Outcome tracking on mobile" fill className="object-cover" />
+              <Image src={PHOTOS.tracking} alt="Outcome tracking on mobile" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
               <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.1)' }} />
             </div>
           </div>
@@ -353,7 +354,7 @@ export default function Landing() {
           {/* Feature 3: Brand Intelligence */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.dashboard} alt="Brand intelligence dashboard" fill className="object-cover" />
+              <Image src={PHOTOS.dashboard} alt="Brand intelligence dashboard" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
               <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.2)' }} />
               {/* Overlay card */}
               <div
@@ -565,6 +566,7 @@ export default function Landing() {
             src={PHOTOS.inclusion}
             alt="Diverse skin tones"
             fill
+            sizes="100vw"
             className="object-cover object-center"
           />
           <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.78)' }} />
