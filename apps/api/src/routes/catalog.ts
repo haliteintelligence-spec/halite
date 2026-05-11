@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { prisma, CatalogFormat } from '@halite/db'
+import { prisma, CatalogFormat, ProductCategory, SkinConcern, SkinType } from '@halite/db'
 import { requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { uploadToS3, getPresignedUrl } from '../lib/storage.js'
@@ -108,6 +108,95 @@ export async function catalogRoutes(server: FastifyInstance) {
       ])
 
       return { products, total, page, pages: Math.ceil(total / limit) }
+    }
+  )
+
+  // ── Create product manually ───────────────────────────────────────
+  server.post(
+    '/:brandId/products',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        category: z.nativeEnum(ProductCategory),
+        concerns: z.array(z.nativeEnum(SkinConcern)).default([]),
+        skinTypes: z.array(z.nativeEnum(SkinType)).default([]),
+        fitzpatrickTypes: z.array(z.number().int().min(1).max(6)).default([]),
+        ingredients: z.array(z.string()).default([]),
+        keyIngredients: z.array(z.string()).default([]),
+        price: z.number().min(0),
+        currency: z.string().default('USD'),
+        imageUrl: z.string().url().optional(),
+        productUrl: z.string().url().optional(),
+        externalId: z.string().optional(),
+        inStock: z.boolean().default(true),
+      })
+      const d = schema.parse(request.body)
+      const product = await prisma.product.create({
+        data: {
+          brandId,
+          name: d.name,
+          description: d.description ?? null,
+          category: d.category,
+          concerns: d.concerns,
+          skinTypes: d.skinTypes,
+          fitzpatrickTypes: d.fitzpatrickTypes,
+          ingredients: d.ingredients,
+          keyIngredients: d.keyIngredients,
+          price: d.price,
+          currency: d.currency,
+          imageUrl: d.imageUrl ?? null,
+          productUrl: d.productUrl ?? null,
+          externalId: d.externalId ?? null,
+          inStock: d.inStock,
+        },
+      })
+      return reply.status(201).send({ product })
+    }
+  )
+
+  // ── Update product ────────────────────────────────────────────────
+  server.patch(
+    '/:brandId/products/:productId',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, productId } = request.params as { brandId: string; productId: string }
+      const schema = z.object({
+        name: z.string().min(1).optional(),
+        description: z.string().nullable().optional(),
+        category: z.nativeEnum(ProductCategory).optional(),
+        concerns: z.array(z.nativeEnum(SkinConcern)).optional(),
+        skinTypes: z.array(z.nativeEnum(SkinType)).optional(),
+        fitzpatrickTypes: z.array(z.number().int().min(1).max(6)).optional(),
+        ingredients: z.array(z.string()).optional(),
+        keyIngredients: z.array(z.string()).optional(),
+        price: z.number().min(0).optional(),
+        currency: z.string().optional(),
+        imageUrl: z.string().url().nullable().optional(),
+        productUrl: z.string().url().nullable().optional(),
+        inStock: z.boolean().optional(),
+      })
+      const parsed = schema.parse(request.body)
+      const data = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined))
+      const existing = await prisma.product.findFirst({ where: { id: productId, brandId } })
+      if (!existing) throw new ApiError(404, 'Product not found')
+      const product = await prisma.product.update({ where: { id: productId }, data })
+      return { product }
+    }
+  )
+
+  // ── Delete product ────────────────────────────────────────────────
+  server.delete(
+    '/:brandId/products/:productId',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId, productId } = request.params as { brandId: string; productId: string }
+      const existing = await prisma.product.findFirst({ where: { id: productId, brandId } })
+      if (!existing) throw new ApiError(404, 'Product not found')
+      await prisma.product.delete({ where: { id: productId } })
+      return reply.status(204).send()
     }
   )
 

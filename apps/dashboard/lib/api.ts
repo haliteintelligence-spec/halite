@@ -119,6 +119,61 @@ export async function getWidgetConfig(): Promise<WidgetConfig | null> {
   }
 }
 
+export interface Product {
+  id: string
+  brandId: string
+  name: string
+  description: string | null
+  category: string
+  price: number
+  currency: string
+  imageUrl: string | null
+  productUrl: string | null
+  inStock: boolean
+  concerns: string[]
+  skinTypes: string[]
+  keyIngredients: string[]
+  ingredients: string[]
+  fitzpatrickTypes: number[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProductsResponse {
+  products: Product[]
+  total: number
+  page: number
+  pages: number
+}
+
+export interface UploadRecord {
+  id: string
+  fileName: string
+  format: string
+  status: string
+  createdAt: string
+  errorLog: unknown
+}
+
+export async function getProducts(page = 1): Promise<ProductsResponse | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  return apiFetch<ProductsResponse>(`/brands/${payload.brandId}/products?page=${page}&limit=50`, token)
+}
+
+export async function getUploadHistory(): Promise<UploadRecord[] | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  const data = await apiFetch<{ uploads: UploadRecord[] }>(`/brands/${payload.brandId}/catalog/uploads`, token)
+  return data?.uploads ?? null
+}
+
 export async function getAnalytics(): Promise<AnalyticsData | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value

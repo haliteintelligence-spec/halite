@@ -11,6 +11,7 @@ import {
   BarChart3,
   Sparkles,
   Package,
+  BookOpen,
   LogOut,
   Settings,
 } from 'lucide-react'
@@ -23,6 +24,7 @@ const nav = [
   { href: '/ingredients',  label: 'Ingredients',   icon: FlaskConical, section: 'Intelligence' },
   { href: '/market',       label: 'Market',        icon: TrendingUp,   section: 'Intelligence' },
   { href: '/benchmarking', label: 'Benchmarking',  icon: BarChart3,    section: 'Intelligence' },
+  { href: '/catalog',      label: 'Catalog',       icon: BookOpen,     section: 'Catalog' },
   { href: '/ai-lab',       label: 'AI Lab',        icon: Sparkles,     section: 'Lab' },
   { href: '/settings',     label: 'Settings',      icon: Settings,     section: 'Settings' },
 ]
@@ -34,6 +36,7 @@ export function SideNav({ slug }: { slug: string }) {
 
   const overview = nav.filter(n => !n.section)
   const intelligence = nav.filter(n => n.section === 'Intelligence')
+  const catalog = nav.filter(n => n.section === 'Catalog')
   const lab = nav.filter(n => n.section === 'Lab')
   const settings = nav.filter(n => n.section === 'Settings')
 
@@ -89,6 +92,15 @@ export function SideNav({ slug }: { slug: string }) {
           </p>
           <div className="space-y-0.5">
             {intelligence.map(item => <NavItem key={item.href} {...item} />)}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30 px-3 mb-2">
+            Catalog
+          </p>
+          <div className="space-y-0.5">
+            {catalog.map(item => <NavItem key={item.href} {...item} />)}
           </div>
         </div>
 
