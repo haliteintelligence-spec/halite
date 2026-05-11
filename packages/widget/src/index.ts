@@ -2,6 +2,7 @@ import { HaliteApi } from './api'
 import { QuizController } from './quiz'
 import { CheckInController } from './checkin'
 import { ProgressController } from './progress'
+import { ReorderController } from './reorder'
 import { getStyles } from './styles'
 
 interface HaliteWidgetConfig {
@@ -12,7 +13,7 @@ interface HaliteWidgetConfig {
 
 class HaliteWidgetInstance {
   private api: HaliteApi
-  private controller!: QuizController | CheckInController | ProgressController
+  private controller!: QuizController | CheckInController | ProgressController | ReorderController
   private overlay: HTMLElement | null = null
   private body: HTMLElement | null = null
   private progress: HTMLElement | null = null
@@ -33,7 +34,7 @@ class HaliteWidgetInstance {
     document.head.appendChild(style)
   }
 
-  open(mode: 'quiz' | 'checkin' | 'progress' = 'quiz') {
+  open(mode: 'quiz' | 'checkin' | 'progress' | 'reorder' = 'quiz') {
     if (this.overlay) return
     this.overlay = this.buildModal()
     document.body.appendChild(this.overlay)
@@ -47,13 +48,15 @@ class HaliteWidgetInstance {
       this.controller = new CheckInController(this.api, renderFn, progressFn, backFn)
     } else if (mode === 'progress') {
       this.controller = new ProgressController(this.api, renderFn, progressFn, backFn)
+    } else if (mode === 'reorder') {
+      this.controller = new ReorderController(this.api, renderFn, progressFn, backFn)
     } else {
       this.controller = new QuizController(this.api, renderFn, progressFn, backFn)
     }
 
     this.api.init()
       .then(() => this.controller.start())
-      .catch(() => (this.controller as ProgressController).renderLoading('Connecting…'))
+      .catch(() => (this.controller as any).renderLoading?.('Connecting…'))
   }
 
   private buildModal(): HTMLElement {
@@ -196,6 +199,11 @@ function init(config: HaliteWidgetConfig) {
       if (el.dataset.hlwBound) return
       el.dataset.hlwBound = '1'
       el.addEventListener('click', () => instance.open('progress'))
+    })
+    document.querySelectorAll<HTMLElement>('[data-halite-reorder]').forEach(el => {
+      if (el.dataset.hlwBound) return
+      el.dataset.hlwBound = '1'
+      el.addEventListener('click', () => instance.open('reorder'))
     })
   }
 

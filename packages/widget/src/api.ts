@@ -1,4 +1,4 @@
-import type { QuizQuestion, QuizOption, Routine, CheckIn } from './types'
+import type { QuizQuestion, QuizOption, Routine, CheckIn, ReorderItem } from './types'
 
 interface RawFlow {
   areaSelector: { question: string; options: QuizOption[] }
@@ -141,6 +141,13 @@ export class HaliteApi {
     try {
       return await this.get(`/brands/${this.brandId}/me/narrative`)
     } catch { return { narrative: null } }
+  }
+
+  async getReorderItems(): Promise<ReorderItem[]> {
+    try {
+      const res = await this.get<{ items: ReorderItem[] }>(`/brands/${this.brandId}/me/reorder`)
+      return res.items
+    } catch { return [] }
   }
 
   private async get<T>(path: string): Promise<T> {

@@ -58,6 +58,22 @@ export interface CheckIn {
   products: CheckInProduct[]
 }
 
+export interface ReorderItem {
+  product: {
+    id: string
+    name: string
+    price: number
+    currency: string
+    imageUrl?: string | null
+    productUrl?: string | null
+    category: string
+  }
+  routineArea: string
+  reorderDue: string | null
+  daysUntil: number | null
+  urgency: 'overdue' | 'soon' | 'upcoming' | 'none'
+}
+
 export interface WidgetConfig {
   apiKey: string
   apiUrl: string

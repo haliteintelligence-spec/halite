@@ -212,13 +212,31 @@ async function main() {
     },
   ]
 
+  const slugMap: Record<string, string> = {
+    'demo-001': 'vitamin-c-brightening-serum',
+    'demo-002': 'niacinamide-10-zinc-pore-minimiser',
+    'demo-003': 'hyaluronic-acid-deep-hydration-serum',
+    'demo-004': 'spf-50-invisible-daily-moisturiser',
+    'demo-005': 'barrier-repair-ceramide-moisturiser',
+    'demo-006': 'retinol-0-3-renewal-serum',
+    'demo-007': 'aha-bha-exfoliating-toner-10',
+    'demo-008': 'gentle-micellar-gel-cleanser',
+    'demo-009': 'centella-calming-ampoule',
+    'demo-010': 'deep-hydration-hair-mask',
+    'demo-011': 'scalp-detox-charcoal-shampoo',
+    'demo-012': 'body-glow-nourishing-lotion',
+  }
+  const BASE_URL = 'https://demo.haliteintelligence.com/products'
+
   for (const p of products) {
+    const productUrl = slugMap[p.externalId] ? `${BASE_URL}/${slugMap[p.externalId]}` : null
     await prisma.product.upsert({
       where: { brandId_externalId: { brandId: demoBrand.id, externalId: p.externalId } },
-      update: { name: p.name, description: p.description, price: p.price },
+      update: { name: p.name, description: p.description, price: p.price, productUrl },
       create: {
         brandId: demoBrand.id,
         ...p,
+        productUrl,
         category: p.category as any,
         beautyArea: p.beautyArea as any,
         concerns: p.concerns as any,

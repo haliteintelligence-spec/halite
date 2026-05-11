@@ -174,4 +174,55 @@ export async function endUserRoutes(server: FastifyInstance) {
       return { narrative: profile.progressNarrative, generatedAt: profile.narrativeUpdatedAt }
     }
   )
+
+  // End user: get reorder reminders (routines due within 14 days)
+  server.get(
+    '/:brandId/me/reorder',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+      const windowDays = 14
+      const windowDate = new Date(Date.now() + windowDays * 24 * 60 * 60 * 1000)
+
+      const routines = await prisma.routine.findMany({
+        where: {
+          endUserId: userId,
+          activeTo: null,
+          reorderDue: { lte: windowDate },
+        },
+        include: {
+          steps: {
+            include: {
+              product: {
+                select: {
+                  id: true, name: true, price: true, currency: true,
+                  imageUrl: true, productUrl: true, category: true,
+                },
+              },
+            },
+            orderBy: [{ timeOfDay: 'asc' }, { step: 'asc' }],
+          },
+        },
+        orderBy: { reorderDue: 'asc' },
+      })
+
+      const items = routines.flatMap(r => {
+        const daysUntil = r.reorderDue
+          ? Math.ceil((r.reorderDue.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+          : null
+        const seen = new Set<string>()
+        return r.steps
+          .filter(s => { if (seen.has(s.productId)) return false; seen.add(s.productId); return true })
+          .map(s => ({
+            product: s.product,
+            routineArea: r.focusArea,
+            reorderDue: r.reorderDue,
+            daysUntil,
+            urgency: daysUntil === null ? 'none' : daysUntil <= 0 ? 'overdue' : daysUntil <= 7 ? 'soon' : 'upcoming',
+          }))
+      })
+
+      return { items, count: items.length }
+    }
+  )
 }
