@@ -60,6 +60,7 @@ export interface BrandProfile {
   logoUrl: string | null
   primaryColor: string | null
   focusAreas: string[]
+  shopifyShop: string | null
   createdAt: string
 }
 
@@ -161,6 +162,24 @@ export interface TeamMember {
   email: string
   role: 'OWNER' | 'MEMBER'
   createdAt: string
+}
+
+export interface IntegrationStatus {
+  shopify: {
+    connected: boolean
+    shop: string | null
+    lastSync: string | null
+    lastSyncCount: number | null
+  }
+}
+
+export async function getIntegrations(): Promise<IntegrationStatus | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  return apiFetch<IntegrationStatus>(`/brands/${payload.brandId}/integrations`, token)
 }
 
 export async function getTeam(): Promise<TeamMember[] | null> {

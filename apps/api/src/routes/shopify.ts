@@ -61,7 +61,8 @@ export async function shopifyRoutes(server: FastifyInstance) {
     await triggerShopifyProductSync(brandId, shop!, access_token)
 
     const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { slug: true } })
-    return reply.redirect(`https://${brand!.slug}.haliteintelligence.com/settings/shopify?connected=true`)
+    const dashboardUrl = process.env.DASHBOARD_URL ?? 'http://localhost:3002'
+    return reply.redirect(`${dashboardUrl}/${brand!.slug}/settings/integrations?connected=true`)
   })
 
   // ── Shopify Webhooks ─────────────────────────────────────────────────

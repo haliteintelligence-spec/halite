@@ -167,7 +167,7 @@ export async function brandRoutes(server: FastifyInstance) {
       const parsed = schema.parse(request.body)
       const data = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined))
       const brand = await prisma.brand.update({ where: { id: brandId }, data })
-      const { shopifyToken, apiKey, ...safe } = brand
+      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
       return { brand: safe }
     }
   )
@@ -183,9 +183,53 @@ export async function brandRoutes(server: FastifyInstance) {
         include: { _count: { select: { endUsers: true, products: true } } },
       })
       if (!brand) throw new ApiError(404, 'Brand not found')
-      // Omit sensitive fields
-      const { shopifyToken, apiKey, ...safe } = brand
+      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
       return { brand: safe }
+    }
+  )
+
+  // ── Brand Admin: get integrations status ──────────────────────────
+  server.get(
+    '/:brandId/integrations',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        select: { shopifyShop: true },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+
+      const lastSync = brand.shopifyShop
+        ? await prisma.catalogUpload.findFirst({
+            where: { brandId, format: 'SHOPIFY_SYNC', status: 'DONE' },
+            orderBy: { processedAt: 'desc' },
+            select: { processedAt: true, rowCount: true },
+          })
+        : null
+
+      return {
+        shopify: {
+          connected: !!brand.shopifyShop,
+          shop: brand.shopifyShop ?? null,
+          lastSync: lastSync?.processedAt ?? null,
+          lastSyncCount: lastSync?.rowCount ?? null,
+        },
+      }
+    }
+  )
+
+  // ── Brand Admin: disconnect Shopify ───────────────────────────────
+  server.delete(
+    '/:brandId/shopify',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+      await prisma.brand.update({
+        where: { id: brandId },
+        data: { shopifyShop: null, shopifyToken: null, shopifyWebhookSecret: null },
+      })
+      return reply.status(204).send()
     }
   )
 
