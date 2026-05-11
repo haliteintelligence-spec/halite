@@ -12,6 +12,7 @@ import {
   Sparkles,
   Package,
   LogOut,
+  Settings,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -23,6 +24,7 @@ const nav = [
   { href: '/market',       label: 'Market',        icon: TrendingUp,   section: 'Intelligence' },
   { href: '/benchmarking', label: 'Benchmarking',  icon: BarChart3,    section: 'Intelligence' },
   { href: '/ai-lab',       label: 'AI Lab',        icon: Sparkles,     section: 'Lab' },
+  { href: '/settings',     label: 'Settings',      icon: Settings,     section: 'Settings' },
 ]
 
 export function SideNav({ slug }: { slug: string }) {
@@ -33,6 +35,7 @@ export function SideNav({ slug }: { slug: string }) {
   const overview = nav.filter(n => !n.section)
   const intelligence = nav.filter(n => n.section === 'Intelligence')
   const lab = nav.filter(n => n.section === 'Lab')
+  const settings = nav.filter(n => n.section === 'Settings')
 
   function handleLogout() {
     document.cookie = 'halite_token=; path=/; max-age=0'
@@ -47,9 +50,7 @@ export function SideNav({ slug }: { slug: string }) {
         href={to}
         className={clsx(
           'group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all',
-          active
-            ? 'text-white'
-            : 'text-ink-3 hover:text-white/80'
+          active ? 'text-white' : 'text-ink-3 hover:text-white/80'
         )}
         style={active ? { background: 'var(--clay)', color: 'white' } : {}}
       >
@@ -97,6 +98,15 @@ export function SideNav({ slug }: { slug: string }) {
           </p>
           <div className="space-y-0.5">
             {lab.map(item => <NavItem key={item.href} {...item} />)}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30 px-3 mb-2">
+            Admin
+          </p>
+          <div className="space-y-0.5">
+            {settings.map(item => <NavItem key={item.href} {...item} />)}
           </div>
         </div>
       </nav>

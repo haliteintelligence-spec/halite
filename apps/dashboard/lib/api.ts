@@ -51,6 +51,49 @@ async function apiFetch<T>(path: string, token: string): Promise<T | null> {
   } catch { return null }
 }
 
+export interface BrandProfile {
+  id: string
+  name: string
+  slug: string
+  plan: string
+  active: boolean
+  logoUrl: string | null
+  primaryColor: string | null
+  focusAreas: string[]
+  createdAt: string
+}
+
+async function apiFetchMutate<T>(path: string, token: string, method: string, body?: unknown): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    if (!res.ok) return null
+    return res.json() as Promise<T>
+  } catch { return null }
+}
+
+export async function getBrandProfile(): Promise<BrandProfile | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  const data = await apiFetch<{ brand: BrandProfile }>(`/brands/${payload.brandId}/profile`, token)
+  return data?.brand ?? null
+}
+
+export async function getTokenAndBrandId(): Promise<{ token: string; brandId: string } | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  return { token, brandId: payload.brandId }
+}
+
 export async function getAnalytics(): Promise<AnalyticsData | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value

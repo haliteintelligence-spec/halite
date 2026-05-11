@@ -151,6 +151,26 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Brand Admin: update own brand profile ────────────────────────
+  server.patch(
+    '/:brandId/profile',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        name: z.string().min(2).optional(),
+        logoUrl: z.string().url().optional().nullable(),
+        primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        focusAreas: z.array(z.enum(['SKINCARE', 'BODY', 'HAIR', 'MAKEUP', 'FRAGRANCE', 'NAILS', 'WELLNESS', 'SUN_CARE', 'LIP_CARE', 'EYE_CARE'])).optional(),
+      })
+      const parsed = schema.parse(request.body)
+      const data = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined))
+      const brand = await prisma.brand.update({ where: { id: brandId }, data })
+      const { shopifyToken, apiKey, ...safe } = brand
+      return { brand: safe }
+    }
+  )
+
   // ── Brand Admin: get own brand profile ────────────────────────────
   server.get(
     '/:brandId/profile',
