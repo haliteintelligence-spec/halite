@@ -1,6 +1,7 @@
 import { HaliteApi } from './api'
 import { QuizController } from './quiz'
 import { CheckInController } from './checkin'
+import { ProgressController } from './progress'
 import { getStyles } from './styles'
 
 interface HaliteWidgetConfig {
@@ -11,7 +12,7 @@ interface HaliteWidgetConfig {
 
 class HaliteWidgetInstance {
   private api: HaliteApi
-  private controller!: QuizController | CheckInController
+  private controller!: QuizController | CheckInController | ProgressController
   private overlay: HTMLElement | null = null
   private body: HTMLElement | null = null
   private progress: HTMLElement | null = null
@@ -32,29 +33,27 @@ class HaliteWidgetInstance {
     document.head.appendChild(style)
   }
 
-  open(mode: 'quiz' | 'checkin' = 'quiz') {
+  open(mode: 'quiz' | 'checkin' | 'progress' = 'quiz') {
     if (this.overlay) return
     this.overlay = this.buildModal()
     document.body.appendChild(this.overlay)
     document.body.style.overflow = 'hidden'
 
-    this.controller = mode === 'checkin'
-      ? new CheckInController(
-          this.api,
-          (node) => this.renderBody(node),
-          (pct) => this.setProgress(pct),
-          (fn) => this.setBack(fn),
-        )
-      : new QuizController(
-          this.api,
-          (node) => this.renderBody(node),
-          (pct) => this.setProgress(pct),
-          (fn) => this.setBack(fn),
-        )
+    const renderFn = (node: HTMLElement) => this.renderBody(node)
+    const progressFn = (pct: number) => this.setProgress(pct)
+    const backFn = (fn: (() => void) | null) => this.setBack(fn)
+
+    if (mode === 'checkin') {
+      this.controller = new CheckInController(this.api, renderFn, progressFn, backFn)
+    } else if (mode === 'progress') {
+      this.controller = new ProgressController(this.api, renderFn, progressFn, backFn)
+    } else {
+      this.controller = new QuizController(this.api, renderFn, progressFn, backFn)
+    }
 
     this.api.init()
       .then(() => this.controller.start())
-      .catch(() => (this.controller as QuizController).renderLoading('Connecting…', 'Having trouble reaching the server.'))
+      .catch(() => (this.controller as ProgressController).renderLoading('Connecting…'))
   }
 
   private buildModal(): HTMLElement {
@@ -192,6 +191,11 @@ function init(config: HaliteWidgetConfig) {
       if (el.dataset.hlwBound) return
       el.dataset.hlwBound = '1'
       el.addEventListener('click', () => instance.open('checkin'))
+    })
+    document.querySelectorAll<HTMLElement>('[data-halite-progress]').forEach(el => {
+      if (el.dataset.hlwBound) return
+      el.dataset.hlwBound = '1'
+      el.addEventListener('click', () => instance.open('progress'))
     })
   }
 

@@ -36,7 +36,8 @@ export interface RoutineStep {
 
 export interface Routine {
   id: string
-  area: string
+  area?: string
+  focusArea: string
   steps: RoutineStep[]
 }
 
