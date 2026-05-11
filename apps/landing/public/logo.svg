@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="160" viewBox="0 0 480 160">
+  <rect width="480" height="160" fill="#450F2A" rx="20"/>
+  <text x="40" y="82" font-family="Georgia, serif" font-size="16" fill="#FAF6F0" opacity="0.6" letter-spacing="3">✦</text>
+  <text x="64" y="88" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="600" fill="#FAF6F0">Halite</text>
+  <text x="64" y="118" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="500" fill="#FAF6F0" letter-spacing="7" opacity="0.65">INTELLIGENCE</text>
+</svg>
