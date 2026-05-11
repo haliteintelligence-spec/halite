@@ -34,7 +34,7 @@ export interface AnalyticsData {
   }
 }
 
-export function decodeToken(token: string): { brandId?: string; role?: string } | null {
+export function decodeToken(token: string): { brandId?: string; adminId?: string; role?: string } | null {
   try {
     return JSON.parse(atob(token.split('.')[1]))
   } catch { return null }
@@ -85,13 +85,13 @@ export async function getBrandProfile(): Promise<BrandProfile | null> {
   return data?.brand ?? null
 }
 
-export async function getTokenAndBrandId(): Promise<{ token: string; brandId: string } | null> {
+export async function getTokenAndBrandId(): Promise<{ token: string; brandId: string; adminId: string } | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value
   if (!token) return null
   const payload = decodeToken(token)
-  if (!payload?.brandId) return null
-  return { token, brandId: payload.brandId }
+  if (!payload?.brandId || !payload?.adminId) return null
+  return { token, brandId: payload.brandId, adminId: payload.adminId }
 }
 
 export interface WidgetConfig {
@@ -153,6 +153,24 @@ export interface UploadRecord {
   status: string
   createdAt: string
   errorLog: unknown
+}
+
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: 'OWNER' | 'MEMBER'
+  createdAt: string
+}
+
+export async function getTeam(): Promise<TeamMember[] | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  const data = await apiFetch<{ admins: TeamMember[] }>(`/brands/${payload.brandId}/team`, token)
+  return data?.admins ?? null
 }
 
 export async function getProducts(page = 1): Promise<ProductsResponse | null> {

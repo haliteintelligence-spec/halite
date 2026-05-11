@@ -189,6 +189,108 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Brand Admin: list team members ───────────────────────────────
+  server.get(
+    '/:brandId/team',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const admins = await prisma.brandAdmin.findMany({
+        where: { brandId },
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      return { admins }
+    }
+  )
+
+  // ── Brand Admin: invite team member ──────────────────────────────
+  server.post(
+    '/:brandId/team/invite',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+      const caller = await prisma.brandAdmin.findFirst({
+        where: { id: request.brandAdmin!.adminId, brandId },
+      })
+      if (caller?.role !== 'OWNER') throw new ApiError(403, 'Only owners can invite members')
+
+      const schema = z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        password: z.string().min(8),
+        role: z.enum(['OWNER', 'MEMBER']).default('MEMBER'),
+      })
+      const data = schema.parse(request.body)
+
+      const existing = await prisma.brandAdmin.findUnique({ where: { email: data.email } })
+      if (existing) throw new ApiError(409, 'An admin with this email already exists')
+
+      const hashedPassword = await bcrypt.hash(data.password, 12)
+      const admin = await prisma.brandAdmin.create({
+        data: { brandId, name: data.name, email: data.email, password: hashedPassword, role: data.role },
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+      })
+      return reply.status(201).send({ admin })
+    }
+  )
+
+  // ── Brand Admin (OWNER): change member role ───────────────────────
+  server.patch(
+    '/:brandId/team/:adminId',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, adminId } = request.params as { brandId: string; adminId: string }
+      const caller = await prisma.brandAdmin.findFirst({
+        where: { id: request.brandAdmin!.adminId, brandId },
+      })
+      if (caller?.role !== 'OWNER') throw new ApiError(403, 'Only owners can change roles')
+      if (adminId === request.brandAdmin!.adminId) throw new ApiError(400, 'Cannot change your own role')
+
+      const { role } = z.object({ role: z.enum(['OWNER', 'MEMBER']) }).parse(request.body)
+
+      if (role === 'MEMBER') {
+        const ownerCount = await prisma.brandAdmin.count({ where: { brandId, role: 'OWNER' } })
+        if (ownerCount <= 1) throw new ApiError(400, 'Cannot demote the last owner')
+      }
+
+      const target = await prisma.brandAdmin.findFirst({ where: { id: adminId, brandId } })
+      if (!target) throw new ApiError(404, 'Member not found')
+
+      const admin = await prisma.brandAdmin.update({
+        where: { id: adminId },
+        data: { role },
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+      })
+      return { admin }
+    }
+  )
+
+  // ── Brand Admin (OWNER): remove team member ───────────────────────
+  server.delete(
+    '/:brandId/team/:adminId',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId, adminId } = request.params as { brandId: string; adminId: string }
+      const caller = await prisma.brandAdmin.findFirst({
+        where: { id: request.brandAdmin!.adminId, brandId },
+      })
+      if (caller?.role !== 'OWNER') throw new ApiError(403, 'Only owners can remove members')
+      if (adminId === request.brandAdmin!.adminId) throw new ApiError(400, 'Cannot remove yourself')
+
+      const target = await prisma.brandAdmin.findFirst({ where: { id: adminId, brandId } })
+      if (!target) throw new ApiError(404, 'Member not found')
+
+      if (target.role === 'OWNER') {
+        const ownerCount = await prisma.brandAdmin.count({ where: { brandId, role: 'OWNER' } })
+        if (ownerCount <= 1) throw new ApiError(400, 'Cannot remove the last owner')
+      }
+
+      await prisma.brandAdmin.delete({ where: { id: adminId } })
+      return reply.status(204).send()
+    }
+  )
+
   // ── Brand Admin: rotate API key ───────────────────────────────────
   server.post(
     '/:brandId/rotate-api-key',
