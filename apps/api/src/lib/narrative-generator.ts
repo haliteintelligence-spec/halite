@@ -33,7 +33,7 @@ export async function generateProgressNarrative(
   // Build stats for Claude
   const ratings = checkIns.map(c => c.skinRating)
   const avgRating = (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
-  const trend = ratings[0] > ratings[ratings.length - 1] ? 'improving' : ratings[0] < ratings[ratings.length - 1] ? 'declining' : 'stable'
+  const trend = ratings[0]! > ratings[ratings.length - 1]! ? 'improving' : ratings[0]! < ratings[ratings.length - 1]! ? 'declining' : 'stable'
   const compliance = Math.round((checkIns.filter(c => c.compliant).length / checkIns.length) * 100)
 
   const symptomCounts: Record<string, number> = {}
@@ -44,8 +44,8 @@ export async function generateProgressNarrative(
   const productReactions: Record<string, { name: string; pos: number; neg: number }> = {}
   checkIns.forEach(c => c.products.forEach(p => {
     if (!productReactions[p.productId]) productReactions[p.productId] = { name: p.product.name, pos: 0, neg: 0 }
-    if (p.reaction === 'POSITIVE') productReactions[p.productId].pos++
-    if (p.reaction === 'NEGATIVE') productReactions[p.productId].neg++
+    if (p.reaction === 'POSITIVE') productReactions[p.productId]!.pos++
+    if (p.reaction === 'NEGATIVE') productReactions[p.productId]!.neg++
   }))
 
   const bestProduct = Object.values(productReactions).sort((a, b) => b.pos - a.pos)[0]

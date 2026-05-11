@@ -18,7 +18,7 @@ export async function endUserRoutes(server: FastifyInstance) {
         prisma.endUser.findMany({
           where: { brandId },
           include: {
-            skinProfile: true,
+            beautyProfile: true,
             _count: { select: { checkIns: true, routines: true } },
           },
           orderBy: { createdAt: 'desc' },
@@ -41,7 +41,7 @@ export async function endUserRoutes(server: FastifyInstance) {
       const user = await prisma.endUser.findUnique({
         where: { id: userId },
         include: {
-          skinProfile: true,
+          beautyProfile: true,
           routines: {
             where: { activeTo: null },
             orderBy: { createdAt: 'desc' },
@@ -61,6 +61,7 @@ export async function endUserRoutes(server: FastifyInstance) {
     { preHandler: requireEndUser },
     async (request, reply) => {
       const userId = request.endUser!.userId
+      const { brandId } = request.params as { brandId: string }
       const schema = z.object({
         skinRating: z.number().int().min(1).max(5),
         symptoms: z.array(z.string()).default([]),
@@ -81,14 +82,14 @@ export async function endUserRoutes(server: FastifyInstance) {
           endUserId: userId,
           skinRating: data.skinRating,
           symptoms: data.symptoms as any,
-          notes: data.notes,
+          notes: data.notes ?? null,
           compliant: data.compliant,
-          photoUrl: data.photoUrl,
+          photoUrl: data.photoUrl ?? null,
           products: {
             create: data.products.map((p) => ({
               productId: p.productId,
               used: p.used,
-              reaction: p.reaction,
+              ...(p.reaction !== undefined ? { reaction: p.reaction } : {}),
             })),
           },
         },

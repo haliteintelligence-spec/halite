@@ -134,7 +134,7 @@ export async function generateRoutine(
             productId: s.productId,
             timeOfDay: (timings.includes(s.timeOfDay) ? s.timeOfDay : timings[0]!) as any,
             step: s.step ?? i + 1,
-            instruction: s.instruction,
+            instruction: s.instruction ?? null,
           })),
       },
     },

@@ -1,5 +1,5 @@
 import { parse } from 'csv-parse/sync'
-import { prisma, CatalogFormat, ProductCategory, SkinConcern, SkinType } from '@halite/db'
+import { prisma, Prisma, CatalogFormat, ProductCategory, SkinConcern, SkinType } from '@halite/db'
 
 interface RawProductRow {
   name: string
@@ -90,7 +90,7 @@ export async function processCatalogUpload(
         },
         update: {
           name: row.name,
-          description: row.description,
+          description: row.description ?? null,
           category: normalizeCategory(row.category),
           concerns: splitTags(row.concerns, VALID_CONCERNS) as SkinConcern[],
           skinTypes: splitTags(row.skin_types, VALID_SKIN_TYPES) as SkinType[],
@@ -99,15 +99,15 @@ export async function processCatalogUpload(
           keyIngredients: row.key_ingredients?.split(',').map((s) => s.trim()) ?? [],
           price,
           currency: row.currency ?? 'USD',
-          imageUrl: row.image_url,
-          productUrl: row.product_url,
+          imageUrl: row.image_url ?? null,
+          productUrl: row.product_url ?? null,
           inStock: row.in_stock !== 'false' && row.in_stock !== '0',
         },
         create: {
           brandId,
           externalId: row.external_id ?? row.name,
           name: row.name,
-          description: row.description,
+          description: row.description ?? null,
           category: normalizeCategory(row.category),
           concerns: splitTags(row.concerns, VALID_CONCERNS) as SkinConcern[],
           skinTypes: splitTags(row.skin_types, VALID_SKIN_TYPES) as SkinType[],
@@ -116,8 +116,8 @@ export async function processCatalogUpload(
           keyIngredients: row.key_ingredients?.split(',').map((s) => s.trim()) ?? [],
           price,
           currency: row.currency ?? 'USD',
-          imageUrl: row.image_url,
-          productUrl: row.product_url,
+          imageUrl: row.image_url ?? null,
+          productUrl: row.product_url ?? null,
           inStock: row.in_stock !== 'false' && row.in_stock !== '0',
         },
       })
@@ -132,7 +132,7 @@ export async function processCatalogUpload(
     data: {
       status: errors.length > 0 && processed === 0 ? 'FAILED' : 'DONE',
       rowCount: processed,
-      errorLog: errors.length > 0 ? { errors } : undefined,
+      errorLog: errors.length > 0 ? { errors } : Prisma.JsonNull,
       processedAt: new Date(),
     },
   })

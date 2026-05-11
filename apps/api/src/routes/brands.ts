@@ -51,8 +51,8 @@ export async function brandRoutes(server: FastifyInstance) {
       const uid = externalId ?? `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       const endUser = await prisma.endUser.upsert({
         where: { brandId_externalId: { brandId: brand.id, externalId: uid } },
-        update: { email: email ?? undefined },
-        create: { brandId: brand.id, externalId: uid, email },
+        update: { email: email ?? null },
+        create: { brandId: brand.id, externalId: uid, email: email ?? null },
       })
 
       const token = server.jwt.sign(
@@ -96,8 +96,8 @@ export async function brandRoutes(server: FastifyInstance) {
           name: data.name,
           slug: data.slug,
           plan: data.plan,
-          logoUrl: data.logoUrl,
-          primaryColor: data.primaryColor,
+          logoUrl: data.logoUrl ?? null,
+          primaryColor: data.primaryColor ?? null,
           admins: {
             create: {
               email: data.ownerEmail,
@@ -145,7 +145,8 @@ export async function brandRoutes(server: FastifyInstance) {
         logoUrl: z.string().url().optional(),
         primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
       })
-      const data = schema.parse(request.body)
+      const parsed = schema.parse(request.body)
+      const data = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined))
       const brand = await prisma.brand.update({ where: { id: brandId }, data })
       return { brand }
     }

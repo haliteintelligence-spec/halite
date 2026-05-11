@@ -54,11 +54,11 @@ export async function shopifyRoutes(server: FastifyInstance) {
 
     await prisma.brand.update({
       where: { id: brandId },
-      data: { shopifyShop: shop, shopifyToken: access_token },
+      data: { shopifyShop: shop ?? null, shopifyToken: access_token },
     })
 
     // Kick off initial catalog sync
-    await triggerShopifyProductSync(brandId, shop, access_token)
+    await triggerShopifyProductSync(brandId, shop!, access_token)
 
     const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { slug: true } })
     return reply.redirect(`https://${brand!.slug}.haliteintelligence.com/settings/shopify?connected=true`)
@@ -121,21 +121,21 @@ async function upsertShopifyProduct(brandId: string, product: ShopifyProduct) {
     where: { brandId_externalId: { brandId, externalId: String(product.id) } },
     update: {
       name: product.title,
-      description: product.body_html?.replace(/<[^>]*>/g, '') ?? undefined,
+      description: product.body_html?.replace(/<[^>]*>/g, '') ?? null,
       price,
       inStock,
-      imageUrl: product.images[0]?.src,
+      imageUrl: product.images[0]?.src ?? null,
       productUrl: `https://${(await prisma.brand.findUnique({ where: { id: brandId }, select: { shopifyShop: true } }))?.shopifyShop}/products/${product.handle}`,
     },
     create: {
       brandId,
       externalId: String(product.id),
       name: product.title,
-      description: product.body_html?.replace(/<[^>]*>/g, '') ?? undefined,
+      description: product.body_html?.replace(/<[^>]*>/g, '') ?? null,
       category: 'OTHER',
       price,
       inStock,
-      imageUrl: product.images[0]?.src,
+      imageUrl: product.images[0]?.src ?? null,
     },
   })
 }

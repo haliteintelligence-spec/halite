@@ -70,11 +70,11 @@ export async function authRoutes(server: FastifyInstance) {
           externalId: externalId ?? `anon-${Date.now()}`,
         },
       },
-      update: { email: email ?? undefined },
+      update: { email: email ?? null },
       create: {
         brandId: brand.id,
         externalId: externalId ?? `anon-${Date.now()}`,
-        email,
+        email: email ?? null,
       },
     })
 

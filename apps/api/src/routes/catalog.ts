@@ -36,6 +36,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           if (process.env.OPENAI_API_KEY) {
             return embedBrandProducts(brandId)
           }
+          return
         })
         .catch((err) => {
           console.error(`Catalog processing failed for upload ${upload.id}:`, err)
