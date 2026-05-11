@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: var(--font-playfair);
+    --font-sans: var(--font-inter);
+
+    /* Melanin palette */
+    --melanin-i:   #f9e8d0;
+    --melanin-ii:  #e8c99a;
+    --melanin-iii: #c8976a;
+    --melanin-iv:  #a0693a;
+    --melanin-v:   #7a4228;
+    --melanin-vi:  #4a2015;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: #FAF6F0;
+    color: #1A0A12;
+    -webkit-font-smoothing: antialiased;
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: var(--font-playfair), Georgia, serif; }
+}
