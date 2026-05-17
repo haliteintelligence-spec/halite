@@ -7,7 +7,7 @@ interface RawProductRow {
   category: string
   concerns?: string
   skin_types?: string
-  fitzpatrick_types?: string
+  monk_skin_tones?: string
   ingredients?: string
   key_ingredients?: string
   price: string
@@ -76,10 +76,10 @@ export async function processCatalogUpload(
       const price = parseFloat(row.price)
       if (!row.name || isNaN(price)) throw new Error('Missing required field: name or price')
 
-      const fitzTypes = (row.fitzpatrick_types ?? '')
+      const monkTones = (row.monk_skin_tones ?? '')
         .split(/[,;|]/)
         .map((s) => parseInt(s.trim()))
-        .filter((n) => n >= 1 && n <= 6)
+        .filter((n) => n >= 1 && n <= 10)
 
       await prisma.product.upsert({
         where: {
@@ -94,7 +94,7 @@ export async function processCatalogUpload(
           category: normalizeCategory(row.category),
           concerns: splitTags(row.concerns, VALID_CONCERNS) as SkinConcern[],
           skinTypes: splitTags(row.skin_types, VALID_SKIN_TYPES) as SkinType[],
-          fitzpatrickTypes: fitzTypes,
+          monkSkinTones: monkTones,
           ingredients: row.ingredients?.split(',').map((s) => s.trim()) ?? [],
           keyIngredients: row.key_ingredients?.split(',').map((s) => s.trim()) ?? [],
           price,
@@ -111,7 +111,7 @@ export async function processCatalogUpload(
           category: normalizeCategory(row.category),
           concerns: splitTags(row.concerns, VALID_CONCERNS) as SkinConcern[],
           skinTypes: splitTags(row.skin_types, VALID_SKIN_TYPES) as SkinType[],
-          fitzpatrickTypes: fitzTypes,
+          monkSkinTones: monkTones,
           ingredients: row.ingredients?.split(',').map((s) => s.trim()) ?? [],
           keyIngredients: row.key_ingredients?.split(',').map((s) => s.trim()) ?? [],
           price,

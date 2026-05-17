@@ -24,7 +24,7 @@ export interface BrandSummary {
 }
 
 export interface SkinProfileData {
-  fitzpatrickType: number
+  monkSkinTone: number
   skinType: string
   concerns: string[]
   climateType?: string

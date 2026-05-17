@@ -8,7 +8,8 @@ export interface QuizOption {
   value: string
   label: string
   description?: string
-  imageHint?: string // for Fitzpatrick visual picker
+  swatchColor?: string // hex color for Monk Skin Tone picker
+  imageHint?: string   // image identifier for visual pickers (e.g. hair type)
 }
 
 export interface QuizQuestion {
@@ -93,16 +94,20 @@ export const SKINCARE_QUESTIONS: QuizQuestion[] = [
     id: 'S5',
     area: 'SKINCARE',
     type: 'single',
-    question: 'Which best describes your natural skin tone and how you react to the sun?',
-    subtext: 'This is your Fitzpatrick phototype — it helps us match ingredients and SPF levels',
+    question: 'Which best matches your natural skin tone?',
+    subtext: 'Based on the Monk Skin Tone Scale — helps us recommend formulations that work with your complexion',
     required: true,
     options: [
-      { value: '1', label: 'Type I', description: 'Very fair, ivory. Always burns, never tans.', imageHint: 'fitzpatrick-1' },
-      { value: '2', label: 'Type II', description: 'Fair, beige. Usually burns, tans minimally.', imageHint: 'fitzpatrick-2' },
-      { value: '3', label: 'Type III', description: 'Medium, golden. Sometimes mild burn, tans gradually.', imageHint: 'fitzpatrick-3' },
-      { value: '4', label: 'Type IV', description: 'Olive, light brown. Rarely burns, tans easily.', imageHint: 'fitzpatrick-4' },
-      { value: '5', label: 'Type V', description: 'Brown. Very rarely burns, tans very easily.', imageHint: 'fitzpatrick-5' },
-      { value: '6', label: 'Type VI', description: 'Deep brown to ebony. Never burns, always tans.', imageHint: 'fitzpatrick-6' },
+      { value: '1',  label: 'MST 1',  description: 'Very light',        swatchColor: '#f6ede4' },
+      { value: '2',  label: 'MST 2',  description: 'Light',             swatchColor: '#f3e7db' },
+      { value: '3',  label: 'MST 3',  description: 'Light to medium',   swatchColor: '#f7ead0' },
+      { value: '4',  label: 'MST 4',  description: 'Medium',            swatchColor: '#eadaba' },
+      { value: '5',  label: 'MST 5',  description: 'Medium to tan',     swatchColor: '#d7bd96' },
+      { value: '6',  label: 'MST 6',  description: 'Tan to rich',       swatchColor: '#a07e56' },
+      { value: '7',  label: 'MST 7',  description: 'Deep brown',        swatchColor: '#825c43' },
+      { value: '8',  label: 'MST 8',  description: 'Rich brown',        swatchColor: '#604134' },
+      { value: '9',  label: 'MST 9',  description: 'Deep',              swatchColor: '#3a312a' },
+      { value: '10', label: 'MST 10', description: 'Deepest',           swatchColor: '#292420' },
     ],
   },
 ]

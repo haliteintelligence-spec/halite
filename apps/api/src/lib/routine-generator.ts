@@ -75,7 +75,7 @@ export async function generateRoutine(
     },
     select: {
       id: true, name: true, description: true, category: true,
-      concerns: true, skinTypes: true, fitzpatrickTypes: true,
+      concerns: true, skinTypes: true, monkSkinTones: true,
       keyIngredients: true, price: true, currency: true,
       imageUrl: true, productUrl: true,
     },
@@ -163,7 +163,7 @@ function buildSystemPrompt(
   brandName: string,
   products: Array<{
     id: string; name: string; description?: string | null; category: string;
-    concerns: string[]; skinTypes: string[]; fitzpatrickTypes: number[];
+    concerns: string[]; skinTypes: string[]; monkSkinTones: number[];
     keyIngredients: string[]; price: number; currency: string;
   }>,
   area: string
@@ -172,7 +172,7 @@ function buildSystemPrompt(
     .map(
       (p) =>
         `ID:${p.id} | ${p.name} | ${p.category} | Concerns: ${p.concerns.join(', ')} | ` +
-        `Skin types: ${p.skinTypes.join(', ')} | Fitzpatrick: ${p.fitzpatrickTypes.join(', ') || 'all'} | ` +
+        `Skin types: ${p.skinTypes.join(', ')} | Monk Skin Tones: ${p.monkSkinTones.join(', ') || 'all'} | ` +
         `Key ingredients: ${p.keyIngredients.join(', ')} | Price: ${p.price} ${p.currency}`
     )
     .join('\n')
@@ -207,7 +207,7 @@ Rules:
 - Sequence products in correct application order (thinnest → thickest for skincare)
 - Do NOT recommend products that conflict with sensitivity flags
 - Do NOT recommend products that together exceed the user's budget
-- Prefer products that match the user's Fitzpatrick type if specified
+- Prefer products that match the user's Monk Skin Tone if specified
 - If fewer than 2 eligible products exist, set incomplete: true in your JSON`
 }
 
@@ -263,7 +263,7 @@ function buildUserProfile(area: string, answers: Record<string, unknown>): Recor
   const areaProfiles: Record<string, () => Record<string, unknown>> = {
     SKINCARE: () => ({
       ageRange,
-      fitzpatrickType: answers['S5'],
+      monkSkinTone: answers['S5'],
       skinType: answers['S1'],
       concerns: answers['S4'],
       sensitivity: answers['S3'],
@@ -296,7 +296,7 @@ function buildUserProfile(area: string, answers: Record<string, unknown>): Recor
       makeupConcerns: answers['M4'],
       wearDuration: answers['M5'],
       skinType: answers['S1'],
-      fitzpatrickType: answers['S5'],
+      monkSkinTone: answers['S5'],
       ...shared,
     }),
     FRAGRANCE: () => ({
@@ -329,7 +329,7 @@ function buildUserProfile(area: string, answers: Record<string, unknown>): Recor
       spfType: answers['SC3'],
       spfTexture: answers['SC4'],
       wearUnderMakeup: answers['SC5'],
-      fitzpatrickType: answers['S5'],
+      monkSkinTone: answers['S5'],
       ...shared,
     }),
     LIP_CARE: () => ({
@@ -344,7 +344,7 @@ function buildUserProfile(area: string, answers: Record<string, unknown>): Recor
       eyeConcerns: answers['E1'],
       wearsContacts: answers['E2'],
       wearsEyeMakeup: answers['E3'],
-      fitzpatrickType: answers['S5'],
+      monkSkinTone: answers['S5'],
       ...shared,
     }),
   }
