@@ -27,6 +27,8 @@ export {
   TimeOfDay,
   SkinSymptom,
   ProductReaction,
+  CrystalAdminRole,
+  MessageRole,
 } from '@prisma/client'
 export type {
   Brand,
@@ -42,4 +44,6 @@ export type {
   RoutineStep,
   CheckIn,
   CheckInProduct,
+  CrystalConversation,
+  CrystalMessage,
 } from '@prisma/client'

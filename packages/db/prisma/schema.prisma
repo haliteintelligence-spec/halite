@@ -49,13 +49,14 @@ model Brand {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admins         BrandAdmin[]
-  products       Product[]
-  endUsers       EndUser[]
-  quizSessions   QuizSession[]
-  catalogUploads CatalogUpload[]
-  quizConfig     QuizConfig?
-  invoices       Invoice[]
+  admins              BrandAdmin[]
+  products            Product[]
+  endUsers            EndUser[]
+  quizSessions        QuizSession[]
+  catalogUploads      CatalogUpload[]
+  quizConfig          QuizConfig?
+  invoices            Invoice[]
+  crystalConversations CrystalConversation[]
 
   @@map("brands")
 }
@@ -534,6 +535,52 @@ enum ProductReaction {
   POSITIVE
   NEUTRAL
   NEGATIVE
+}
+
+// ─────────────────────────────────────────────
+// CRYSTAL — AI CONVERSATIONS
+// ─────────────────────────────────────────────
+
+// Scope: brandId set → brand Crystal; brandId null → Halite admin Crystal
+model CrystalConversation {
+  id        String   @id @default(cuid())
+  brandId   String?
+  adminId   String   // BrandAdmin.id or HaliteAdmin.id
+  adminRole CrystalAdminRole
+  title     String   @default("New conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand    Brand?           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  messages CrystalMessage[]
+
+  @@index([brandId])
+  @@index([adminId])
+  @@map("crystal_conversations")
+}
+
+model CrystalMessage {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  tokenCount     Int?
+  createdAt      DateTime    @default(now())
+
+  conversation CrystalConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("crystal_messages")
+}
+
+enum CrystalAdminRole {
+  BRAND
+  HALITE
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }
 
 // ─────────────────────────────────────────────

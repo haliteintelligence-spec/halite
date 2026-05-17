@@ -13,6 +13,7 @@ import { endUserRoutes } from './routes/end-users.js'
 import { shopifyRoutes } from './routes/shopify.js'
 import { analyticsRoutes } from './routes/analytics.js'
 import { adminRoutes } from './routes/admin.js'
+import { crystalRoutes, adminCrystalRoutes } from './routes/crystal.js'
 import { errorHandler } from './lib/errors.js'
 
 const server = Fastify({
@@ -64,6 +65,8 @@ async function bootstrap() {
   await server.register(analyticsRoutes, { prefix: '/brands' })
   await server.register(shopifyRoutes, { prefix: '/shopify' })
   await server.register(adminRoutes)
+  await server.register(crystalRoutes, { prefix: '/brands' })
+  await server.register(adminCrystalRoutes)
 
   server.setErrorHandler(errorHandler)
 
