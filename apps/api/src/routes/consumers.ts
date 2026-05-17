@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { prisma } from '@halite/db'
+import { prisma, Prisma } from '@halite/db'
 import { requireConsumer } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 
@@ -100,7 +100,7 @@ export async function consumerRoutes(server: FastifyInstance) {
 
       const updated = await prisma.consumer.update({
         where: { id: consumerId },
-        data: { prefillAnswers: merged },
+        data: { prefillAnswers: merged as Prisma.InputJsonValue },
         select: { id: true, email: true, prefillAnswers: true, updatedAt: true },
       })
 

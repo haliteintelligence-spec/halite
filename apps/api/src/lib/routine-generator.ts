@@ -33,12 +33,19 @@ const STEP_TIMING: Record<string, string[]> = {
 
 // ── Main generator ─────────────────────────────────────────────────────────
 
+export interface GenerateRoutineOptions {
+  excludeProductIds?: string[]
+  checkInContext?: string
+  version?: number
+}
+
 export async function generateRoutine(
   userId: string,
   brandId: string,
   sessionId: string,
   area: string,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
+  options?: GenerateRoutineOptions
 ) {
   // Load brand + products for this area
   const brand = await prisma.brand.findUnique({
@@ -53,6 +60,8 @@ export async function generateRoutine(
   const currency = (answers['SH1_currency'] as string) ?? 'USD'
   const isRoutine = (answers['SH2A'] as string) !== 'SINGLE'
 
+  const excluded = options?.excludeProductIds ?? []
+
   const products = await prisma.product.findMany({
     where: {
       brandId,
@@ -62,6 +71,7 @@ export async function generateRoutine(
         ? { category: { in: selectedCategories as any } }
         : {}),
       price: { lte: isRoutine ? spendMax : spendMax },
+      ...(excluded.length > 0 ? { id: { notIn: excluded } } : {}),
     },
     select: {
       id: true, name: true, description: true, category: true,
@@ -93,7 +103,7 @@ export async function generateRoutine(
   // User turn (profile) changes per user.
 
   const systemPrompt = buildSystemPrompt(brand.name, products, area)
-  const userTurn = buildUserTurn(userProfile, climateSnapshot, isRoutine, selectedCategories, spendMax, currency)
+  const userTurn = buildUserTurn(userProfile, climateSnapshot, isRoutine, selectedCategories, spendMax, currency, options?.checkInContext)
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -125,7 +135,8 @@ export async function generateRoutine(
       quizSessionId: sessionId,
       focusArea: area as any,
       rationale: parsed.rationale,
-      aiPromptTokens: inputTokens - cacheTokens, // only count uncached tokens
+      aiPromptTokens: inputTokens - cacheTokens,
+      version: options?.version ?? 1,
       reorderDue: new Date(Date.now() + reorderDays * 24 * 60 * 60 * 1000),
       steps: {
         create: parsed.steps
@@ -206,7 +217,8 @@ function buildUserTurn(
   isRoutine: boolean,
   selectedCategories: string[],
   spendMax: number,
-  currency: string
+  currency: string,
+  checkInContext?: string
 ): string {
   const lines: string[] = [
     `## User Profile`,
@@ -223,6 +235,11 @@ function buildUserTurn(
   lines.push(`- Budget: up to ${spendMax} ${currency} total`)
   if (selectedCategories.length > 0) {
     lines.push(`- Requested categories: ${selectedCategories.join(', ')}`)
+  }
+
+  if (checkInContext) {
+    lines.push(`\n## Check-in History`)
+    lines.push(checkInContext)
   }
 
   lines.push(`\nPlease build the most suitable routine for this person using only the products in your catalog.`)
@@ -366,7 +383,7 @@ function parseRoutineResponse(raw: string): ParsedRoutine {
 
 // ── Reorder cadence per area ───────────────────────────────────────────────
 
-function reorderDueDays(area: string): number {
+export function reorderDueDays(area: string): number {
   const cadence: Record<string, number> = {
     SKINCARE: 45,
     BODY: 60,

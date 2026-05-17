@@ -4,6 +4,7 @@ import { prisma } from '@halite/db'
 import { requireBrandAdmin, requireEndUser } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { generateProgressNarrative, shouldGenerateNarrative } from '../lib/narrative-generator.js'
+import { refineRoutine } from '../lib/routine-refiner.js'
 
 export async function endUserRoutes(server: FastifyInstance) {
   // Brand admin: list end users
@@ -173,6 +174,118 @@ export async function endUserRoutes(server: FastifyInstance) {
       }
 
       return { narrative: profile.progressNarrative, generatedAt: profile.narrativeUpdatedAt }
+    }
+  )
+
+  // End user: check-in streak (consecutive days)
+  server.get(
+    '/:brandId/me/check-ins/streak',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+
+      const checkIns = await prisma.checkIn.findMany({
+        where: { endUserId: userId },
+        select: { date: true },
+        orderBy: { date: 'desc' },
+      })
+
+      if (checkIns.length === 0) return { streak: 0, totalCheckIns: 0 }
+
+      const DAY = 24 * 60 * 60 * 1000
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const days = new Set(
+        checkIns.map(c => {
+          const d = new Date(c.date)
+          d.setHours(0, 0, 0, 0)
+          return d.getTime()
+        })
+      )
+
+      // Start from today; if no check-in today, allow yesterday as the streak start
+      let cursor = today.getTime()
+      if (!days.has(cursor) && days.has(cursor - DAY)) cursor -= DAY
+
+      let streak = 0
+      while (days.has(cursor)) {
+        streak++
+        cursor -= DAY
+      }
+
+      return { streak, totalCheckIns: checkIns.length }
+    }
+  )
+
+  // End user: routine history (all versions, grouped by area)
+  server.get(
+    '/:brandId/me/routine/history',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+      const { area } = request.query as { area?: string }
+
+      const routines = await prisma.routine.findMany({
+        where: {
+          endUserId: userId,
+          ...(area ? { focusArea: area as any } : {}),
+        },
+        include: {
+          steps: {
+            include: {
+              product: { select: { id: true, name: true, imageUrl: true, category: true } },
+            },
+            orderBy: [{ timeOfDay: 'asc' }, { step: 'asc' }],
+          },
+        },
+        orderBy: [{ focusArea: 'asc' }, { version: 'desc' }],
+      })
+
+      // Group by area, each with ordered version list
+      const grouped: Record<string, typeof routines> = {}
+      for (const r of routines) {
+        const key = r.focusArea as string
+        if (!grouped[key]) grouped[key] = []
+        grouped[key]!.push(r)
+      }
+
+      return { history: grouped, total: routines.length }
+    }
+  )
+
+  // End user: refine routine(s) based on check-in data
+  server.post(
+    '/:brandId/me/routine/refine',
+    { preHandler: requireEndUser },
+    async (request, reply) => {
+      const userId = request.endUser!.userId
+      const { brandId } = request.params as { brandId: string }
+      const { area } = z.object({ area: z.string().optional() }).parse(request.body ?? {})
+
+      const activeRoutines = await prisma.routine.findMany({
+        where: {
+          endUserId: userId,
+          activeTo: null,
+          ...(area ? { focusArea: area as any } : {}),
+        },
+      })
+
+      if (activeRoutines.length === 0) throw new ApiError(404, 'No active routines found')
+
+      const results = await Promise.all(
+        activeRoutines.map(r => refineRoutine(userId, brandId, r.id))
+      )
+
+      const refinedCount = results.filter(r => r.refined).length
+
+      return reply.status(200).send({
+        results,
+        refinedCount,
+        message: refinedCount > 0
+          ? `${refinedCount} routine(s) updated based on your check-in data`
+          : 'Your routines are performing well — no changes needed',
+      })
     }
   )
 
