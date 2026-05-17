@@ -859,6 +859,30 @@ GET   /admin/intelligence/trends
 
 ## Cross-Cutting Concerns
 
+### Model Stack (Multi-Model Cognition)
+
+Halite routes tasks to two AI providers based on what each does best. The model is not the moat — the routing layer is.
+
+| Layer | Provider | Model | Used For |
+|-------|----------|-------|----------|
+| Execution | OpenAI | gpt-4o | Agent chat, tool calling, UI interactions, structured extraction |
+| Execution (fast) | OpenAI | gpt-4o-mini | Query summarization, lightweight classification |
+| Embeddings | OpenAI | text-embedding-3-small | Product vectors, semantic similarity search |
+| Synthesis | Anthropic | claude-sonnet-4-6 | Routine generation, insight synthesis, trend analysis |
+| Narrative | Anthropic | claude-sonnet-4-6 | Progress narratives, executive reports, strategic recommendations |
+
+**Rule of thumb:**
+- OpenAI = "Do it" — fast, interactive, structured, tool-native. Frontline intelligence layer.
+- Anthropic = "Understand it" — deep reasoning, long-context synthesis, strategy. Executive brain layer.
+
+**Routing implementation:** `apps/api/src/lib/model-router.ts`
+- `synthesize()` — Anthropic call with optional prompt caching for large brand contexts
+- `extract<T>()` — OpenAI structured JSON output
+- `streamAgentChat()` — OpenAI streaming for Crystal and agent UI
+- `executeWithTools()` — OpenAI tool-calling for agentic workflows
+
+**The moat is the orchestration:** what gets asked, which model handles it, how outputs are validated, how insights are stored, how agents learn from feedback. OpenAI and Anthropic are interchangeable power sources — the intelligence routing layer is what compounds over time.
+
 ### Security
 - All brand data isolated via `brandId` scoping on every query (RLS enforced at Postgres level)
 - API keys hashed in DB, never returned after creation (only shown once)
