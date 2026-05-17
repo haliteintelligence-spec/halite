@@ -527,6 +527,336 @@ reorder.triggered       → { userId, routineId, products[] }
 
 ---
 
+## Phase 8 — Crystal Agent System
+
+**Goal:** Build the Crystal agent as a fully-realized, context-aware AI operator — one for each brand, one for the Halite team. Crystal is not a chatbot. It is a structured intelligence layer with memory, tool access, and proactive output. Phase 8 is the proof of concept that the agent architecture works before brands can build their own.
+
+### 8A — Brand Crystal Agent
+
+Crystal for brand admins. Preloaded with everything about the brand — product catalog, consumer skin profiles, check-in trends, routine performance, analytics — and accessible via a premium dashboard experience.
+
+**Crystal's context (prompt-cached on brand level):**
+- Full product catalog (name, category, concerns, ingredients, price, performance signals)
+- Aggregated skin profile distribution across all end users
+- Top check-in symptoms and frequency trends
+- Compliance and sentiment trend summaries
+- Latest routine refinement signals
+- The 10 analytics chart datasets
+
+**Crystal's primary interface — the Intelligence Feed (not chat):**
+- Daily signal surface: emerging skin concerns, compliance dips, product reaction anomalies
+- Proactive opportunity cards: "Your dry-skin consumers are showing increased dullness concern — you have no targeted serum for this segment."
+- Anomaly alerts: "Check-in compliance dropped 18% this week among Type IV–VI users."
+- Weekly intelligence summary report (auto-generated, downloadable)
+
+**Crystal's secondary interface — conversational drill-down:**
+- Contextual chat embedded per-section in the dashboard ("Why did compliance drop?")
+- Freeform queries: "Which products are causing negative reactions in oily-skin users?"
+- Custom report generation: "Give me a breakdown of my humid-climate consumers by age range."
+- Cross-chart synthesis: "What does our data say about retention this quarter?"
+
+- [ ] `GET /brands/:brandId/crystal/context` — assemble Crystal's full system prompt from live brand data
+- [ ] `POST /brands/:brandId/crystal/chat` — streaming Claude response (conversational layer)
+- [ ] `GET /brands/:brandId/crystal/feed` — daily proactive intelligence feed (signals, opportunities, anomalies)
+- [ ] `POST /brands/:brandId/crystal/report` — generate weekly intelligence summary (Claude, prompt-cached brand context)
+- [ ] `crystal_messages` table — chat history per brand, per admin user
+- [ ] `crystal_reports` table — weekly reports stored and versioned per brand
+- [ ] Crystal panel in brand dashboard: slide-in drawer for chat, full `/[slug]/crystal` page for feed + reports
+- [ ] Brand context refreshes every 24h; prompt-cached for the 5-min TTL window per request
+- [ ] Crystal feed cards are dismissable, approvable, and exportable
+
+### 8B — Halite Crystal Agent
+
+Crystal at platform scale. Scoped to the full dataset across all brands. Used by the Halite team for board-level synthesis, brand health monitoring, and platform intelligence.
+
+**Crystal (Halite) context includes:**
+- All brand summaries (anonymized where required for cross-brand queries)
+- Platform aggregate analytics (quiz completion, routine generation, check-in rates, sentiment trends)
+- Brand health scores across all tenants
+- Integration health across all Shopify connections
+- Revenue signals: plan tier distribution, churn risk indicators, usage velocity
+
+**What Halite Crystal can do:**
+- "Which brands are at risk of churn this quarter?"
+- "Show platform-wide ingredient efficacy for niacinamide across all brands."
+- "Which brand should we move to Enterprise based on usage?"
+- "Give me a board-ready summary of platform performance this month."
+- "What do our top 5 brands have in common that our bottom 5 don't?"
+
+- [ ] `POST /admin/crystal/chat` — Halite admin scoped, streaming, full platform context
+- [ ] `GET /admin/crystal/feed` — platform-level proactive intelligence feed
+- [ ] `POST /admin/crystal/report` — monthly platform performance report
+- [ ] Chat history per Halite admin user
+- [ ] `/crystal` page in Halite admin dashboard
+
+### 8C — Agent Infrastructure (Shared)
+
+The underlying system both Crystal variants and Phase 9 custom agents run on.
+
+- [ ] `Agent` model — stores identity, instruction set, memory config, tool permissions, delivery config
+- [ ] `AgentMessage` model — persists all agent conversations and outputs
+- [ ] `AgentReport` model — stores scheduled reports and generated summaries
+- [ ] `AgentSignal` model — stores proactive feed items (signals, opportunities, anomalies) with dismissed/approved state
+- [ ] Prompt assembly pipeline: identity layer + instruction layer + memory layer + live data retrieval
+- [ ] Tool registry: each tool (analytics query, product lookup, check-in summary, competitor data) registered with schema
+- [ ] Claude Sonnet 4.6 with prompt caching on the identity + instruction layers (stable across requests)
+- [ ] Token usage tracked per agent per request in `agent_token_log`
+
+### Phase 8 API surface
+```
+GET  /brands/:brandId/crystal/context
+POST /brands/:brandId/crystal/chat
+GET  /brands/:brandId/crystal/feed
+POST /brands/:brandId/crystal/report
+POST /admin/crystal/chat
+GET  /admin/crystal/feed
+POST /admin/crystal/report
+```
+
+---
+
+## Phase 9 — Brand Agent Builder
+
+**Goal:** Brands create their own purpose-built agents. Not chatbots with names — structured decision-making systems with memory, tool access, defined objectives, and deliverable outputs. This transforms Halite from a dashboard into a living operating system. Switching costs become brutal: brands lose not just charts but institutional memory, learned workflows, and accumulated strategic intelligence.
+
+### 9A — Agent Templates (Marketplace)
+
+Pre-built agents brands can deploy in minutes. Each template comes with a recommended objective, default data access, suggested output format, and trigger cadence. Brands can customize from there.
+
+**Template library:**
+
+| Template | Optimizes For | Primary Output |
+|----------|---------------|----------------|
+| Trend Scout | Emerging ingredient, texture, and ritual trends | Weekly signal digest |
+| Product Opportunity Analyst | Whitespace gaps, underserved demographics, unmet claims | Opportunity briefs |
+| Launch Strategist | Launch timing, positioning, pricing, risk assessment | Launch recommendations |
+| Consumer Persona Agent | Evolving personas, emotional drivers, churn signals | Living persona profiles |
+| Retail Performance Agent | Sell-through, assortment gaps, regional performance | Retailer recommendations |
+| Competitive Intelligence | Competitor launches, sentiment shifts, pricing moves | Competitor watch reports |
+| Formulation Co-Pilot | Ingredient trends, consumer complaints, reformulation signals | Formulation recommendations |
+| Pricing Strategist | Price elasticity, competitor pricing, budget cohort performance | Pricing recommendations |
+| Creator Discovery | Creator-mention velocity, ingredient overlap with creators, audience fit | Creator opportunity list |
+| Assortment Optimizer | SKU cannibalization, portfolio gaps, seasonal whitespace | Assortment recommendations |
+
+- [ ] `agent_templates` table — seeded with 10 templates above, each with default config JSON
+- [ ] `GET /agents/templates` — list all available templates
+- [ ] Template clone-on-deploy: creates a new `Agent` record pre-populated from template defaults
+- [ ] `/[slug]/agents/marketplace` — template gallery page in brand dashboard
+
+### 9B — Agent Builder (Configuration Flow)
+
+A structured 10-step configuration experience. The interface feels like assigning a role to an employee, not writing a prompt. No blank text boxes.
+
+**Step 1 — Choose a Goal**
+Dropdown of business outcomes ("Detect emerging trends", "Identify whitespace opportunities", "Improve launch success", "Monitor competitor movement", "Reduce inventory risk"). Starts from a template or blank.
+
+**Step 2 — Configure Objective**
+Weighted priority sliders and toggles — not freeform text. Example: trend detection weight, geographic scope, category focus. System assembles the instruction layer from structured inputs.
+
+**Step 3 — Select Data Sources**
+Toggle panel: which data rooms does this agent have access to?
+- Internal: quiz results, check-in data, product catalog, sales, routine performance
+- Shopify: orders, inventory, sell-through
+- Consumer: skin profiles, sentiment trends, cohort analysis
+- Platform benchmarks: anonymized cross-brand signals (if on Enterprise plan)
+
+**Step 4 — Define Scope + Constraints**
+Category focus, demographic focus, geographic focus, market tier (prestige / mass / indie), time window. Constraints prevent hallucination drift and keep outputs on-brand.
+
+**Step 5 — Choose Deliverables**
+What does this agent produce? (Not "what can you ask it") — weekly reports, real-time alerts, opportunity briefs, competitor summaries, launch recommendations, market maps, executive slides, email digests. Brands select output format and destination.
+
+**Step 6 — Define Triggers**
+Event-driven or scheduled:
+- Schedule: daily / weekly / monthly / custom cron
+- Threshold: "alert when a trend grows 30% week-over-week"
+- Event: "run when a new check-in batch is processed"
+- Comparison: "notify when competitor sentiment drops below 3.5"
+
+**Step 7 — Assign Action Permissions**
+Graduated autonomy levels:
+- Analyze only
+- Recommend actions
+- Generate reports
+- Send alerts
+- Auto-run workflows
+- Trigger integrations (Slack, email, Shopify)
+
+**Step 8 — Brand Training**
+Upload brand context documents: positioning, past launch performance, tone of voice, ingredient philosophy, strategic goals, consumer personas. Stored as embeddings alongside structured profile data. The same trend produces different recommendations for Sol de Janeiro vs. Aesop vs. Topicals — because each agent knows its brand.
+
+**Step 9 — Review + Activate**
+Summary screen showing the agent's full configuration. Estimated weekly token cost. Option to run a preview output before going live.
+
+- [ ] `Agent` model fields: `templateId`, `name`, `goal`, `instructionConfig` (JSON), `dataSources` (JSON), `scope` (JSON), `deliverables` (JSON), `triggerConfig` (JSON), `permissions` (JSON), `brandContext` (text, embedded), `active`, `brandId`
+- [ ] `POST /brands/:brandId/agents` — create agent from template or blank
+- [ ] `GET /brands/:brandId/agents` — list all agents for a brand
+- [ ] `GET /brands/:brandId/agents/:agentId` — get agent config
+- [ ] `PATCH /brands/:brandId/agents/:agentId` — update agent config
+- [ ] `DELETE /brands/:brandId/agents/:agentId` — deactivate/delete agent
+- [ ] `POST /brands/:brandId/agents/:agentId/preview` — run a one-off preview output
+- [ ] `POST /brands/:brandId/agents/:agentId/train` — ingest brand context documents into agent embeddings
+- [ ] Brand context documents stored in S3, embedded with OpenAI/Claude, linked to agent via `agent_context_documents` table
+- [ ] Builder UI: `/[slug]/agents/new` — 10-step flow with step validation and preview
+- [ ] Edit UI: `/[slug]/agents/:agentId/settings`
+
+### 9C — Agent Dashboard (Primary Interface)
+
+The agent's home is not a chat window. It is a structured output dashboard — closer to Bloomberg Terminal than ChatGPT.
+
+**Agent dashboard layout:**
+- Header: agent name, role, last run, next scheduled run, status indicator
+- **Today's Signals** — real-time or most recent feed of detected signals, ranked by relevance
+- **Recommended Opportunities** — structured opportunity cards with supporting data
+- **Watch List** — monitored competitors, ingredients, or metrics with change indicators
+- **Latest Report** — link to most recent generated report with key highlights inline
+- **Action Center** — pending recommendations the brand team can approve, dismiss, assign, or export
+
+Signal cards include: signal title, supporting data points, trend direction, confidence level, recommended action, "Ask [Agent Name]" button to open conversational drill-down.
+
+- [ ] `AgentSignal` model — `agentId`, `type` (signal/opportunity/anomaly/watch), `title`, `body`, `data` (JSON), `confidence`, `status` (pending/approved/dismissed), `createdAt`
+- [ ] `GET /brands/:brandId/agents/:agentId/signals` — paginated signal feed
+- [ ] `PATCH /brands/:brandId/agents/:agentId/signals/:signalId` — approve/dismiss/assign
+- [ ] `GET /brands/:brandId/agents/:agentId/reports` — list generated reports
+- [ ] `GET /brands/:brandId/agents/:agentId/reports/:reportId` — get full report
+- [ ] Dashboard page: `/[slug]/agents/:agentId` — signal feed + opportunities + action center
+- [ ] `/[slug]/agents` — all agents overview (status, last signal, health)
+
+### 9D — Conversational Drill-Down (Secondary Interface)
+
+Chat exists as an investigative layer on top of the structured dashboard. Accessed via "Ask [Agent Name]" on any signal card or report section. The agent already has context on what you're looking at.
+
+- [ ] `POST /brands/:brandId/agents/:agentId/chat` — streaming response, contextually aware of current signal or report
+- [ ] Conversation pinned to signal or report context (passed as system message addition)
+- [ ] Chat history stored per agent, per session in `AgentMessage` table
+- [ ] "Explain this" / "Show me more data" / "What should we do?" are the dominant use cases — not open-ended prompting
+
+### 9E — Trigger Engine + Scheduler
+
+Agents run on schedule or on event. This is what makes the system operational software rather than a query interface.
+
+- [ ] Redis-backed job queue (Bull or BullMQ) for scheduled agent runs
+- [ ] Cron-based scheduler: registers each active agent's trigger config on activation
+- [ ] Event listeners: check-in batch complete → trigger relevant agents; new Shopify order → trigger Retail agent; competitor data refresh → trigger Competitive Intelligence agent
+- [ ] Threshold monitor: runs after each data refresh, evaluates trigger conditions for all active agents, enqueues jobs when conditions met
+- [ ] Job result → writes `AgentSignal` records → pushes to dashboard feed
+- [ ] Delivery integrations: email digest, Slack notification (via brand-configured webhook), in-app notification
+
+### Phase 9 API surface
+```
+GET    /agents/templates
+POST   /brands/:brandId/agents
+GET    /brands/:brandId/agents
+GET    /brands/:brandId/agents/:agentId
+PATCH  /brands/:brandId/agents/:agentId
+DELETE /brands/:brandId/agents/:agentId
+POST   /brands/:brandId/agents/:agentId/preview
+POST   /brands/:brandId/agents/:agentId/train
+POST   /brands/:brandId/agents/:agentId/chat
+GET    /brands/:brandId/agents/:agentId/signals
+PATCH  /brands/:brandId/agents/:agentId/signals/:signalId
+GET    /brands/:brandId/agents/:agentId/reports
+GET    /brands/:brandId/agents/:agentId/reports/:reportId
+```
+
+---
+
+## Phase 10 — Multi-Agent Orchestration
+
+**Goal:** Agents collaborate. The Trend Scout feeds the Opportunity Analyst feeds the Launch Strategist. This is no longer analytics software — it is an autonomous strategy layer. A constellation of specialized operators that work independently, surface to humans at decision points, and compound intelligence over time.
+
+### 10A — Agent-to-Agent Communication
+
+Agents can publish outputs that other agents subscribe to as inputs. Defined via a workflow graph — no agent modifies another's config, but outputs flow between them as structured data events.
+
+**Example workflow: "Blue Tansy Launch Brief"**
+```
+Trend Scout Agent
+  detects: "Blue tansy nighttime body oils accelerating 40% WoW"
+    ↓
+Opportunity Analyst Agent
+  checks: prestige market saturation low; unmet claims in "calming luxury" body oil
+    ↓
+Consumer Persona Agent
+  finds: Gen Z consumers associate blue tansy with calming ritual; high compliance segment
+    ↓
+Launch Strategist Agent
+  produces: pricing ($38–$58), positioning ("ritual-first"), timing (Q4), channel (DTC-first then Sephora), risk flags
+    ↓
+Action Center
+  presents: launch brief for brand team approval
+```
+
+- [ ] `AgentWorkflow` model — `brandId`, `name`, `steps` (ordered JSON array of agentId + input mapping + output mapping), `triggerAgentId`, `active`
+- [ ] `AgentWorkflowRun` model — tracks each workflow execution, step status, intermediate outputs
+- [ ] Workflow engine: on `AgentSignal` creation, check if any workflow is subscribed to that agent's output type; if so, enqueue the next step
+- [ ] Input mapping: specify which fields of the upstream signal map to which context fields for the downstream agent
+- [ ] `POST /brands/:brandId/workflows` — create workflow
+- [ ] `GET /brands/:brandId/workflows` — list workflows
+- [ ] `PATCH /brands/:brandId/workflows/:workflowId` — update
+- [ ] `POST /brands/:brandId/workflows/:workflowId/run` — manual trigger
+- [ ] `GET /brands/:brandId/workflows/:workflowId/runs` — execution history
+- [ ] Workflow builder UI: `/[slug]/agents/workflows` — visual graph with agent nodes and data flow arrows
+
+### 10B — Agent Memory + Learning
+
+Agents improve over time. Approvals and rejections teach the agent what "good" looks like for this brand. This is where institutional memory accumulates and switching costs compound.
+
+- [ ] `AgentFeedback` model — `agentId`, `signalId`, `action` (approved/dismissed/assigned), `adminId`, `note`, `createdAt`
+- [ ] Feedback summary injected into agent context on each run: "In the past 90 days, this brand approved 23 trend signals and dismissed 8. Dismissed signals tended to be in the mass-market tier and vitamin C-focused."
+- [ ] Agent accuracy score: ratio of approved to total signals, tracked over time, surfaced in agent settings
+- [ ] `GET /brands/:brandId/agents/:agentId/feedback` — feedback history
+- [ ] Agents adapt scope implicitly: dismissed signals inform the constraint layer without requiring manual config changes
+- [ ] Brand context re-embedding triggered on document upload or significant feedback volume threshold
+
+### 10C — Proactive Intelligence Layer
+
+Agents run continuously in the background. No one needs to open the dashboard for value to be generated. Intelligence surfaces when it's ready — not when someone remembers to log in.
+
+- [ ] Push notification system: in-app, email, and Slack delivery of high-confidence signals
+- [ ] Signal priority scoring: each signal gets a relevance score based on confidence, recency, brand priority weights, and historical approval rate
+- [ ] "Morning brief" digest: daily summary of all agent outputs across a brand's full agent constellation, delivered at configured time
+- [ ] Anomaly detection: statistical threshold monitoring on core metrics (compliance rate, sentiment score, product reaction ratio) — fires immediately when crossed regardless of schedule
+- [ ] `notification_preferences` table per brand admin: delivery channel, digest timing, minimum signal confidence threshold
+
+### 10D — Cross-Brand Intelligence (Halite Layer)
+
+Anonymized, aggregated signals across all brands on the platform become a proprietary intelligence layer no individual brand can replicate. Available to Halite Crystal and — on Enterprise plan — as a benchmark feed for brand agents.
+
+- [ ] Platform trend index: ingredient velocity, skin concern shifts, ritual emergence — computed weekly across all consumer profiles and check-ins, stored in `platform_trend_signals`
+- [ ] Benchmark layer: brand agents can query anonymized platform percentiles ("how does my compliance rate compare to brands of similar size and category?")
+- [ ] `GET /admin/intelligence/trends` — platform trend index (Halite admin only)
+- [ ] Enterprise plan brands can enable "Platform Benchmarks" data source in agent config — feeds anonymized signal percentiles into their agents
+- [ ] Halite Crystal uses full platform trend index as part of its context
+
+### 10E — Autonomous Output Generation
+
+At the highest tier: agents don't just recommend — they produce. Brand teams review and approve, but the labor of synthesis, drafting, and structuring is done.
+
+- [ ] Launch brief generator: Launch Strategist agent produces a full structured launch brief (positioning, pricing, timing, channel strategy, risk flags) as a downloadable PDF/Notion export
+- [ ] Assortment plan generator: Assortment Optimizer produces a ranked SKU recommendation list with supporting data, exportable to CSV
+- [ ] Retailer deck generator: Retail Performance agent produces a slide-ready summary of sell-through performance and expansion recommendations (Claude + structured template)
+- [ ] `AgentDocument` model — `agentId`, `type` (launch_brief/assortment_plan/retailer_deck/report), `content` (JSON), `exportUrl` (S3), `status` (draft/approved), `createdAt`
+- [ ] `POST /brands/:brandId/agents/:agentId/documents` — trigger document generation
+- [ ] `GET /brands/:brandId/agents/:agentId/documents` — list generated documents
+- [ ] Document approval flow: brand admin reviews → approves or requests revision → Claude re-runs with revision note
+- [ ] Export formats: PDF (via Puppeteer or similar), CSV, JSON
+
+### Phase 10 API surface
+```
+POST  /brands/:brandId/workflows
+GET   /brands/:brandId/workflows
+PATCH /brands/:brandId/workflows/:workflowId
+POST  /brands/:brandId/workflows/:workflowId/run
+GET   /brands/:brandId/workflows/:workflowId/runs
+GET   /brands/:brandId/agents/:agentId/feedback
+POST  /brands/:brandId/agents/:agentId/documents
+GET   /brands/:brandId/agents/:agentId/documents
+GET   /admin/intelligence/trends
+```
+
+---
+
 ## Cross-Cutting Concerns
 
 ### Security
@@ -567,3 +897,6 @@ reorder.triggered       → { userId, routineId, products[] }
 | 5 — Halite Admin | Week 12 | Halite team sees all brands; Crystal works at platform level |
 | 6 — Shopify App | Week 14 | Listed on Shopify App Store; no-code embed for merchants |
 | 7 — Generic Embed | Week 16 | Any website can integrate; public API docs live |
+| 8 — Crystal Agent System | Week 19 | Crystal live for brands and Halite team; proactive feed + weekly reports |
+| 9 — Brand Agent Builder | Week 24 | Brands deploy purpose-built agents from templates or custom config |
+| 10 — Multi-Agent Orchestration | Week 30 | Agents collaborate; autonomous output generation; platform intelligence layer |
