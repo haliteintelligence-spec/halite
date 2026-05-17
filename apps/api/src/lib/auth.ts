@@ -5,6 +5,7 @@ export type JwtPayload =
   | { role: 'halite_admin'; adminId: string }
   | { role: 'brand_admin'; adminId: string; brandId: string }
   | { role: 'end_user'; userId: string; brandId: string }
+  | { role: 'consumer'; consumerId: string }
 
 export async function requireHaliteAdmin(request: FastifyRequest, _reply: FastifyReply) {
   try {
@@ -44,11 +45,23 @@ export async function requireEndUser(request: FastifyRequest, _reply: FastifyRep
   }
 }
 
+export async function requireConsumer(request: FastifyRequest, _reply: FastifyReply) {
+  try {
+    const payload = (await request.jwtVerify()) as JwtPayload
+    if (payload.role !== 'consumer') throw new ApiError(403, 'Forbidden')
+    request.consumer = payload
+  } catch (e) {
+    if (e instanceof ApiError) throw e
+    throw new ApiError(401, 'Unauthorized')
+  }
+}
+
 // Fastify type augmentation
 declare module 'fastify' {
   interface FastifyRequest {
     haliteAdmin?: Extract<JwtPayload, { role: 'halite_admin' }>
     brandAdmin?: Extract<JwtPayload, { role: 'brand_admin' }>
     endUser?: Extract<JwtPayload, { role: 'end_user' }>
+    consumer?: Extract<JwtPayload, { role: 'consumer' }>
   }
 }

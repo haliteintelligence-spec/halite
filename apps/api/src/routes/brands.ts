@@ -40,26 +40,40 @@ export async function brandRoutes(server: FastifyInstance) {
     '/slug/:slug/quiz/token',
     async (request, reply) => {
       const { slug } = request.params as { slug: string }
-      const { externalId, email } = z.object({
+      const { externalId, email, consumerId } = z.object({
         externalId: z.string().optional(),
         email: z.string().email().optional(),
+        consumerId: z.string().optional(),
       }).parse(request.body)
 
       const brand = await prisma.brand.findUnique({ where: { slug } })
       if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
 
-      const uid = externalId ?? `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      // If consumerId provided, find an existing EndUser for this consumer+brand
+      // so returning consumers get their history linked automatically
+      let uid = externalId
+      if (!uid && consumerId) uid = `consumer-${consumerId}`
+      if (!uid) uid = `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
       const endUser = await prisma.endUser.upsert({
         where: { brandId_externalId: { brandId: brand.id, externalId: uid } },
-        update: { email: email ?? null },
-        create: { brandId: brand.id, externalId: uid, email: email ?? null },
+        update: {
+          ...(email ? { email } : {}),
+          ...(consumerId ? { consumerId } : {}),
+        },
+        create: {
+          brandId: brand.id,
+          externalId: uid,
+          email: email ?? null,
+          consumerId: consumerId ?? null,
+        },
       })
 
       const token = server.jwt.sign(
         { role: 'end_user', userId: endUser.id, brandId: brand.id },
         { expiresIn: '30d' }
       )
-      return reply.send({ token, userId: endUser.id, brandId: brand.id })
+      return reply.send({ token, userId: endUser.id, brandId: brand.id, consumerId: endUser.consumerId })
     }
   )
 

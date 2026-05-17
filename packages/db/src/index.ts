@@ -34,6 +34,7 @@ export type {
   QuizConfig,
   CatalogUpload,
   Product,
+  Consumer,
   EndUser,
   UserBeautyProfile,
   QuizSession,

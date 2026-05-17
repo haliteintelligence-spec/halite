@@ -275,12 +275,34 @@ enum SkinType {
 }
 
 // ─────────────────────────────────────────────
+// PLATFORM CONSUMER IDENTITY (cross-brand)
+// ─────────────────────────────────────────────
+
+// One Consumer record spans all brands — like Stripe's Customer object.
+// Stores quiz answers that are about the person (biology, lifestyle, location)
+// so returning consumers get a shorter onboarding at each new brand.
+model Consumer {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  // JSON map of questionId → answer for brand-agnostic questions
+  // e.g. { S1: "dry", S4: ["ACNE","DRYNESS"], SH0: "25_34", SH1_location: {...}, H1: "coily" }
+  prefillAnswers Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  endUsers EndUser[]
+
+  @@map("consumers")
+}
+
+// ─────────────────────────────────────────────
 // END USERS (CONSUMERS)
 // ─────────────────────────────────────────────
 
 model EndUser {
   id         String  @id @default(cuid())
   brandId    String
+  consumerId String?
   externalId String?
   email      String?
   firstName  String?
@@ -290,6 +312,7 @@ model EndUser {
   updatedAt DateTime @updatedAt
 
   brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  consumer        Consumer?          @relation(fields: [consumerId], references: [id])
   beautyProfile   UserBeautyProfile?
   quizSessions    QuizSession[]
   routines        Routine[]
