@@ -18,8 +18,16 @@ const PLATFORM_MODULES = [
 ]
 
 export const metadata = {
-  title: 'Platform — Halite Intelligence',
-  description: 'Routine Engine, Outcome Tracker, Brand Dashboard, and Embedded Widget — the complete Halite Intelligence platform.',
+  title: 'Platform',
+  description: 'The complete Halite Intelligence platform: Routine Engine, Outcome Tracker, Brand Dashboard, and Embedded Widget — four connected modules that turn consumer skin data into retention leverage.',
+  alternates: {
+    canonical: 'https://haliteintelligence.com/platform',
+  },
+  openGraph: {
+    url: 'https://haliteintelligence.com/platform',
+    title: 'The Platform — Halite Intelligence',
+    description: 'Four connected modules. One continuous intelligence loop — from first quiz answer to long-term retention signal.',
+  },
 }
 
 export default function Platform() {
