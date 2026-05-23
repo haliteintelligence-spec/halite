@@ -15,11 +15,11 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'Halite Intelligence — Closed-Loop Beauty Intelligence',
-  description: 'The only B2B platform that closes the loop — from skin quiz to AI routine to real outcome data. Built for beauty brands.',
+  title: 'Halite Intelligence — Predictive Consumer Intelligence for Beauty Brands',
+  description: 'Know your customer. Personalize deeper. Retain longer. Halite is the predictive consumer intelligence platform built for beauty brands.',
   openGraph: {
     title: 'Halite Intelligence',
-    description: 'From skin quiz to AI routine to real outcome data.',
+    description: 'Know your customer. Personalize deeper. Retain longer.',
     type: 'website',
   },
 }

@@ -13,10 +13,10 @@ export function Nav() {
   }, [])
 
   const links = [
-    { label: 'How it works', href: '#how' },
-    { label: 'Features', href: '#features' },
-    { label: 'Compare', href: '#compare' },
-    { label: 'Pricing', href: '#pricing' },
+    { label: 'Platform', href: '/platform' },
+    { label: 'How it works', href: '/#how' },
+    { label: 'Compare', href: '/#compare' },
+    { label: 'Pricing', href: '/#pricing' },
   ]
 
   return (
@@ -30,7 +30,7 @@ export function Nav() {
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2 group">
+        <a href="/" className="flex items-center gap-2 group">
           <span
             className="text-[10px] font-bold tracking-[0.25em] uppercase"
             style={{ color: scrolled ? '#450F2A' : '#FAF6F0' }}
