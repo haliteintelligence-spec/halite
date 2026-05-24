@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Resend } from 'resend'
+import bcrypt from 'bcryptjs'
 import { prisma, InvoiceStatus } from '@halite/db'
 import { requireHaliteAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
@@ -491,6 +492,116 @@ export async function adminRoutes(server: FastifyInstance) {
         orderBy: { createdAt: 'desc' },
       })
       return { brands }
+    }
+  )
+
+  // ── Get brand detail ───────────────────────────────────────────────
+  server.get(
+    '/admin/brands/:brandId',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        include: {
+          admins: { select: { id: true, email: true, name: true, role: true, createdAt: true } },
+          _count: { select: { endUsers: true, products: true } },
+        },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
+      return { brand: safe }
+    }
+  )
+
+  // ── Create brand + first admin ─────────────────────────────────────
+  server.post(
+    '/admin/brands',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const schema = z.object({
+        name: z.string().min(1).max(100),
+        slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
+        plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).default('STARTER'),
+        focusAreas: z.array(z.string()).default([]),
+        adminEmail: z.string().email(),
+        adminName: z.string().min(1),
+        adminPassword: z.string().min(8),
+      })
+      const data = schema.parse(request.body)
+
+      const existing = await prisma.brand.findUnique({ where: { slug: data.slug } })
+      if (existing) throw new ApiError(409, `Slug "${data.slug}" is already taken`)
+
+      const hashedPassword = await bcrypt.hash(data.adminPassword, 12)
+
+      const brand = await prisma.brand.create({
+        data: {
+          name: data.name,
+          slug: data.slug,
+          plan: data.plan as any,
+          focusAreas: data.focusAreas as any,
+          active: true,
+          admins: {
+            create: {
+              email: data.adminEmail,
+              name: data.adminName,
+              password: hashedPassword,
+              role: 'OWNER',
+            },
+          },
+        },
+        include: {
+          admins: { select: { id: true, email: true, name: true, role: true } },
+        },
+      })
+
+      return reply.status(201).send({ brand })
+    }
+  )
+
+  // ── Update brand ───────────────────────────────────────────────────
+  server.patch(
+    '/admin/brands/:brandId',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        name: z.string().min(1).max(100).optional(),
+        plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).optional(),
+        active: z.boolean().optional(),
+        focusAreas: z.array(z.string()).optional(),
+      })
+      const data = schema.parse(request.body)
+      const updateData: Record<string, unknown> = {}
+      if (data.name !== undefined) updateData.name = data.name
+      if (data.plan !== undefined) updateData.plan = data.plan
+      if (data.active !== undefined) updateData.active = data.active
+      if (data.focusAreas !== undefined) updateData.focusAreas = data.focusAreas
+      const brand = await prisma.brand.update({ where: { id: brandId }, data: updateData as any })
+      return { brand }
+    }
+  )
+
+  // ── Add brand admin ────────────────────────────────────────────────
+  server.post(
+    '/admin/brands/:brandId/admins',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        email: z.string().email(),
+        name: z.string().min(1),
+        password: z.string().min(8),
+        role: z.enum(['OWNER', 'ADMIN', 'VIEWER']).default('ADMIN'),
+      })
+      const data = schema.parse(request.body)
+      const hashed = await bcrypt.hash(data.password, 12)
+      const admin = await prisma.brandAdmin.create({
+        data: { brandId, email: data.email, name: data.name, password: hashed, role: data.role as any },
+        select: { id: true, email: true, name: true, role: true, createdAt: true },
+      })
+      return reply.status(201).send({ admin })
     }
   )
 }

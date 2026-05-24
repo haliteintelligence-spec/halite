@@ -62,11 +62,28 @@ export async function getDemoDetail(demoId: string): Promise<DemoDetail | null> 
   return data?.demo ?? null
 }
 
-export async function getBrands(): Promise<Array<{
-  id: string; name: string; slug: string; plan: string; active: boolean
-  createdAt: string; _count: { endUsers: number; products: number }
-}>> {
-  // Reuse admin stats to get brand list — fetched from a separate endpoint
-  const data = await adminFetch<{ brands: any[] }>('/admin/brands')
+export interface BrandSummary {
+  id: string
+  name: string
+  slug: string
+  plan: string
+  active: boolean
+  createdAt: string
+  _count: { endUsers: number; products: number }
+}
+
+export interface BrandDetail extends BrandSummary {
+  focusAreas: string[]
+  logoUrl: string | null
+  admins: Array<{ id: string; email: string; name: string; role: string; createdAt: string }>
+}
+
+export async function getBrands(): Promise<BrandSummary[]> {
+  const data = await adminFetch<{ brands: BrandSummary[] }>('/admin/brands')
   return data?.brands ?? []
+}
+
+export async function getBrandDetail(brandId: string): Promise<BrandDetail | null> {
+  const data = await adminFetch<{ brand: BrandDetail }>(`/admin/brands/${brandId}`)
+  return data?.brand ?? null
 }
