@@ -18,6 +18,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Pass through admin routes regardless of subdomain
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    return NextResponse.next()
+  }
+
   // Rewrite to /[slug]/... so the app router can serve the brand-scoped UI
   const url = request.nextUrl.clone()
   url.pathname = `/${subdomain}${url.pathname}`
