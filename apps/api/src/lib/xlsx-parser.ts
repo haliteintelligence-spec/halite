@@ -1,4 +1,7 @@
-import * as XLSX from 'xlsx'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const XLSX = require('xlsx') as typeof import('xlsx')
 
 export interface ParsedSheet {
   headers: string[]
