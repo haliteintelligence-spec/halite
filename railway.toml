@@ -2,7 +2,7 @@
 buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/db build && pnpm --filter @halite/dashboard build"
 
 [deploy]
-startCommand = "pnpm --filter @halite/dashboard start"
+startCommand = "cd apps/dashboard && node_modules/.bin/next start -p $PORT"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
