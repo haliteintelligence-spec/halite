@@ -1,5 +1,4 @@
 [build]
-builder = "nixpacks"
 buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/dashboard build"
 
 [deploy]
