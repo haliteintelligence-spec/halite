@@ -7,6 +7,7 @@ cmds = ["pnpm install --frozen-lockfile"]
 [phases.build]
 cmds = [
   "pnpm --filter @halite/db db:generate",
+  "pnpm --filter @halite/db build",
   "pnpm --filter @halite/dashboard build",
   "cp -r apps/dashboard/.next/static apps/dashboard/.next/standalone/.next/static",
   "cp -r apps/dashboard/public apps/dashboard/.next/standalone/public"
