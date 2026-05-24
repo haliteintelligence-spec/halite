@@ -204,11 +204,26 @@ export async function quizRoutes(server: FastifyInstance) {
       const { brandId, sessionId } = request.params as { brandId: string; sessionId: string }
       const userId = request.endUser!.userId
 
+      const { consumerToken } = z.object({ consumerToken: z.string().optional() }).parse(request.body ?? {})
+
       const session = await prisma.quizSession.findFirst({
         where: { id: sessionId, brandId, endUserId: userId },
       })
       if (!session) throw new ApiError(404, 'Session not found')
       if (session.completed) throw new ApiError(400, 'Session already completed')
+
+      // Link EndUser → Consumer if a valid consumer token was provided
+      if (consumerToken) {
+        try {
+          const payload = server.jwt.verify(consumerToken) as { consumerId?: string; role?: string }
+          if (payload.role === 'consumer' && payload.consumerId) {
+            const endUser = await prisma.endUser.findUnique({ where: { id: userId }, select: { consumerId: true } })
+            if (!endUser?.consumerId) {
+              await prisma.endUser.update({ where: { id: userId }, data: { consumerId: payload.consumerId } })
+            }
+          }
+        } catch { /* invalid/expired token — skip linking */ }
+      }
 
       const answers = session.answers as Record<string, unknown>
       const selectedAreas = session.selectedAreas as string[]

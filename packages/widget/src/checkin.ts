@@ -355,20 +355,23 @@ export class CheckInController {
 
     const steps = this.routine?.steps ?? []
     const seen = new Set<string>()
-    const products = steps
-      .filter(s => { if (seen.has(s.product.id)) return false; seen.add(s.product.id); return true })
-      .map(s => ({
-        productId: s.product.id,
-        used: true,
-        reaction: this.reactions[s.product.id] as 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | undefined,
-      }))
+    const uniqueProducts = steps.filter(s => { if (seen.has(s.product.id)) return false; seen.add(s.product.id); return true })
+    const products = uniqueProducts.map(s => ({
+      productId: s.product.id,
+      used: s.product.id in this.reactions,
+      reaction: this.reactions[s.product.id] as 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | undefined,
+    }))
+
+    // Compliant if at least half of routine products got a reaction (user engaged with routine)
+    const reactedCount = Object.keys(this.reactions).length
+    const compliant = uniqueProducts.length === 0 || reactedCount >= Math.ceil(uniqueProducts.length / 2)
 
     try {
       await this.api.submitCheckIn({
         skinRating: this.skinRating,
         symptoms: Array.from(this.symptoms),
         notes: this.notes || undefined,
-        compliant: true,
+        compliant,
         photoUrl: this.photoUrl || undefined,
         products,
       })

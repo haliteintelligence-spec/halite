@@ -226,3 +226,29 @@ export async function getAnalytics(): Promise<AnalyticsData | null> {
   if (!payload?.brandId) return null
   return apiFetch<AnalyticsData>(`/brands/${payload.brandId}/analytics`, token)
 }
+
+export interface IdentityData {
+  total: number
+  identified: number
+  anonymous: number
+  crossBrand: number
+  retained: number
+  identificationRate: number
+  crossBrandRate: number
+  retentionRate: number
+  trend: Array<{
+    week: number
+    total: number
+    identified: number
+    rate: number | null
+  }>
+}
+
+export async function getIdentityIntelligence(): Promise<IdentityData | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  return apiFetch<IdentityData>(`/brands/${payload.brandId}/intelligence`, token)
+}

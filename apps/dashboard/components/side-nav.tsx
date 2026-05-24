@@ -15,11 +15,13 @@ import {
   LogOut,
   Settings,
   Activity,
+  Link2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const nav = [
   { href: '',              label: 'Overview',      icon: LayoutGrid,   section: null },
+  { href: '/identity',     label: 'Identity',      icon: Link2,        section: 'Intelligence' },
   { href: '/consumers',    label: 'Consumer',      icon: Users,        section: 'Intelligence' },
   { href: '/outcomes',     label: 'Outcomes',      icon: Activity,     section: 'Intelligence' },
   { href: '/products',     label: 'Products',      icon: Package,      section: 'Intelligence' },

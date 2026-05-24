@@ -135,7 +135,9 @@ export class HaliteApi {
   }
 
   async completeSession(sessionId: string): Promise<void> {
-    await this.post(`/brands/${this.brandId}/quiz/sessions/${sessionId}/complete`, {})
+    await this.post(`/brands/${this.brandId}/quiz/sessions/${sessionId}/complete`, {
+      ...(this.consumerToken ? { consumerToken: this.consumerToken } : {}),
+    })
   }
 
   async getRoutine(): Promise<Routine | null> {

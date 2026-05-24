@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma, Prisma } from '@halite/db'
-import { requireConsumer } from '../lib/auth.js'
+import { requireConsumer, requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 
 // Questions that are about the person (brand-agnostic) — safe to pre-fill
@@ -126,6 +126,68 @@ export async function consumerRoutes(server: FastifyInstance) {
       })
 
       return { consumer: updated }
+    }
+  )
+
+  // ── Brand admin: consumer identity intelligence ───────────────────
+  // Returns aggregated, anonymised cross-brand signals for a brand's consumers.
+  server.get(
+    '/:brandId/intelligence',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+
+      const endUsers = await prisma.endUser.findMany({
+        where: { brandId },
+        select: {
+          id: true,
+          consumerId: true,
+          createdAt: true,
+          _count: { select: { checkIns: true } },
+          consumer: {
+            select: {
+              id: true,
+              _count: { select: { endUsers: true } },
+            },
+          },
+        },
+      })
+
+      const total = endUsers.length
+      const identified = endUsers.filter(u => u.consumerId != null).length
+      const crossBrand = endUsers.filter(u => u.consumer && u.consumer._count.endUsers > 1).length
+      const retained = endUsers.filter(u => u._count.checkIns >= 3).length
+
+      // Weekly identification rate over last 8 weeks
+      const now = Date.now()
+      const weeklyIdentified = Array(8).fill(0) as number[]
+      const weeklyTotal = Array(8).fill(0) as number[]
+      endUsers.forEach(u => {
+        const weeks = Math.floor((now - new Date(u.createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000))
+        if (weeks < 8) {
+          weeklyTotal[7 - weeks]!++
+          if (u.consumerId) weeklyIdentified[7 - weeks]!++
+        }
+      })
+
+      const trend = weeklyTotal.map((t, i) => ({
+        week: i,
+        total: t,
+        identified: weeklyIdentified[i]!,
+        rate: t > 0 ? Math.round((weeklyIdentified[i]! / t) * 100) : null,
+      }))
+
+      return {
+        total,
+        identified,
+        anonymous: total - identified,
+        crossBrand,
+        retained,
+        identificationRate: total > 0 ? Math.round((identified / total) * 100) : 0,
+        crossBrandRate: identified > 0 ? Math.round((crossBrand / identified) * 100) : 0,
+        retentionRate: total > 0 ? Math.round((retained / total) * 100) : 0,
+        trend,
+      }
     }
   )
 }
