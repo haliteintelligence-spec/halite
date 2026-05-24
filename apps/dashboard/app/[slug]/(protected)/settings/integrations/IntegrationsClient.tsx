@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { IntegrationStatus } from '@/lib/api'
-import { CheckCircle, AlertCircle, RefreshCw, Unlink, ExternalLink, Loader2 } from 'lucide-react'
+import { CheckCircle, RefreshCw, Unlink, ExternalLink, Loader2, Copy, Check, RotateCcw } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -18,11 +18,13 @@ function ShopifyIcon() {
 export function IntegrationsClient({
   brandId,
   token,
+  apiKey,
   integrations,
   justConnected,
 }: {
   brandId: string
   token: string
+  apiKey: string | null
   integrations: IntegrationStatus | null
   justConnected: boolean
 }) {
@@ -33,8 +35,29 @@ export function IntegrationsClient({
   const [syncDone, setSyncDone] = useState(false)
   const [banner, setBanner] = useState(justConnected)
   const [connectError, setConnectError] = useState('')
+  const [currentApiKey, setCurrentApiKey] = useState(apiKey)
+  const [keyCopied, setKeyCopied] = useState(false)
+  const [rotating, setRotating] = useState(false)
 
   const authHeaders = { Authorization: `Bearer ${token}` }
+
+  function copyKey() {
+    if (!currentApiKey) return
+    navigator.clipboard.writeText(currentApiKey)
+    setKeyCopied(true)
+    setTimeout(() => setKeyCopied(false), 2000)
+  }
+
+  async function rotateKey() {
+    if (!confirm('Rotate API key? Your existing integrations will stop working until you update them with the new key.')) return
+    setRotating(true)
+    const res = await fetch(`${API_URL}/brands/${brandId}/rotate-api-key`, { method: 'POST', headers: authHeaders })
+    if (res.ok) {
+      const data = await res.json()
+      setCurrentApiKey(data.apiKey)
+    }
+    setRotating(false)
+  }
 
   useEffect(() => {
     if (banner) {
@@ -91,6 +114,34 @@ export function IntegrationsClient({
 
   return (
     <div className="space-y-5">
+      {/* API Key */}
+      <div className={cardCls}>
+        <div className="px-6 py-4 border-b border-sand-1">
+          <p className="text-[13px] font-semibold text-ink">API Key</p>
+          <p className="text-[11px] text-ink-3">Use this key to embed the quiz widget and call the Halite API</p>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          {currentApiKey ? (
+            <div className="flex items-center gap-3 p-3 rounded-xl font-mono text-[12px]" style={{ background: 'var(--sand-1)', border: '1px solid var(--sand-2)' }}>
+              <span className="flex-1 truncate" style={{ color: 'var(--ink)' }}>{currentApiKey}</span>
+              <button onClick={copyKey} className="flex-shrink-0 p-1 rounded hover:opacity-70 transition-opacity">
+                {keyCopied ? <Check size={14} style={{ color: '#16a34a' }} /> : <Copy size={14} style={{ color: 'var(--ink-3)' }} />}
+              </button>
+            </div>
+          ) : (
+            <p className="text-[13px] text-ink-3">Unable to load API key.</p>
+          )}
+          <div className="flex items-center gap-3">
+            <button onClick={rotateKey} disabled={rotating}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium border border-sand-2 text-ink-3 hover:border-sand-3 transition-colors disabled:opacity-50">
+              {rotating ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+              Rotate key
+            </button>
+            <p className="text-[11px] text-ink-3">Rotating generates a new key — update all integrations immediately.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Success banner */}
       {banner && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-100">

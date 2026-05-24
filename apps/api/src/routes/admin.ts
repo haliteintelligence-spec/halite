@@ -509,8 +509,21 @@ export async function adminRoutes(server: FastifyInstance) {
         },
       })
       if (!brand) throw new ApiError(404, 'Brand not found')
-      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
+      const { shopifyToken, shopifyWebhookSecret, ...safe } = brand
       return { brand: safe }
+    }
+  )
+
+  // ── Delete brand ───────────────────────────────────────────────────
+  server.delete(
+    '/admin/brands/:brandId',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { id: true } })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      await prisma.brand.delete({ where: { id: brandId } })
+      return reply.status(204).send()
     }
   )
 
@@ -602,6 +615,21 @@ export async function adminRoutes(server: FastifyInstance) {
         select: { id: true, email: true, name: true, role: true, createdAt: true },
       })
       return reply.status(201).send({ admin })
+    }
+  )
+
+  // ── Reset brand admin password ─────────────────────────────────────
+  server.patch(
+    '/admin/brands/:brandId/admins/:adminId/password',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId, adminId } = request.params as { brandId: string; adminId: string }
+      const { password } = z.object({ password: z.string().min(8) }).parse(request.body)
+      const existing = await prisma.brandAdmin.findFirst({ where: { id: adminId, brandId } })
+      if (!existing) throw new ApiError(404, 'Admin not found')
+      const hashed = await bcrypt.hash(password, 12)
+      await prisma.brandAdmin.update({ where: { id: adminId }, data: { password: hashed } })
+      return { ok: true }
     }
   )
 }

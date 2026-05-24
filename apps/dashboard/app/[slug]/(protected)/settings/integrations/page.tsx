@@ -1,4 +1,4 @@
-import { getTokenAndBrandId, getIntegrations } from '@/lib/api'
+import { getTokenAndBrandId, getIntegrations, getWidgetConfig } from '@/lib/api'
 import { IntegrationsClient } from './IntegrationsClient'
 
 export default async function IntegrationsPage({
@@ -6,9 +6,10 @@ export default async function IntegrationsPage({
 }: {
   searchParams: Promise<{ connected?: string }>
 }) {
-  const [auth, integrations, sp] = await Promise.all([
+  const [auth, integrations, widgetConfig, sp] = await Promise.all([
     getTokenAndBrandId(),
     getIntegrations(),
+    getWidgetConfig(),
     searchParams,
   ])
 
@@ -24,6 +25,7 @@ export default async function IntegrationsPage({
     <IntegrationsClient
       brandId={auth.brandId}
       token={auth.token}
+      apiKey={widgetConfig?.apiKey ?? null}
       integrations={integrations}
       justConnected={sp.connected === 'true'}
     />

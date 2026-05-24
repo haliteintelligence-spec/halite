@@ -75,6 +75,7 @@ export interface BrandSummary {
 export interface BrandDetail extends BrandSummary {
   focusAreas: string[]
   logoUrl: string | null
+  apiKey: string
   admins: Array<{ id: string; email: string; name: string; role: string; createdAt: string }>
 }
 
