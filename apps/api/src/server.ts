@@ -30,7 +30,9 @@ async function bootstrap() {
       // Allow Shopify storefronts, brand subdomains, and dashboard
       const allowed = [
         /\.haliteintelligence\.com$/,
+        /^https?:\/\/haliteintelligence\.com$/,
         /\.myshopify\.com$/,
+        /\.up\.railway\.app$/,
         /^http:\/\/localhost/,
       ]
       if (!origin || allowed.some((r) => r.test(origin))) {
