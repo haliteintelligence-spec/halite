@@ -18,9 +18,16 @@ export interface AnalyticsData {
   }
   checkIns: {
     weeklyTrend: number[]
+    ratingTrend: (number | null)[]
+    complianceTrend: (number | null)[]
     thisWeek: number
     lastWeek: number
-    symptoms: Array<{ symptom: string; count: number }>
+    symptoms: Array<{ symptom: string; count: number; positive: boolean }>
+    positiveSymptomCount: number
+    negativeSymptomCount: number
+  }
+  outcomes: {
+    totalRefined: number
   }
   products: {
     topProducts: Array<{

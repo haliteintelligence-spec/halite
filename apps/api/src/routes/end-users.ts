@@ -5,6 +5,7 @@ import { requireBrandAdmin, requireEndUser } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { generateProgressNarrative, shouldGenerateNarrative } from '../lib/narrative-generator.js'
 import { refineRoutine } from '../lib/routine-refiner.js'
+import { uploadToS3 } from '../lib/storage.js'
 
 export async function endUserRoutes(server: FastifyInstance) {
   // Brand admin: list end users
@@ -101,6 +102,9 @@ export async function endUserRoutes(server: FastifyInstance) {
       shouldGenerateNarrative(userId).then(should => {
         if (should) generateProgressNarrative(userId, brandId).catch(console.error)
       })
+
+      // Auto-refine: check if routine needs updating based on recent check-in trajectory
+      autoRefineIfNeeded(userId, brandId).catch(console.error)
 
       return reply.status(201).send({ checkIn })
     }
@@ -359,4 +363,69 @@ export async function endUserRoutes(server: FastifyInstance) {
       return { items, count: items.length }
     }
   )
+
+  // End user: upload check-in photo → returns S3 URL
+  server.post(
+    '/:brandId/me/check-ins/photo',
+    { preHandler: requireEndUser },
+    async (request, reply) => {
+      const userId = request.endUser!.userId
+      if (!process.env.S3_BUCKET) throw new ApiError(503, 'Photo uploads not configured')
+
+      const data = await request.file()
+      if (!data) throw new ApiError(400, 'No file provided')
+
+      const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+      if (!allowed.includes(data.mimetype)) throw new ApiError(400, 'Unsupported image type')
+
+      const ext = data.mimetype.split('/')[1]!.replace('jpeg', 'jpg')
+      const key = `check-ins/${userId}/${Date.now()}.${ext}`
+      const buffer = await data.toBuffer()
+      const url = await uploadToS3(key, buffer, data.mimetype)
+
+      return reply.status(201).send({ url })
+    }
+  )
+}
+
+// ── Auto-refine helper ─────────────────────────────────────────────────────
+
+async function autoRefineIfNeeded(userId: string, brandId: string): Promise<void> {
+  const checkIns = await prisma.checkIn.findMany({
+    where: { endUserId: userId },
+    select: { skinRating: true, compliant: true, date: true },
+    orderBy: { date: 'desc' },
+    take: 10,
+  })
+
+  if (checkIns.length < 7) return
+
+  const recent = checkIns.slice(0, 5).map(c => c.skinRating)
+  const older = checkIns.slice(5).map(c => c.skinRating)
+  const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length
+  const olderAvg = older.reduce((a, b) => a + b, 0) / older.length
+
+  const declining = recentAvg < olderAvg - 0.5
+  const poor = recentAvg < 2.5
+
+  if (!declining && !poor) return
+
+  // Don't re-refine if a routine was already refined in the last 7 days
+  const recentRefined = await prisma.routine.findFirst({
+    where: {
+      endUserId: userId,
+      version: { gt: 1 },
+      createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+    },
+  })
+  if (recentRefined) return
+
+  const activeRoutines = await prisma.routine.findMany({
+    where: { endUserId: userId, activeTo: null },
+    select: { id: true },
+  })
+
+  for (const r of activeRoutines) {
+    await refineRoutine(userId, brandId, r.id).catch(console.error)
+  }
 }

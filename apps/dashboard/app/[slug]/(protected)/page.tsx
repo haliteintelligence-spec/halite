@@ -112,6 +112,31 @@ export default async function IntelligencePage({ params }: Props) {
                   </div>
                   <ProductEngine products={analytics.products} usageRate={analytics.summary.usageRate} />
                 </div>
+
+                {/* Outcomes snapshot */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                      Outcomes
+                    </h2>
+                    <a href={`/${slug}/outcomes`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
+                      Full view →
+                    </a>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: 'Avg Skin Rating', value: analytics.summary.avgRating != null ? `${analytics.summary.avgRating}/5` : '—' },
+                      { label: 'Compliance', value: analytics.summary.complianceRate != null ? `${analytics.summary.complianceRate}%` : '—' },
+                      { label: 'Total Check-ins', value: analytics.summary.totalCheckIns.toLocaleString() },
+                      { label: 'Routines Refined', value: analytics.outcomes.totalRefined.toString() },
+                    ].map(tile => (
+                      <div key={tile.label} className="rounded-xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-1" style={{ color: 'var(--ink-3)' }}>{tile.label}</p>
+                        <p className="text-xl font-semibold font-display" style={{ color: 'var(--ink)' }}>{tile.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 

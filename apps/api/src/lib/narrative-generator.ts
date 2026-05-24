@@ -55,9 +55,17 @@ export async function generateProgressNarrative(
   const skinType = profile?.skinType ?? 'unknown'
   const concerns = (profile?.skinConcerns as string[] | null)?.join(', ') ?? 'not specified'
 
-  const prompt = `You are a knowledgeable, warm beauty advisor reviewing a customer's skin progress data.
+  const SYSTEM_PROMPT = `You are a knowledgeable, warm beauty advisor reviewing a customer's skin progress data.
 
-USER PROFILE:
+Write a personalised 3-paragraph progress report in second person ("Your skin…"). Be specific, warm, and actionable.
+
+Paragraph 1: What the data shows — overall trend, rating movement, standout positives.
+Paragraph 2: What's working and why — highlight the best-performing product, compliance impact.
+Paragraph 3: One specific, actionable recommendation based on the data (e.g. consistency tip, product usage tweak, or next step).
+
+Keep each paragraph to 2–3 sentences. No bullet points, no headers. Plain prose only.`
+
+  const userContent = `USER PROFILE:
 - Skin type: ${skinType}
 - Primary concerns: ${concerns}
 - Current routine: ${routineSteps}
@@ -69,20 +77,13 @@ CHECK-IN DATA (${checkIns.length} check-ins):
 - Top positive signs: ${topPositive.map(([k, v]) => `${k} (${v}x)`).join(', ') || 'none yet'}
 - Top concerns: ${topConcerns.map(([k, v]) => `${k} (${v}x)`).join(', ') || 'none'}
 - Most positively rated product: ${bestProduct ? `${bestProduct.name} (${bestProduct.pos} positive reactions)` : 'n/a'}
-${worstProduct ? `- Product showing negative reactions: ${worstProduct.name} (${worstProduct.neg} negative reactions)` : ''}
-
-Write a personalised 3-paragraph progress report in second person ("Your skin…"). Be specific, warm, and actionable.
-
-Paragraph 1: What the data shows — overall trend, rating movement, standout positives.
-Paragraph 2: What's working and why — highlight the best-performing product, compliance impact.
-Paragraph 3: One specific, actionable recommendation based on the data (e.g. consistency tip, product usage tweak, or next step).
-
-Keep each paragraph to 2–3 sentences. No bullet points, no headers. Plain prose only.`
+${worstProduct ? `- Product showing negative reactions: ${worstProduct.name} (${worstProduct.neg} negative reactions)` : ''}`
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 512,
-    messages: [{ role: 'user', content: prompt }],
+    system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }] as any,
+    messages: [{ role: 'user', content: userContent }],
   })
 
   const narrative = response.content[0]?.type === 'text' ? response.content[0].text.trim() : null

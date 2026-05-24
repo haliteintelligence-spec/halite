@@ -11,7 +11,7 @@ export async function analyticsRoutes(server: FastifyInstance) {
     async (request) => {
       const { brandId } = request.params as { brandId: string }
 
-      const [endUsers, profiles, checkIns, routineSteps, checkInProducts] = await Promise.all([
+      const [endUsers, profiles, checkIns, routineSteps, checkInProducts, refinedCount] = await Promise.all([
         prisma.endUser.findMany({
           where: { brandId },
           select: { id: true },
@@ -40,6 +40,9 @@ export async function analyticsRoutes(server: FastifyInstance) {
             reaction: true,
             product: { select: { id: true, name: true, category: true } },
           },
+        }),
+        prisma.routine.count({
+          where: { endUser: { brandId }, version: { gt: 1 } },
         }),
       ])
 
@@ -94,17 +97,40 @@ export async function analyticsRoutes(server: FastifyInstance) {
       // ── Check-in trend (12 weeks) ─────────────────────────────────
       const now = Date.now()
       const weeklyTrend: number[] = Array(12).fill(0)
+      const ratingAccum: { sum: number; count: number }[] = Array.from({ length: 12 }, () => ({ sum: 0, count: 0 }))
+      const complianceAccum: { compliant: number; total: number }[] = Array.from({ length: 12 }, () => ({ compliant: 0, total: 0 }))
+
       checkIns.forEach(ci => {
         const weeks = Math.floor((now - new Date(ci.date).getTime()) / (7 * 24 * 60 * 60 * 1000))
-        if (weeks < 12) weeklyTrend[11 - weeks]! ++
+        if (weeks < 12) {
+          weeklyTrend[11 - weeks]!++
+          ratingAccum[11 - weeks]!.sum += ci.skinRating
+          ratingAccum[11 - weeks]!.count++
+          complianceAccum[11 - weeks]!.total++
+          if (ci.compliant) complianceAccum[11 - weeks]!.compliant++
+        }
       })
 
+      const ratingTrend = ratingAccum.map(w =>
+        w.count > 0 ? Math.round((w.sum / w.count) * 10) / 10 : null
+      )
+      const complianceTrend = complianceAccum.map(w =>
+        w.total > 0 ? Math.round((w.compliant / w.total) * 100) : null
+      )
+
+      const POSITIVE_SYMPTOMS = new Set(['IMPROVEMENT', 'GLOW', 'HYDRATED', 'TEXTURE_SMOOTH'])
       const symptomMap: Record<string, number> = {}
-      checkIns.forEach(ci => ci.symptoms.forEach((s: string) => { symptomMap[s] = (symptomMap[s] || 0) + 1 }))
+      let positiveSymptomCount = 0
+      let negativeSymptomCount = 0
+      checkIns.forEach(ci => ci.symptoms.forEach((s: string) => {
+        symptomMap[s] = (symptomMap[s] || 0) + 1
+        if (POSITIVE_SYMPTOMS.has(s)) positiveSymptomCount++
+        else negativeSymptomCount++
+      }))
       const symptoms = Object.entries(symptomMap)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([symptom, count]) => ({ symptom, count }))
+        .slice(0, 10)
+        .map(([symptom, count]) => ({ symptom, count, positive: POSITIVE_SYMPTOMS.has(symptom) }))
 
       // ── Product performance ───────────────────────────────────────
       const productPerf: Record<string, {
@@ -195,9 +221,16 @@ export async function analyticsRoutes(server: FastifyInstance) {
         consumers: { monkSkinTones, skinTypes, concerns, ageRanges },
         checkIns: {
           weeklyTrend,
+          ratingTrend,
+          complianceTrend,
           thisWeek: weeklyTrend[11],
           lastWeek: weeklyTrend[10],
           symptoms,
+          positiveSymptomCount,
+          negativeSymptomCount,
+        },
+        outcomes: {
+          totalRefined: refinedCount,
         },
         products: {
           topProducts,

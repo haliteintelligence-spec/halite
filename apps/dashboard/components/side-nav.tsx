@@ -14,12 +14,14 @@ import {
   BookOpen,
   LogOut,
   Settings,
+  Activity,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const nav = [
   { href: '',              label: 'Overview',      icon: LayoutGrid,   section: null },
   { href: '/consumers',    label: 'Consumer',      icon: Users,        section: 'Intelligence' },
+  { href: '/outcomes',     label: 'Outcomes',      icon: Activity,     section: 'Intelligence' },
   { href: '/products',     label: 'Products',      icon: Package,      section: 'Intelligence' },
   { href: '/ingredients',  label: 'Ingredients',   icon: FlaskConical, section: 'Intelligence' },
   { href: '/market',       label: 'Market',        icon: TrendingUp,   section: 'Intelligence' },

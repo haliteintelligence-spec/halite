@@ -29,6 +29,7 @@ const STEPS: Step[] = [
   { id: 2, title: 'Any symptoms?' },
   { id: 3, title: 'Product feedback' },
   { id: 4, title: 'Any notes?' },
+  { id: 5, title: 'Add a photo (optional)' },
 ]
 
 export class CheckInController {
@@ -37,6 +38,7 @@ export class CheckInController {
   private symptoms = new Set<string>()
   private reactions: Record<string, string> = {}
   private notes = ''
+  private photoUrl = ''
   private routine: Routine | null = null
   private previousCount = 0
 
@@ -72,6 +74,7 @@ export class CheckInController {
       case 2: return this.renderSymptoms()
       case 3: return this.renderProducts()
       case 4: return this.renderNotes()
+      case 5: return this.renderPhoto()
     }
   }
 
@@ -287,6 +290,63 @@ export class CheckInController {
     this.render(el)
   }
 
+  // ── Step 5: Photo ──────────────────────────────────────────────────
+
+  private renderPhoto() {
+    const el = document.createElement('div')
+
+    const title = document.createElement('p')
+    title.className = 'hlw-question-text'
+    title.textContent = 'Add a skin photo'
+    el.appendChild(title)
+
+    const sub = document.createElement('p')
+    sub.className = 'hlw-question-sub'
+    sub.textContent = 'Optional — helps track visible progress over time. Stored privately.'
+    el.appendChild(sub)
+
+    const uploadArea = document.createElement('div')
+    uploadArea.className = 'hlw-photo-upload'
+    uploadArea.innerHTML = `<span class="hlw-photo-icon">📷</span><p class="hlw-photo-label">Tap to add photo</p>`
+
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'user'
+    input.style.display = 'none'
+
+    let uploading = false
+
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0]
+      if (!file || uploading) return
+      uploading = true
+      uploadArea.innerHTML = `<span class="hlw-photo-icon">⏳</span><p class="hlw-photo-label">Uploading…</p>`
+      try {
+        this.photoUrl = await this.api.uploadCheckInPhoto(file)
+        const preview = document.createElement('img')
+        preview.src = URL.createObjectURL(file)
+        preview.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px;'
+        uploadArea.innerHTML = ''
+        uploadArea.appendChild(preview)
+      } catch {
+        this.photoUrl = ''
+        uploadArea.innerHTML = `<span class="hlw-photo-icon">⚠️</span><p class="hlw-photo-label">Upload failed — continuing without photo</p>`
+      }
+      uploading = false
+    })
+
+    uploadArea.addEventListener('click', () => input.click())
+    el.appendChild(uploadArea)
+    el.appendChild(input)
+
+    const nextBtn = this.makeNextBtn('Submit Check-in', false)
+    nextBtn.disabled = false
+    nextBtn.addEventListener('click', () => this.next())
+    ;(el as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = nextBtn
+    this.render(el)
+  }
+
   // ── Submit ─────────────────────────────────────────────────────────
 
   private async submit() {
@@ -309,6 +369,7 @@ export class CheckInController {
         symptoms: Array.from(this.symptoms),
         notes: this.notes || undefined,
         compliant: true,
+        photoUrl: this.photoUrl || undefined,
         products,
       })
       this.renderSuccess()

@@ -127,11 +127,25 @@ export class HaliteApi {
     } catch { return [] }
   }
 
+  async uploadCheckInPhoto(file: File): Promise<string> {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${this.apiUrl}/brands/${this.brandId}/me/check-ins/photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.token}` },
+      body: form,
+    })
+    if (!res.ok) throw new Error(`Photo upload failed: ${res.status}`)
+    const { url } = await res.json() as { url: string }
+    return url
+  }
+
   async submitCheckIn(data: {
     skinRating: number
     symptoms: string[]
     notes?: string
     compliant: boolean
+    photoUrl?: string
     products: Array<{ productId: string; used: boolean; reaction?: string }>
   }): Promise<void> {
     await this.post(`/brands/${this.brandId}/me/check-ins`, data)

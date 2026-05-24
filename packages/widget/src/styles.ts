@@ -267,6 +267,18 @@ export function getStyles(accent: string): string {
       border-radius: 16px;
       padding: 16px;
     }
+    /* ── Photo upload ── */
+    .hlw-photo-upload {
+      width: 100%; height: 160px; border-radius: 14px;
+      border: 2px dashed #e0d6cc; background: #faf6f0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; cursor: pointer; overflow: hidden;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .hlw-photo-upload:hover { border-color: ${accent}; background: ${accent}08; }
+    .hlw-photo-icon { font-size: 28px; }
+    .hlw-photo-label { font-size: 12px; font-weight: 500; color: #999; }
+
     .hlw-streak {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 6px 14px; border-radius: 100px;
