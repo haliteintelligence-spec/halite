@@ -69,6 +69,8 @@ export interface BrandProfile {
   focusAreas: string[]
   shopifyShop: string | null
   createdAt: string
+  isDemo: boolean
+  demoLinkExpiresAt: string | null
 }
 
 async function apiFetchMutate<T>(path: string, token: string, method: string, body?: unknown): Promise<T | null> {
@@ -251,4 +253,47 @@ export async function getIdentityIntelligence(): Promise<IdentityData | null> {
   const payload = decodeToken(token)
   if (!payload?.brandId) return null
   return apiFetch<IdentityData>(`/brands/${payload.brandId}/intelligence`, token)
+}
+
+export interface AgentWorkflow {
+  id: string
+  name: string
+  description: string | null
+  type: string
+  isPrebuilt: boolean
+  isActive: boolean
+  createdAt: string
+  _count: { runs: number }
+  runs: Array<{ id: string; status: string; createdAt: string }>
+}
+
+export interface AgentRun {
+  id: string
+  workflowId: string
+  status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED'
+  output: unknown
+  tokenCount: number | null
+  createdAt: string
+}
+
+export async function getAgentWorkflows(): Promise<AgentWorkflow[]> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return []
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return []
+  const data = await apiFetch<{ workflows: AgentWorkflow[] }>(`/brands/${payload.brandId}/agents/workflows`, token)
+  return data?.workflows ?? []
+}
+
+export type WorkflowDetail = Omit<AgentWorkflow, 'runs'> & { runs: AgentRun[] }
+
+export async function getAgentWorkflow(workflowId: string): Promise<WorkflowDetail | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  const data = await apiFetch<{ workflow: WorkflowDetail }>(`/brands/${payload.brandId}/agents/workflows/${workflowId}`, token)
+  return data?.workflow ?? null
 }

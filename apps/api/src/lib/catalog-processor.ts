@@ -1,5 +1,7 @@
 import { parse } from 'csv-parse/sync'
 import { prisma, Prisma, CatalogFormat, ProductCategory, SkinConcern, SkinType } from '@halite/db'
+import { parseXlsx } from './xlsx-parser.js'
+import { normalizeCatalogColumns, applyColumnMapping } from './schema-normalizer.js'
 
 interface RawProductRow {
   name: string
@@ -60,9 +62,16 @@ export async function processCatalogUpload(
   let rows: RawProductRow[]
 
   if (format === 'CSV') {
-    rows = parse(buffer, { columns: true, skip_empty_lines: true, trim: true }) as RawProductRow[]
+    const raw = parse(buffer, { columns: true, skip_empty_lines: true, trim: true }) as Record<string, string>[]
+    const headers = raw.length > 0 ? Object.keys(raw[0]!) : []
+    const mapping = await normalizeCatalogColumns(headers, raw.slice(0, 5))
+    rows = applyColumnMapping(raw, mapping) as unknown as RawProductRow[]
   } else if (format === 'JSON') {
     rows = JSON.parse(buffer.toString('utf-8')) as RawProductRow[]
+  } else if (format === 'XLSX') {
+    const { headers, rows: xlsxRows } = parseXlsx(buffer)
+    const mapping = await normalizeCatalogColumns(headers, xlsxRows.slice(0, 5))
+    rows = applyColumnMapping(xlsxRows, mapping) as unknown as RawProductRow[]
   } else {
     throw new Error(`Unsupported format: ${format}`)
   }

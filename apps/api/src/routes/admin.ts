@@ -4,6 +4,9 @@ import { Resend } from 'resend'
 import { prisma, InvoiceStatus } from '@halite/db'
 import { requireHaliteAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
+import { processCatalogUpload } from '../lib/catalog-processor.js'
+import { parsePurchaseHistory } from '../lib/purchase-history-processor.js'
+import { provisionDemoEnvironment } from '../lib/demo-generator.js'
 
 export async function adminRoutes(server: FastifyInstance) {
   // ── Platform-wide stats ───────────────────────────────────────────
@@ -201,4 +204,301 @@ export async function adminRoutes(server: FastifyInstance) {
       return { sent: true, recipients: brand.admins.length }
     }
   )
+
+  // ── Demo environments ─────────────────────────────────────────────
+
+  // Create a new demo — multipart: catalogFile (required), purchaseFile (optional)
+  server.post(
+    '/admin/demos',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const adminId = (request as any).haliteAdmin!.adminId
+
+      const parts = request.parts()
+      let prospectName = ''
+      let focusAreas: string[] = []
+      let consumerCount = 100
+      let catalogBuffer: Buffer | null = null
+      let catalogMime = 'text/csv'
+      let catalogFilename = 'catalog.csv'
+      let purchaseBuffer: Buffer | null = null
+      let purchaseMime = 'text/csv'
+
+      for await (const part of parts) {
+        if (part.type === 'field') {
+          if (part.fieldname === 'prospectName') prospectName = String(part.value)
+          if (part.fieldname === 'focusAreas') {
+            try { focusAreas = JSON.parse(String(part.value)) } catch { focusAreas = [String(part.value)] }
+          }
+          if (part.fieldname === 'consumerCount') consumerCount = Math.min(200, Math.max(50, parseInt(String(part.value)) || 100))
+        } else {
+          const buf = await part.toBuffer()
+          if (part.fieldname === 'catalogFile') {
+            catalogBuffer = buf
+            catalogMime = part.mimetype
+            catalogFilename = (part as any).filename ?? 'catalog.csv'
+          } else if (part.fieldname === 'purchaseFile') {
+            purchaseBuffer = buf
+            purchaseMime = part.mimetype
+          }
+        }
+      }
+
+      if (!prospectName) throw new ApiError(400, 'prospectName is required')
+      if (!catalogBuffer) throw new ApiError(400, 'catalogFile is required')
+      if (focusAreas.length === 0) focusAreas = ['SKINCARE']
+
+      // Determine catalog format
+      const ext = catalogFilename.split('.').pop()?.toLowerCase()
+      const catalogFormat =
+        ext === 'xlsx' || ext === 'xls' ? 'XLSX' :
+        ext === 'json' ? 'JSON' : 'CSV'
+
+      // Parse purchase history if provided
+      let purchaseMatrix
+      if (purchaseBuffer) {
+        try { purchaseMatrix = await parsePurchaseHistory(purchaseBuffer, purchaseMime) }
+        catch { /* non-blocking — proceed without purchase data */ }
+      }
+
+      // Create brand stub immediately so we can upload catalog to it
+      const slug = `${prospectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-demo-${Math.random().toString(36).slice(2, 6)}`
+
+      const brand = await prisma.brand.create({
+        data: {
+          name: prospectName,
+          slug,
+          isDemo: true,
+          demoProspectName: prospectName,
+          demoCreatedBy: adminId,
+          demoLinkExpiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+          focusAreas: focusAreas as any,
+          primaryColor: '#C17A47',
+          active: true,
+        },
+      })
+
+      // Ingest catalog synchronously (it's fast — just DB writes)
+      const upload = await prisma.catalogUpload.create({
+        data: { brandId: brand.id, fileName: catalogFilename, fileUrl: '', format: catalogFormat as any, status: 'PROCESSING' },
+      })
+      await processCatalogUpload(upload.id, brand.id, catalogBuffer, catalogFormat as any)
+
+      // Kick off the rest of provisioning async (routines take time)
+      ;(async () => {
+        try {
+          await provisionDemoEnvironment({
+            prospectName,
+            createdByAdminId: adminId,
+            focusAreas,
+            consumerCount,
+            purchaseMatrix,
+            existingBrandId: brand.id,
+          })
+          await prisma.brand.update({ where: { id: brand.id }, data: { active: true } })
+        } catch (err) {
+          console.error('Demo provisioning failed:', err)
+        }
+      })()
+
+      return reply.status(202).send({
+        demoId: brand.id,
+        slug,
+        status: 'generating',
+        message: 'Demo environment is being provisioned. Poll GET /admin/demos/:demoId for status.',
+      })
+    }
+  )
+
+  // List all demos
+  server.get(
+    '/admin/demos',
+    { preHandler: requireHaliteAdmin },
+    async () => {
+      const demos = await prisma.brand.findMany({
+        where: { isDemo: true },
+        include: {
+          _count: { select: { products: true, endUsers: true } },
+          admins: { select: { email: true }, take: 1 },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      return {
+        demos: demos.map(d => ({
+          id: d.id,
+          slug: d.slug,
+          prospectName: d.demoProspectName,
+          status: demoBrandStatus(d),
+          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${d.slug}/login`,
+          email: d.admins[0]?.email ?? null,
+          password: `demo-${d.slug}`,
+          demoLinkExpiresAt: d.demoLinkExpiresAt,
+          focusAreas: d.focusAreas,
+          productCount: d._count.products,
+          consumerCount: d._count.endUsers,
+          createdAt: d.createdAt,
+        })),
+      }
+    }
+  )
+
+  // Demo detail
+  server.get(
+    '/admin/demos/:demoId',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { demoId } = request.params as { demoId: string }
+      const brand = await prisma.brand.findFirst({
+        where: { id: demoId, isDemo: true },
+        include: {
+          admins: { select: { email: true }, take: 1 },
+          _count: { select: { products: true, endUsers: true, quizSessions: true } },
+        },
+      })
+      if (!brand) throw new ApiError(404, 'Demo not found')
+
+      const [routineCount, checkInCount, workflowCount] = await Promise.all([
+        prisma.routine.count({ where: { endUser: { brandId: brand.id } } }),
+        prisma.checkIn.count({ where: { endUser: { brandId: brand.id } } }),
+        prisma.agentWorkflow.count({ where: { brandId: brand.id } }),
+      ])
+
+      return {
+        demo: {
+          id: brand.id,
+          slug: brand.slug,
+          prospectName: brand.demoProspectName,
+          status: demoBrandStatus(brand),
+          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${brand.slug}/login`,
+          email: brand.admins[0]?.email ?? null,
+          password: `demo-${brand.slug}`,
+          demoLinkExpiresAt: brand.demoLinkExpiresAt,
+          focusAreas: brand.focusAreas,
+          createdAt: brand.createdAt,
+          stats: {
+            products: brand._count.products,
+            consumers: brand._count.endUsers,
+            routines: routineCount,
+            checkIns: checkInCount,
+            workflows: workflowCount,
+          },
+        },
+      }
+    }
+  )
+
+  // Extend access window
+  server.post(
+    '/admin/demos/:demoId/access',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { demoId } = request.params as { demoId: string }
+      const brand = await prisma.brand.findFirst({ where: { id: demoId, isDemo: true } })
+      if (!brand) throw new ApiError(404, 'Demo not found')
+
+      const newExpiry = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+      await prisma.brand.update({ where: { id: demoId }, data: { demoLinkExpiresAt: newExpiry } })
+
+      return { demoLinkExpiresAt: newExpiry, message: 'Access extended by 15 days' }
+    }
+  )
+
+  // Get credentials
+  server.get(
+    '/admin/demos/:demoId/credentials',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { demoId } = request.params as { demoId: string }
+      const brand = await prisma.brand.findFirst({
+        where: { id: demoId, isDemo: true },
+        include: { admins: { select: { email: true }, take: 1 } },
+      })
+      if (!brand) throw new ApiError(404, 'Demo not found')
+
+      return {
+        loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${brand.slug}/login`,
+        email: brand.admins[0]?.email ?? `admin@${brand.slug}.halite`,
+        password: `demo-${brand.slug}`,
+        demoLinkExpiresAt: brand.demoLinkExpiresAt,
+        status: demoBrandStatus(brand),
+      }
+    }
+  )
+
+  // Delete demo (hard delete — cascades all data)
+  server.delete(
+    '/admin/demos/:demoId',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const { demoId } = request.params as { demoId: string }
+      const brand = await prisma.brand.findFirst({ where: { id: demoId, isDemo: true } })
+      if (!brand) throw new ApiError(404, 'Demo not found')
+      await prisma.brand.delete({ where: { id: demoId } })
+      return reply.status(204).send()
+    }
+  )
+
+  // Regenerate synthetic data (keeps products, replaces consumers/check-ins)
+  server.post(
+    '/admin/demos/:demoId/regenerate',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const { demoId } = request.params as { demoId: string }
+      const body = z.object({ consumerCount: z.number().min(50).max(200).default(100) }).parse(request.body ?? {})
+      const brand = await prisma.brand.findFirst({
+        where: { id: demoId, isDemo: true },
+        select: { id: true, demoProspectName: true, demoCreatedBy: true, focusAreas: true },
+      })
+      if (!brand) throw new ApiError(404, 'Demo not found')
+
+      // Delete existing consumers/check-ins but keep products
+      await prisma.endUser.deleteMany({ where: { brandId: brand.id } })
+      await prisma.agentWorkflow.deleteMany({ where: { brandId: brand.id } })
+
+      ;(async () => {
+        try {
+          await provisionDemoEnvironment({
+            prospectName: brand.demoProspectName ?? 'Demo',
+            createdByAdminId: brand.demoCreatedBy ?? '',
+            focusAreas: brand.focusAreas as string[],
+            consumerCount: body.consumerCount,
+            existingBrandId: brand.id,
+          })
+        } catch (err) { console.error('Regeneration failed:', err) }
+      })()
+
+      return reply.status(202).send({ message: 'Regeneration started' })
+    }
+  )
+
+  // ── List paying brands (non-demo) ─────────────────────────────────
+  server.get(
+    '/admin/brands',
+    { preHandler: requireHaliteAdmin },
+    async () => {
+      const brands = await prisma.brand.findMany({
+        where: { isDemo: false },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          plan: true,
+          active: true,
+          createdAt: true,
+          _count: { select: { endUsers: true, products: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+      return { brands }
+    }
+  )
+}
+
+function demoBrandStatus(brand: { demoLinkExpiresAt: Date | null; _count?: { products: number; endUsers: number } }): string {
+  if (!brand.demoLinkExpiresAt) return 'generating'
+  if (brand.demoLinkExpiresAt < new Date()) return 'access_expired'
+  const daysLeft = Math.ceil((brand.demoLinkExpiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  if (daysLeft <= 3) return 'expiring_soon'
+  return 'active'
 }

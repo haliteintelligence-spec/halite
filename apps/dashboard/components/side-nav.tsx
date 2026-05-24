@@ -16,6 +16,9 @@ import {
   Settings,
   Activity,
   Link2,
+  Bot,
+  Plus,
+  Clock,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -28,21 +31,35 @@ const nav = [
   { href: '/ingredients',  label: 'Ingredients',   icon: FlaskConical, section: 'Intelligence' },
   { href: '/market',       label: 'Market',        icon: TrendingUp,   section: 'Intelligence' },
   { href: '/benchmarking', label: 'Benchmarking',  icon: BarChart3,    section: 'Intelligence' },
+  { href: '/agents',       label: 'Agents',        icon: Bot,          section: 'Agents' },
   { href: '/catalog',      label: 'Catalog',       icon: BookOpen,     section: 'Catalog' },
   { href: '/ai-lab',       label: 'AI Lab',        icon: Sparkles,     section: 'Lab' },
   { href: '/settings',     label: 'Settings',      icon: Settings,     section: 'Settings' },
 ]
 
-export function SideNav({ slug }: { slug: string }) {
+export function SideNav({
+  slug,
+  isDemo = false,
+  demoLinkExpiresAt = null,
+}: {
+  slug: string
+  isDemo?: boolean
+  demoLinkExpiresAt?: string | null
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const base = `/${slug}`
 
   const overview = nav.filter(n => !n.section)
   const intelligence = nav.filter(n => n.section === 'Intelligence')
+  const agents = nav.filter(n => n.section === 'Agents')
   const catalog = nav.filter(n => n.section === 'Catalog')
   const lab = nav.filter(n => n.section === 'Lab')
   const settings = nav.filter(n => n.section === 'Settings')
+
+  const daysLeft = demoLinkExpiresAt
+    ? Math.ceil((new Date(demoLinkExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null
 
   function handleLogout() {
     document.cookie = 'halite_token=; path=/; max-age=0'
@@ -82,6 +99,22 @@ export function SideNav({ slug }: { slug: string }) {
           Halite Intelligence
         </p>
         <p className="text-sm font-semibold text-white capitalize leading-tight">{slug}</p>
+        {isDemo && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span
+              className="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded"
+              style={{ background: 'var(--clay)', color: 'white' }}
+            >
+              DEMO
+            </span>
+            {daysLeft !== null && (
+              <span className="flex items-center gap-1 text-[9px] text-white/40">
+                <Clock size={9} />
+                {daysLeft > 0 ? `${daysLeft}d left` : 'expired'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Nav sections */}
@@ -96,6 +129,24 @@ export function SideNav({ slug }: { slug: string }) {
           </p>
           <div className="space-y-0.5">
             {intelligence.map(item => <NavItem key={item.href} {...item} />)}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between px-3 mb-2">
+            <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30">
+              Agents
+            </p>
+            <Link
+              href={`${base}/agents/new`}
+              className="text-white/30 hover:text-white/60 transition-colors"
+              title="New agent"
+            >
+              <Plus size={10} />
+            </Link>
+          </div>
+          <div className="space-y-0.5">
+            {agents.map(item => <NavItem key={item.href} {...item} />)}
           </div>
         </div>
 

@@ -15,6 +15,7 @@ import { analyticsRoutes } from './routes/analytics.js'
 import { adminRoutes } from './routes/admin.js'
 import { crystalRoutes, adminCrystalRoutes } from './routes/crystal.js'
 import { consumerRoutes } from './routes/consumers.js'
+import { agentRoutes } from './routes/agents.js'
 import { errorHandler } from './lib/errors.js'
 
 const server = Fastify({
@@ -69,6 +70,7 @@ async function bootstrap() {
   await server.register(crystalRoutes, { prefix: '/brands' })
   await server.register(adminCrystalRoutes)
   await server.register(consumerRoutes)
+  await server.register(agentRoutes, { prefix: '/brands' })
 
   server.setErrorHandler(errorHandler)
 

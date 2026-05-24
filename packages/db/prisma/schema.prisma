@@ -46,17 +46,24 @@ model Brand {
   logoUrl      String?
   primaryColor String? @default("#000000")
 
+  // Demo environment
+  isDemo            Boolean   @default(false)
+  demoProspectName  String?
+  demoCreatedBy     String?
+  demoLinkExpiresAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admins              BrandAdmin[]
-  products            Product[]
-  endUsers            EndUser[]
-  quizSessions        QuizSession[]
-  catalogUploads      CatalogUpload[]
-  quizConfig          QuizConfig?
-  invoices            Invoice[]
+  admins               BrandAdmin[]
+  products             Product[]
+  endUsers             EndUser[]
+  quizSessions         QuizSession[]
+  catalogUploads       CatalogUpload[]
+  quizConfig           QuizConfig?
+  invoices             Invoice[]
   crystalConversations CrystalConversation[]
+  agentWorkflows       AgentWorkflow[]
 
   @@map("brands")
 }
@@ -145,6 +152,7 @@ enum CatalogFormat {
   CSV
   JSON
   SHOPIFY_SYNC
+  XLSX
 }
 
 enum UploadStatus {
@@ -609,4 +617,58 @@ model Invoice {
   updatedAt DateTime      @updatedAt
 
   @@map("invoices")
+}
+
+// ─────────────────────────────────────────────
+// AGENT WORKFLOWS
+// ─────────────────────────────────────────────
+
+model AgentWorkflow {
+  id          String            @id @default(cuid())
+  brandId     String
+  name        String
+  description String?
+  type        AgentWorkflowType
+  config      Json
+  isActive    Boolean           @default(true)
+  isPrebuilt  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  brand Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  runs  AgentRun[]
+
+  @@index([brandId])
+  @@map("agent_workflows")
+}
+
+enum AgentWorkflowType {
+  ROUTINE_OUTCOME
+  CHURN_PREDICTION
+  PRODUCT_INTELLIGENCE
+  CONVERSION
+  EXECUTIVE_INTELLIGENCE
+  CUSTOM
+}
+
+model AgentRun {
+  id         String         @id @default(cuid())
+  workflowId String
+  status     AgentRunStatus @default(PENDING)
+  input      Json?
+  output     Json?
+  tokenCount Int?
+  createdAt  DateTime       @default(now())
+
+  workflow AgentWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@map("agent_runs")
+}
+
+enum AgentRunStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
 }
