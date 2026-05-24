@@ -120,6 +120,13 @@ export class HaliteApi {
     } catch { return null }
   }
 
+  async getRoutines(): Promise<Routine[]> {
+    try {
+      const res = await this.get<{ routines: Routine[] }>(`/brands/${this.brandId}/me/routines`)
+      return res.routines
+    } catch { return [] }
+  }
+
   async submitCheckIn(data: {
     skinRating: number
     symptoms: string[]

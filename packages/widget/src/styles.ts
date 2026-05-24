@@ -180,6 +180,20 @@ export function getStyles(accent: string): string {
     .hlw-error-text { font-size: 15px; color: #1a1a1a; font-weight: 500; margin-bottom: 6px; }
     .hlw-error-sub { font-size: 13px; color: #888; }
 
+    /* ── Area tabs (multi-area routines) ── */
+    .hlw-area-tabs {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .hlw-area-tab {
+      padding: 7px 16px; border-radius: 100px;
+      border: 1.5px solid #e8e8e8; background: #fff;
+      font-size: 12px; font-weight: 600; color: #888; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .hlw-area-tab:hover { border-color: ${accent}; color: ${accent}; }
+    .hlw-area-tab.active { border-color: ${accent}; background: ${accent}; color: #fff; }
+    .hlw-area-panel { display: flex; flex-direction: column; gap: 20px; }
+
     /* ── Check-in styles ── */
     .hlw-rating-row {
       display: flex; gap: 8px; margin-bottom: 24px;

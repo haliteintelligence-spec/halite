@@ -147,6 +147,26 @@ export async function endUserRoutes(server: FastifyInstance) {
     }
   )
 
+  // End user: get all active routines (one per beauty area)
+  server.get(
+    '/:brandId/me/routines',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+      const routines = await prisma.routine.findMany({
+        where: { endUserId: userId, activeTo: null },
+        include: {
+          steps: {
+            include: { product: true },
+            orderBy: [{ timeOfDay: 'asc' }, { step: 'asc' }],
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+      return { routines }
+    }
+  )
+
   // End user: get AI progress narrative
   server.get(
     '/:brandId/me/narrative',

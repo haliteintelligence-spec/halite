@@ -199,11 +199,16 @@ export class QuizController {
   }
 
   private async pollRoutine() {
-    const maxAttempts = 20
+    const selectedAreas = this.answers['__area_select'] as string[] | undefined
+    const expectedCount = selectedAreas?.length ?? 1
+    const maxAttempts = 30
+
     for (let i = 0; i < maxAttempts; i++) {
       await sleep(2000)
-      const routine = await this.api.getRoutine()
-      if (routine) { this.renderRoutine(routine); return }
+      const routines = await this.api.getRoutines()
+      if (routines.length >= expectedCount) { this.renderRoutines(routines); return }
+      // Show partial result if at least one area ready and we've waited a while
+      if (routines.length > 0 && i > 5) { this.renderRoutines(routines); return }
     }
     this.renderError('Routine is taking longer than usual', 'Check back in a minute — your routine will be ready soon.')
   }
@@ -233,58 +238,51 @@ export class QuizController {
     this.render(el)
   }
 
-  private renderRoutine(routine: Routine) {
+  private renderRoutines(routines: Routine[]) {
     this.setProgress(1); this.setBack(null)
-
-    const grouped: Record<string, typeof routine.steps> = {}
-    for (const step of routine.steps) {
-      const key = step.timeOfDay
-      if (!grouped[key]) grouped[key] = []
-      grouped[key].push(step)
-    }
 
     const el = document.createElement('div')
     el.className = 'hlw-routine'
 
     const header = document.createElement('div')
     header.className = 'hlw-routine-header'
-    header.innerHTML = `
-      <p class="hlw-routine-title">Your Personalised Routine</p>
-      <p class="hlw-routine-sub">${routine.steps.length} step${routine.steps.length !== 1 ? 's' : ''} · ${routine.area.toLowerCase()} routine</p>
-    `
+    const totalSteps = routines.reduce((n, r) => n + r.steps.length, 0)
+    header.innerHTML = `<p class="hlw-routine-title">Your Personalised Routine</p>`
     el.appendChild(header)
 
-    const timeOrder = ['AM', 'PM', 'DAILY', 'WASH_DAY', 'AS_NEEDED']
-    const sortedKeys = Object.keys(grouped).sort((a, b) => {
-      return (timeOrder.indexOf(a) ?? 99) - (timeOrder.indexOf(b) ?? 99)
-    })
+    // Area tabs — only shown when more than one area
+    if (routines.length > 1) {
+      const tabs = document.createElement('div')
+      tabs.className = 'hlw-area-tabs'
+      const panels: HTMLElement[] = []
 
-    for (const timeKey of sortedKeys) {
-      const group = document.createElement('div')
-      group.className = 'hlw-time-group'
+      routines.forEach((routine, i) => {
+        const areaLabel = fmt(routine.focusArea)
+        const tab = document.createElement('button')
+        tab.className = 'hlw-area-tab' + (i === 0 ? ' active' : '')
+        tab.textContent = areaLabel
+        tab.addEventListener('click', () => {
+          tabs.querySelectorAll('.hlw-area-tab').forEach(t => t.classList.remove('active'))
+          tab.classList.add('active')
+          panels.forEach((p, j) => { p.style.display = j === i ? 'block' : 'none' })
+        })
+        tabs.appendChild(tab)
 
-      const label = document.createElement('p')
-      label.className = 'hlw-time-label'
-      label.textContent = TIME_LABELS[timeKey] ?? timeKey
-      group.appendChild(label)
+        const panel = document.createElement('div')
+        panel.className = 'hlw-area-panel'
+        panel.style.display = i === 0 ? 'block' : 'none'
+        buildRoutineSteps(routine, panel)
+        panels.push(panel)
+      })
 
-      for (const step of grouped[timeKey]) {
-        const card = document.createElement('div')
-        card.className = 'hlw-step-card'
-        const ingredients = (step.product.keyIngredients ?? []).slice(0, 3)
-        card.innerHTML = `
-          <div class="hlw-step-top">
-            <div class="hlw-step-num">${step.step}</div>
-            <div class="hlw-step-name">${step.product.name}</div>
-            <div class="hlw-step-price">${step.product.currency} ${step.product.price.toFixed(2)}</div>
-          </div>
-          <p class="hlw-step-instruction">${step.instruction}</p>
-          ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${i}</span>`).join('')}</div>` : ''}
-        `
-        group.appendChild(card)
-      }
-
-      el.appendChild(group)
+      el.appendChild(tabs)
+      panels.forEach(p => el.appendChild(p))
+    } else if (routines.length === 1) {
+      const sub = document.createElement('p')
+      sub.className = 'hlw-routine-sub'
+      sub.textContent = `${totalSteps} step${totalSteps !== 1 ? 's' : ''} · ${fmt(routines[0]!.focusArea)} routine`
+      header.appendChild(sub)
+      buildRoutineSteps(routines[0]!, el)
     }
 
     this.render(el)
@@ -293,4 +291,50 @@ export class QuizController {
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function fmt(s: string) {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function buildRoutineSteps(routine: Routine, container: HTMLElement) {
+  const grouped: Record<string, typeof routine.steps> = {}
+  for (const step of routine.steps) {
+    const key = step.timeOfDay
+    if (!grouped[key]) grouped[key] = []
+    grouped[key]!.push(step)
+  }
+
+  const timeOrder = ['AM', 'PM', 'DAILY', 'WASH_DAY', 'BETWEEN_WASH', 'WEEKLY', 'AS_NEEDED']
+  const sortedKeys = Object.keys(grouped).sort(
+    (a, b) => (timeOrder.indexOf(a) === -1 ? 99 : timeOrder.indexOf(a)) - (timeOrder.indexOf(b) === -1 ? 99 : timeOrder.indexOf(b))
+  )
+
+  for (const timeKey of sortedKeys) {
+    const group = document.createElement('div')
+    group.className = 'hlw-time-group'
+
+    const label = document.createElement('p')
+    label.className = 'hlw-time-label'
+    label.textContent = TIME_LABELS[timeKey] ?? fmt(timeKey)
+    group.appendChild(label)
+
+    for (const step of grouped[timeKey]!) {
+      const card = document.createElement('div')
+      card.className = 'hlw-step-card'
+      const ingredients = (step.product.keyIngredients ?? []).slice(0, 3)
+      card.innerHTML = `
+        <div class="hlw-step-top">
+          <div class="hlw-step-num">${step.step}</div>
+          <div class="hlw-step-name">${step.product.name}</div>
+          <div class="hlw-step-price">${step.product.currency} ${step.product.price.toFixed(2)}</div>
+        </div>
+        <p class="hlw-step-instruction">${step.instruction}</p>
+        ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${i}</span>`).join('')}</div>` : ''}
+      `
+      group.appendChild(card)
+    }
+
+    container.appendChild(group)
+  }
 }
