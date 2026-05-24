@@ -284,7 +284,8 @@ enum SkinType {
 // so returning consumers get a shorter onboarding at each new brand.
 model Consumer {
   id             String   @id @default(cuid())
-  email          String   @unique
+  email          String?  @unique
+  phone          String?  @unique
   // JSON map of questionId → answer for brand-agnostic questions
   // e.g. { S1: "dry", S4: ["ACNE","DRYNESS"], SH0: "25_34", SH1_location: {...}, H1: "coily" }
   prefillAnswers Json     @default("{}")

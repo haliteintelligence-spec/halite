@@ -39,11 +39,18 @@ function flattenFlow(flow: RawFlow): QuizQuestion[] {
 }
 
 const STORAGE_KEY = 'halite_session'
+const CONSUMER_KEY = 'halite_consumer'
 
 interface StoredSession {
   token: string
   userId: string
   brandId: string
+  expiresAt: number
+}
+
+interface StoredConsumer {
+  token: string
+  consumerId: string
   expiresAt: number
 }
 
@@ -61,12 +68,30 @@ function saveSession(s: StoredSession) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
 }
 
+function loadConsumer(): StoredConsumer | null {
+  try {
+    const raw = localStorage.getItem(CONSUMER_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as StoredConsumer
+    if (Date.now() > s.expiresAt) { localStorage.removeItem(CONSUMER_KEY); return null }
+    return s
+  } catch { return null }
+}
+
+function saveConsumer(s: StoredConsumer) {
+  localStorage.setItem(CONSUMER_KEY, JSON.stringify(s))
+}
+
 export class HaliteApi {
   private token = ''
   private userId = ''
   private brandId = ''
+  private consumerToken = ''
 
-  constructor(private apiUrl: string, private apiKey: string) {}
+  constructor(private apiUrl: string, private apiKey: string) {
+    const stored = loadConsumer()
+    if (stored) this.consumerToken = stored.token
+  }
 
   async init(): Promise<void> {
     const stored = loadSession()
@@ -125,6 +150,37 @@ export class HaliteApi {
       const res = await this.get<{ routines: Routine[] }>(`/brands/${this.brandId}/me/routines`)
       return res.routines
     } catch { return [] }
+  }
+
+  async identifyConsumer(contact: { email?: string; phone?: string }): Promise<{
+    consumerId: string
+    prefillAnswers: Record<string, unknown>
+    isReturning: boolean
+  }> {
+    const res = await this.post<{
+      token: string
+      consumerId: string
+      prefillAnswers: Record<string, unknown>
+      isReturning: boolean
+    }>('/consumers/identify', contact, false)
+
+    this.consumerToken = res.token
+    saveConsumer({
+      token: res.token,
+      consumerId: res.consumerId,
+      expiresAt: Date.now() + 364 * 24 * 60 * 60 * 1000,
+    })
+
+    return { consumerId: res.consumerId, prefillAnswers: res.prefillAnswers, isReturning: res.isReturning }
+  }
+
+  async saveConsumerAnswers(answers: Record<string, unknown>): Promise<void> {
+    if (!this.consumerToken) return
+    await fetch(`${this.apiUrl}/consumers/me/answers`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.consumerToken}` },
+      body: JSON.stringify({ answers }),
+    })
   }
 
   async uploadCheckInPhoto(file: File): Promise<string> {

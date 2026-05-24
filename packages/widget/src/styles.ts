@@ -180,6 +180,13 @@ export function getStyles(accent: string): string {
     .hlw-error-text { font-size: 15px; color: #1a1a1a; font-weight: 500; margin-bottom: 6px; }
     .hlw-error-sub { font-size: 13px; color: #888; }
 
+    /* ── Prefill badge ── */
+    .hlw-prefill-badge {
+      font-size: 11px; font-weight: 500; color: ${accent};
+      background: ${accent}12; border: 1px solid ${accent}30;
+      border-radius: 8px; padding: 7px 12px; margin-bottom: 16px;
+    }
+
     /* ── Area tabs (multi-area routines) ── */
     .hlw-area-tabs {
       display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;

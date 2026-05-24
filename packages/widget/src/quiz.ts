@@ -9,12 +9,22 @@ const TIME_LABELS: Record<string, string> = {
   AS_NEEDED: 'As Needed',
 }
 
+const PREFILL_IDS = new Set([
+  'S1','S2','S3','S4','S5',
+  'B1','B2','B3','B4',
+  'H1','H2','H3','H4','H5','H6',
+  'M1','M2','M3',
+  'SH0','SH1_location','SH1_climate','SH1_currency',
+  'SH4','SH5','SH6',
+])
+
 export class QuizController {
   private questions: QuizQuestion[] = []
   private answers: Record<string, unknown> = {}
   private sessionId = ''
   private index = 0
   private saveTimer: ReturnType<typeof setTimeout> | null = null
+  private prefillCount = 0
 
   constructor(
     private api: HaliteApi,
@@ -27,23 +37,118 @@ export class QuizController {
     this.renderLoading('Loading your quiz…', '')
     try {
       this.questions = await this.api.getQuestions()
-      this.sessionId = await this.api.createSession()
-      this.index = 0
-      this.answers = {}
-      this.showQuestion()
+      this.showGate()
     } catch {
       this.renderError('Could not load quiz', 'Check your connection and try again.')
     }
+  }
+
+  private showGate() {
+    this.setProgress(0)
+    this.setBack(null)
+
+    const el = document.createElement('div')
+
+    const title = document.createElement('p')
+    title.className = 'hlw-question-text'
+    title.textContent = "Let's personalise your routine"
+    el.appendChild(title)
+
+    const sub = document.createElement('p')
+    sub.className = 'hlw-question-sub'
+    sub.textContent = 'Enter your email or phone number to save your profile and get faster onboarding next time.'
+    el.appendChild(sub)
+
+    // Email field
+    const emailInput = document.createElement('input')
+    emailInput.type = 'email'
+    emailInput.className = 'hlw-text-input'
+    emailInput.placeholder = 'Email address'
+    emailInput.style.marginBottom = '10px'
+    el.appendChild(emailInput)
+
+    // Divider
+    const divider = document.createElement('p')
+    divider.style.cssText = 'text-align:center;font-size:11px;color:#aaa;margin:4px 0;'
+    divider.textContent = 'or'
+    el.appendChild(divider)
+
+    // Phone field
+    const phoneInput = document.createElement('input')
+    phoneInput.type = 'tel'
+    phoneInput.className = 'hlw-text-input'
+    phoneInput.placeholder = 'Phone number'
+    el.appendChild(phoneInput)
+
+    const errMsg = document.createElement('p')
+    errMsg.style.cssText = 'font-size:11px;color:#e57373;margin-top:8px;display:none;'
+    errMsg.textContent = 'Please enter an email or phone number to continue.'
+    el.appendChild(errMsg)
+
+    const nextBtn = document.createElement('button')
+    nextBtn.className = 'hlw-btn-next'
+    nextBtn.textContent = 'Continue'
+    nextBtn.disabled = false
+
+    nextBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim()
+      const phone = phoneInput.value.trim()
+
+      if (!email && !phone) {
+        errMsg.style.display = 'block'
+        return
+      }
+      errMsg.style.display = 'none'
+      nextBtn.disabled = true
+      nextBtn.textContent = 'Connecting…'
+
+      try {
+        const { prefillAnswers, isReturning } = await this.api.identifyConsumer({
+          email: email || undefined,
+          phone: phone || undefined,
+        })
+
+        // Inject pre-fill answers and count them
+        if (isReturning && Object.keys(prefillAnswers).length > 0) {
+          this.answers = { ...prefillAnswers }
+          this.prefillCount = Object.keys(prefillAnswers).filter(k => PREFILL_IDS.has(k)).length
+        }
+      } catch {
+        // Identity call failed — continue anyway without prefill (graceful degradation)
+      }
+
+      this.sessionId = await this.api.createSession()
+      this.index = 0
+      this.showQuestion()
+    })
+
+    ;(el as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = nextBtn
+    this.render(el)
   }
 
   private showQuestion() {
     const q = this.questions[this.index]
     if (!q) { this.complete(); return }
 
+    // Skip pre-filled questions silently — answer already in this.answers
+    if (PREFILL_IDS.has(q.id) && this.answers[q.id] !== undefined) {
+      this.index++
+      this.showQuestion()
+      return
+    }
+
     this.setProgress(this.index / this.questions.length)
     this.setBack(this.index > 0 ? () => { this.index--; this.showQuestion() } : null)
 
     const container = document.createElement('div')
+
+    // Show prefill badge on the first non-skipped question
+    if (this.prefillCount > 0 && this.index === this.firstNonPrefillIndex()) {
+      const badge = document.createElement('div')
+      badge.className = 'hlw-prefill-badge'
+      badge.textContent = `✦ ${this.prefillCount} question${this.prefillCount !== 1 ? 's' : ''} pre-filled from your previous profile`
+      container.appendChild(badge)
+    }
 
     const titleEl = document.createElement('p')
     titleEl.className = 'hlw-question-text'
@@ -187,11 +292,21 @@ export class QuizController {
     }, 400)
   }
 
+  private firstNonPrefillIndex(): number {
+    for (let i = 0; i < this.questions.length; i++) {
+      const q = this.questions[i]!
+      if (!PREFILL_IDS.has(q.id) || this.answers[q.id] === undefined) return i
+    }
+    return 0
+  }
+
   private async complete() {
     this.renderLoading('Building your routine…', 'Claude is analysing your profile and selecting products just for you.')
     try {
       await this.api.saveAnswers(this.sessionId, this.answers)
       await this.api.completeSession(this.sessionId)
+      // Save brand-agnostic answers back to the consumer's platform profile (non-blocking)
+      this.api.saveConsumerAnswers(this.answers).catch(() => {})
       await this.pollRoutine()
     } catch {
       this.renderError('Something went wrong', 'Your profile was saved. Try reopening the widget.')

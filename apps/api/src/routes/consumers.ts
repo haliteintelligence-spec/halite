@@ -17,20 +17,41 @@ const PREFILL_QUESTION_IDS = new Set([
 
 export async function consumerRoutes(server: FastifyInstance) {
   // ── Identify (lookup or create) ──────────────────────────────────────
-  // Called from quiz intro when consumer enters email.
+  // Called from quiz intro — consumer must provide email or phone (or both).
   // Returns a platform token + any pre-fill answers from prior quizzes.
   server.post(
     '/consumers/identify',
     async (request, reply) => {
-      const { email } = z.object({
-        email: z.string().email(),
-      }).parse(request.body)
+      const schema = z.object({
+        email: z.string().email().optional(),
+        phone: z.string().min(7).max(20).optional(),
+      }).refine(d => d.email || d.phone, { message: 'email or phone is required' })
 
-      const consumer = await prisma.consumer.upsert({
-        where: { email },
-        update: {},
-        create: { email },
+      const { email, phone } = schema.parse(request.body)
+
+      // Look up existing consumer by email or phone
+      let consumer = await prisma.consumer.findFirst({
+        where: {
+          OR: [
+            ...(email ? [{ email }] : []),
+            ...(phone ? [{ phone }] : []),
+          ],
+        },
       })
+
+      if (consumer) {
+        // Merge any newly provided contact info (e.g. first time email, now also has phone)
+        const updates: Record<string, string> = {}
+        if (email && !consumer.email) updates.email = email
+        if (phone && !consumer.phone) updates.phone = phone
+        if (Object.keys(updates).length > 0) {
+          consumer = await prisma.consumer.update({ where: { id: consumer.id }, data: updates })
+        }
+      } else {
+        consumer = await prisma.consumer.create({
+          data: { email: email ?? null, phone: phone ?? null },
+        })
+      }
 
       const token = server.jwt.sign(
         { role: 'consumer', consumerId: consumer.id },
