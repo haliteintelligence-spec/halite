@@ -1,9 +1,8 @@
 [build]
-builder = "nixpacks"
-buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/dashboard build"
+buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/admin build"
 
 [deploy]
-startCommand = "pnpm --filter @halite/dashboard start"
+startCommand = "pnpm --filter @halite/admin start"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
