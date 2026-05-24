@@ -11,4 +11,4 @@ cmds = [
 ]
 
 [start]
-cmd = "pnpm --filter @halite/dashboard start"
+cmd = "node apps/dashboard/.next/standalone/server.js"
