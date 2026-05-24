@@ -8,10 +8,5 @@ cmds = ["pnpm install --frozen-lockfile"]
 cmds = [
   "pnpm --filter @halite/db db:generate",
   "pnpm --filter @halite/db build",
-  "pnpm --filter @halite/dashboard build",
-  "cp -r apps/dashboard/.next/static apps/dashboard/.next/standalone/.next/static",
-  "cp -r apps/dashboard/public apps/dashboard/.next/standalone/public"
+  "pnpm --filter @halite/dashboard build"
 ]
-
-[start]
-cmd = "node apps/dashboard/.next/standalone/server.js"
