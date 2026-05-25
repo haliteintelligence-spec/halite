@@ -69,6 +69,7 @@ export function IntegrationsClient({
   function buildInstallUrl() {
     let shop = shopInput.trim().toLowerCase()
     if (!shop) { setConnectError('Enter your shop domain.'); return null }
+    shop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '')
     if (!shop.includes('.myshopify.com')) shop = `${shop}.myshopify.com`
     setConnectError('')
     return `${API_URL}/shopify/install?shop=${encodeURIComponent(shop)}&brandId=${brandId}`
