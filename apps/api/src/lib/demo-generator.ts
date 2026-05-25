@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '@halite/db'
 import { generateRoutine } from './routine-generator.js'
+import { runAgentWorkflow } from './agent-runner.js'
 import type { PurchaseMatrix } from './purchase-history-processor.js'
 
 // ── Pre-built workflow definitions ────────────────────────────────────────────
@@ -592,17 +593,25 @@ async function generateCheckIns(
 // ── Agent workflow seeding ────────────────────────────────────────────────────
 
 async function seedAgentWorkflows(brandId: string): Promise<void> {
-  for (const wf of PREBUILT_WORKFLOWS) {
-    await prisma.agentWorkflow.create({
-      data: {
-        brandId,
-        name: wf.name,
-        description: wf.description,
-        type: wf.type,
-        config: wf.config as any,
-        isActive: true,
-        isPrebuilt: wf.isPrebuilt,
-      },
-    })
-  }
+  // Create all workflow records first
+  const workflows = await Promise.all(
+    PREBUILT_WORKFLOWS.map(wf =>
+      prisma.agentWorkflow.create({
+        data: {
+          brandId,
+          name: wf.name,
+          description: wf.description,
+          type: wf.type,
+          config: wf.config as any,
+          isActive: true,
+          isPrebuilt: wf.isPrebuilt,
+        },
+      })
+    )
+  )
+
+  // Run all workflows in parallel so demo shows completed results
+  await Promise.allSettled(
+    workflows.map(wf => runAgentWorkflow(wf, brandId).catch(console.error))
+  )
 }

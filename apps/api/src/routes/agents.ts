@@ -152,19 +152,10 @@ export async function agentRoutes(server: FastifyInstance) {
       })
       if (!workflow) throw new ApiError(404, 'Workflow not found or inactive')
 
-      // Fire async — return runId immediately for polling
-      const runId = await new Promise<string>((resolve, reject) => {
-        // Create PENDING run record first
-        prisma.agentRun.create({
-          data: { workflowId: workflow.id, status: 'PENDING' },
-        }).then(run => {
-          resolve(run.id)
-          // Now kick off the actual execution
-          runAgentWorkflow(workflow, brandId).catch(console.error)
-        }).catch(reject)
-      })
+      // Fire async — run creates its own RUNNING record
+      runAgentWorkflow(workflow, brandId).catch(console.error)
 
-      return reply.status(202).send({ runId, status: 'PENDING' })
+      return reply.status(202).send({ status: 'RUNNING' })
     }
   )
 
