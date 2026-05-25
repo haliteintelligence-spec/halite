@@ -58,7 +58,7 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
       {/* Skin Tone Distribution */}
       <InsightCard
         title="Skin Tone Distribution"
-        subtitle={`Fitzpatrick scale · ${totalConsumers} consumer${totalConsumers !== 1 ? 's' : ''}`}
+        subtitle={`Monk skin tone scale · ${totalConsumers} consumer${totalConsumers !== 1 ? 's' : ''}`}
         accent="clay"
       >
         <div className="space-y-4">

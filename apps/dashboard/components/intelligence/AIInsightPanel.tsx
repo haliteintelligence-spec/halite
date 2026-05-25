@@ -20,8 +20,8 @@ const insights = [
   },
   {
     type: 'performance' as const,
-    title: 'Fitzpatrick III–IV over-index',
-    body: 'Your III–IV consumers check in 4.5× more than I–II. They want targeted hyperpigmentation routines — your current SPF range lacks UV filter diversity.',
+    title: 'Monk Type III–IV over-index',
+    body: 'Your MST 3–4 consumers check in 4.5× more than MST 1–2. They want targeted hyperpigmentation routines — your current SPF range lacks UV filter diversity.',
     priority: 'medium',
     module: 'Consumer',
   },

@@ -450,7 +450,7 @@ export function CatalogClient({
           <div className="rounded-xl p-4" style={{ background: 'var(--sand-1)' }}>
             <p className="text-[10px] font-semibold tracking-wide uppercase text-ink-3 mb-1.5">Expected CSV columns</p>
             <code className="text-[11px] leading-relaxed text-ink-3">
-              name, description, category, concerns, skin_types, fitzpatrick_types,
+              name, description, category, concerns, skin_types, monk_skin_tones,
               ingredients, key_ingredients, price, currency, image_url, product_url,
               external_id, in_stock
             </code>

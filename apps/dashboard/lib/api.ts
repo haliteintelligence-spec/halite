@@ -161,7 +161,7 @@ export interface Product {
   skinTypes: string[]
   keyIngredients: string[]
   ingredients: string[]
-  fitzpatrickTypes: number[]
+  monkSkinTones: number[]
   createdAt: string
   updatedAt: string
 }
