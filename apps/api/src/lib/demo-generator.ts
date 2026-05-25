@@ -284,7 +284,10 @@ export async function provisionDemoEnvironment(
   // 9. Generate check-ins (8 simulated weeks)
   const checkInCount = await generateCheckIns(brand.id, consumerIds, 8, catalogProfile)
 
-  // 10. Seed pre-built agent workflows
+  // 10. Seed consumer identity records (~65% identified, some cross-brand)
+  await seedConsumerIdentities(brand.id, consumerIds)
+
+  // 11. Seed pre-built agent workflows
   await seedAgentWorkflows(brand.id)
 
   // Update brand's demoLinkExpiresAt to reflect actual expiry
@@ -588,6 +591,83 @@ async function generateCheckIns(
   }
 
   return totalCheckIns
+}
+
+// ── Consumer identity seeding ─────────────────────────────────────────────────
+
+async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Promise<void> {
+  const shuffled = shuffle(endUserIds)
+  const identifiedCount = Math.round(shuffled.length * 0.65)
+  const identifiedIds = shuffled.slice(0, identifiedCount)
+
+  // Use other demo brands for cross-brand simulation (never touch real brands)
+  const otherDemoBrands = await prisma.brand.findMany({
+    where: { isDemo: true, active: true, id: { not: brandId } },
+    select: { id: true },
+    take: 3,
+  })
+
+  // 12% of identified are cross-brand — only if other demo brands exist
+  const crossBrandCount = otherDemoBrands.length > 0 ? Math.round(identifiedCount * 0.12) : 0
+  const crossBrandSet = new Set(identifiedIds.slice(0, crossBrandCount))
+
+  // Fetch beauty profiles in one query
+  const profiles = await prisma.userBeautyProfile.findMany({
+    where: { endUserId: { in: identifiedIds } },
+    select: { endUserId: true, skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true },
+  })
+  const profileMap = new Map(profiles.map(p => [p.endUserId, p]))
+
+  // Fetch emails in one query
+  const endUsers = await prisma.endUser.findMany({
+    where: { id: { in: identifiedIds } },
+    select: { id: true, email: true },
+  })
+  const emailMap = new Map(endUsers.map(u => [u.id, u.email]))
+
+  for (const endUserId of identifiedIds) {
+    const email = emailMap.get(endUserId) ?? null
+    const profile = profileMap.get(endUserId)
+
+    const prefillAnswers: Record<string, unknown> = {}
+    if (profile) {
+      if (profile.ageRange) prefillAnswers['SH0'] = profile.ageRange
+      if (profile.skinType) prefillAnswers['S1'] = profile.skinType.toLowerCase()
+      if (profile.skinConcerns?.length) prefillAnswers['S4'] = profile.skinConcerns
+      if (profile.monkSkinTone) prefillAnswers['S5'] = String(profile.monkSkinTone)
+    }
+
+    let consumer: { id: string }
+    try {
+      consumer = await prisma.consumer.create({
+        data: { email: email ?? null, prefillAnswers: prefillAnswers as any },
+        select: { id: true },
+      })
+    } catch {
+      // Email already taken by a previous demo — create without email
+      consumer = await prisma.consumer.create({
+        data: { prefillAnswers: prefillAnswers as any },
+        select: { id: true },
+      })
+    }
+
+    await prisma.endUser.update({
+      where: { id: endUserId },
+      data: { consumerId: consumer.id },
+    })
+
+    // Cross-brand: create a stub EndUser at a random other demo brand
+    if (crossBrandSet.has(endUserId)) {
+      const otherBrand = randomItem(otherDemoBrands)
+      await prisma.endUser.create({
+        data: {
+          brandId: otherBrand.id,
+          consumerId: consumer.id,
+          email: email ?? null,
+        },
+      }).catch(() => { /* skip if email unique constraint at that brand */ })
+    }
+  }
 }
 
 // ── Agent workflow seeding ────────────────────────────────────────────────────
