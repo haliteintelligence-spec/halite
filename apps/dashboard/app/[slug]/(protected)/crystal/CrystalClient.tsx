@@ -47,6 +47,7 @@ export function CrystalClient({ slug, brandId, initialConversations, activeConvI
   const [streamText, setStreamText] = useState('')
   const [loadingConv, setLoadingConv] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -107,16 +108,18 @@ export function CrystalClient({ slug, brandId, initialConversations, activeConvI
     const text = (content ?? input).trim()
     if (!text || streaming) return
     const token = getToken()
-    if (!token) return
+    if (!token) { setError('Session expired — please refresh the page.'); return }
+    setError(null)
 
     let convId = activeId
     if (!convId) {
       const conv = await createConversation()
-      if (!conv) return
+      if (!conv) { setError('Could not create conversation — check your connection.'); return }
       setConversations(prev => [conv, ...prev])
       convId = conv.id
       setActiveId(conv.id)
-      router.replace(`/${slug}/crystal?conv=${conv.id}`, { scroll: false })
+      // Update URL after state is set, without triggering a full re-render during streaming
+      window.history.replaceState(null, '', `/${slug}/crystal?conv=${conv.id}`)
     }
 
     const userMsg: CrystalMessage = {
@@ -144,7 +147,13 @@ export function CrystalClient({ slug, brandId, initialConversations, activeConvI
           signal: abortRef.current.signal,
         }
       )
-      if (!res.ok || !res.body) { setStreaming(false); return }
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        setError(`API error ${res.status}${errText ? ': ' + errText.slice(0, 120) : ''}`)
+        setStreaming(false)
+        return
+      }
+      if (!res.body) { setError('No response body from API.'); setStreaming(false); return }
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -182,7 +191,10 @@ export function CrystalClient({ slug, brandId, initialConversations, activeConvI
       })
       if (listRes.ok) setConversations((await listRes.json()).conversations ?? [])
     } catch (e: any) {
-      if (e?.name !== 'AbortError') setStreamText('')
+      if (e?.name !== 'AbortError') {
+        setStreamText('')
+        setError('Connection lost — please try again.')
+      }
     } finally {
       setStreaming(false)
     }
@@ -431,6 +443,17 @@ export function CrystalClient({ slug, brandId, initialConversations, activeConvI
 
           <div ref={bottomRef} />
         </div>
+
+        {/* Error banner */}
+        {error && (
+          <div
+            className="flex-shrink-0 px-4 md:px-6 py-2 text-[12px] flex items-center gap-2"
+            style={{ background: '#fee2e2', color: '#991b1b', borderTop: '1px solid #fca5a5' }}
+          >
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 text-[10px] font-medium">Dismiss</button>
+          </div>
+        )}
 
         {/* Input */}
         <div
