@@ -180,7 +180,14 @@ export default function DemoDetailPage() {
           Access Credentials
         </h2>
         <div className="space-y-3">
-          <CredRow label="Login URL" value={demo.loginUrl} onCopy={() => copyText(demo.loginUrl, 'url')} copied={copied === 'url'} isLink />
+          <CredRow label="Login URL (custom domain)" value={demo.loginUrl} onCopy={() => copyText(demo.loginUrl, 'url')} copied={copied === 'url'} isLink />
+          <CredRow
+            label="Login URL (Railway)"
+            value={`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`}
+            onCopy={() => copyText(`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`, 'rail')}
+            copied={copied === 'rail'}
+            isLink
+          />
           <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />
           <CredRow label="Password" value={demo.password} onCopy={() => copyText(demo.password, 'pw')} copied={copied === 'pw'} />
         </div>

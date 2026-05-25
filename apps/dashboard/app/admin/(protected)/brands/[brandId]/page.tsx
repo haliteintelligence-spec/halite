@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, Save, UserPlus, Power, Copy, Check, Trash2, Globe, Palette, ToggleLeft, ToggleRight } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, UserPlus, Power, Copy, Check, Trash2, Globe, Palette, ToggleLeft, ToggleRight, ShoppingBag } from 'lucide-react'
 import type { BrandDetail, BrandThemeConfig } from '@/lib/admin-api'
 
 const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
@@ -30,6 +30,7 @@ export default function BrandDetailPage() {
   const [wlTheme, setWlTheme] = useState<BrandThemeConfig | null>(null)
   const [scraping, setScraping] = useState(false)
   const [savingWl, setSavingWl] = useState(false)
+  const [embedCopied, setEmbedCopied] = useState(false)
   const [error, setError] = useState('')
 
   function token() {
@@ -277,6 +278,75 @@ export default function BrandDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* Shopify Integration Instructions */}
+      {(() => {
+        const accent = brand.primaryColor ?? '#450F2A'
+        const embedCode = `<script\n  src="https://cdn.haliteintelligence.com/widget.js"\n  data-api-key="${brand.apiKey}"\n  data-accent="${accent}"\n></script>`
+        return (
+          <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <ShoppingBag size={14} style={{ color: 'var(--ink-3)' }} />
+              <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                Shopify Integration for {brand.name}
+              </h2>
+            </div>
+
+            <ol className="space-y-4 text-[13px]" style={{ color: 'var(--ink)' }}>
+              <li>
+                <span className="font-semibold">1.</span> In the Halite dashboard, go to <strong>Settings → Widget</strong> and copy the embed code below.
+                <div className="relative mt-2">
+                  <pre
+                    className="rounded-xl p-4 text-[12px] leading-relaxed overflow-x-auto"
+                    style={{ background: 'var(--ink)', color: '#FAF6F0' }}
+                  >
+                    {embedCode}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(embedCode)
+                      setEmbedCopied(true)
+                      setTimeout(() => setEmbedCopied(false), 2000)
+                    }}
+                    className="absolute top-3 right-3 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all"
+                    style={{ background: embedCopied ? 'var(--clay)' : 'rgba(255,255,255,0.15)', color: embedCopied ? 'white' : '#FAF6F0' }}
+                  >
+                    {embedCopied ? 'Copied ✓' : 'Copy'}
+                  </button>
+                </div>
+              </li>
+              <li className="text-[13px]" style={{ color: 'var(--ink)' }}>
+                <span className="font-semibold">2.</span> In <strong>Shopify Admin</strong>, go to <strong>Online Store → Themes → ⋯ → Edit code</strong>.
+              </li>
+              <li className="text-[13px]" style={{ color: 'var(--ink)' }}>
+                <span className="font-semibold">3.</span> Open <code className="rounded px-1 py-0.5 text-[12px] font-mono" style={{ background: 'var(--sand-1)' }}>layout/theme.liquid</code> and paste the script tag just before <code className="rounded px-1 py-0.5 text-[12px] font-mono" style={{ background: 'var(--sand-1)' }}>&lt;/body&gt;</code>.
+              </li>
+              <li className="text-[13px]" style={{ color: 'var(--ink)' }}>
+                <span className="font-semibold">4.</span> Add trigger attributes to any button or link to open a specific widget mode:
+                <div className="mt-2 space-y-1.5">
+                  {[
+                    { attr: 'data-halite-quiz', label: 'Quiz + routine', example: `<button data-halite-quiz>Take the skin quiz</button>` },
+                    { attr: 'data-halite-checkin', label: 'Weekly check-in', example: `<button data-halite-checkin>Log your skin update</button>` },
+                    { attr: 'data-halite-progress', label: 'Progress view', example: `<button data-halite-progress>See my progress</button>` },
+                    { attr: 'data-halite-reorder', label: 'Reorder reminders', example: `<button data-halite-reorder>Reorder my routine</button>` },
+                  ].map(({ attr, label, example }) => (
+                    <div key={attr} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'var(--sand-1)' }}>
+                      <code className="text-[11px] font-mono font-semibold flex-shrink-0 mt-0.5" style={{ color: 'var(--clay)' }}>{attr}</code>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>{label}</p>
+                        <p className="text-[11px] font-mono truncate" style={{ color: 'var(--ink-3)' }}>{example}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </li>
+              <li className="text-[13px]" style={{ color: 'var(--ink)' }}>
+                <span className="font-semibold">5.</span> Save — the widget loads on every storefront page and activates when a trigger element is clicked.
+              </li>
+            </ol>
+          </div>
+        )
+      })()}
 
       {/* Admins */}
       <div className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>

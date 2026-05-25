@@ -93,6 +93,7 @@ export interface BrandThemeConfig {
 export interface BrandDetail extends BrandSummary {
   focusAreas: string[]
   logoUrl: string | null
+  primaryColor: string | null
   apiKey: string
   whiteLabelEnabled: boolean
   brandWebsiteUrl: string | null
