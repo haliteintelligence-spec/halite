@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Upload, X, CheckCircle2, Loader2 } from 'lucide-react'
+import { CircularProgress } from '@/components/ui/CircularProgress'
 
 const FOCUS_AREAS: { label: string; value: string }[] = [
   { label: 'Skincare',   value: 'SKINCARE' },
@@ -226,8 +227,8 @@ export default function NewDemoPage() {
 
         {step === 3 && (
           <div className="text-center py-6">
-            <div className="flex justify-center mb-4">
-              <Loader2 size={32} className="animate-spin" style={{ color: 'var(--clay)' }} />
+            <div className="flex justify-center mb-5">
+              <CircularProgress size={140} showLabel />
             </div>
             <h2 className="text-lg font-semibold font-display mb-2" style={{ color: 'var(--ink)' }}>
               Generating Demo Environment

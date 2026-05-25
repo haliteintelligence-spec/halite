@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
+import { CircularProgress } from '@/components/ui/CircularProgress'
 
 export default function DemoDetailPage() {
   const { demoId } = useParams<{ demoId: string }>()
@@ -143,13 +144,24 @@ export default function DemoDetailPage() {
 
       {demo.status === 'generating' && (
         <div
-          className="rounded-xl p-4 mb-6 flex items-center gap-3"
+          className="rounded-xl p-5 mb-6 flex items-center gap-5"
           style={{ background: '#fef3c7', border: '1px solid #fde68a' }}
         >
-          <Loader2 size={14} className="animate-spin" style={{ color: '#92400e' }} />
-          <p className="text-sm" style={{ color: '#92400e' }}>
-            Generating synthetic consumers and routines — this takes 2–3 minutes. Auto-refreshing.
-          </p>
+          <div className="flex-shrink-0">
+            <CircularProgress
+              size={72}
+              showLabel={false}
+              startTime={new Date(demo.createdAt).getTime()}
+            />
+          </div>
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#92400e' }}>
+              Generating demo environment
+            </p>
+            <p className="text-[12px]" style={{ color: '#a16207' }}>
+              Building synthetic consumers and routines — this takes 2–3 minutes. Auto-refreshing every 5 s.
+            </p>
+          </div>
         </div>
       )}
 
