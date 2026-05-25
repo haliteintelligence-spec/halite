@@ -2,12 +2,14 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import type { AnalyticsData } from '@/lib/api'
 
 type Props = {
   products: AnalyticsData['products']
   usageRate: number | null
+  brandId: string
 }
 
 const CAT_LABELS: Record<string, string> = {
@@ -25,7 +27,7 @@ const radarData = [
   { metric: 'Repeat Rate', score: 59 },
 ]
 
-export function ProductEngine({ products, usageRate }: Props) {
+export function ProductEngine({ products, usageRate, brandId }: Props) {
   const totalUsed = products.topProducts.reduce((s, p) => s + p.used, 0)
   const totalRecs = products.totalRecommended
 
@@ -36,6 +38,13 @@ export function ProductEngine({ products, usageRate }: Props) {
         title="Routine Adoption"
         subtitle={`${totalRecs} product recommendation${totalRecs !== 1 ? 's' : ''} across active routines`}
         accent="gold"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Routine Adoption"
+            dataContext={{ usageRate, totalRecommended: totalRecs, confirmedUsed: totalUsed }}
+          />
+        }
       >
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-4">
@@ -98,7 +107,17 @@ export function ProductEngine({ products, usageRate }: Props) {
 
       {/* Category Performance */}
       {products.categoryPerf.length > 0 && (
-        <InsightCard title="Performance by Category" subtitle="Usage rate vs check-in volume">
+        <InsightCard
+          title="Performance by Category"
+          subtitle="Usage rate vs check-in volume"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Performance by Category"
+              dataContext={{ categoryPerf: products.categoryPerf }}
+            />
+          }
+        >
           <div className="space-y-3">
             {products.categoryPerf.map(c => (
               <div key={c.category} className="flex items-center gap-3">
@@ -133,7 +152,17 @@ export function ProductEngine({ products, usageRate }: Props) {
 
       {/* Top Products */}
       {products.topProducts.length > 0 ? (
-        <InsightCard title="Top Recommended Products" subtitle="By positive consumer reaction">
+        <InsightCard
+          title="Top Recommended Products"
+          subtitle="By positive consumer reaction"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Top Recommended Products"
+              dataContext={{ topProducts: products.topProducts }}
+            />
+          }
+        >
           <div className="space-y-2">
             {products.topProducts.map((p, i) => (
               <div

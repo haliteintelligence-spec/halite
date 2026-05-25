@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { SideNav } from '@/components/side-nav'
 import { AIInsightPanel } from '@/components/intelligence/AIInsightPanel'
+import { MobileNavToggle } from '@/components/ui/MobileNavToggle'
 import { getBrandProfile, type BrandThemeConfig } from '@/lib/api'
 
 interface Props {
@@ -88,6 +89,8 @@ export default async function BrandLayout({ children, params }: Props) {
         <AIInsightPanel />
       </div>
     </div>
+
+    <MobileNavToggle />
     </>
   )
 }

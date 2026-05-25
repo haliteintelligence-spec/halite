@@ -237,13 +237,16 @@ export async function getUploadHistory(): Promise<UploadRecord[] | null> {
   return data?.uploads ?? null
 }
 
-export async function getAnalytics(days = 30): Promise<AnalyticsData | null> {
+export async function getAnalytics(days = 30, from?: string, to?: string): Promise<AnalyticsData | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value
   if (!token) return null
   const payload = decodeToken(token)
   if (!payload?.brandId) return null
-  return apiFetch<AnalyticsData>(`/brands/${payload.brandId}/analytics?days=${days}`, token)
+  const qs = from
+    ? `?from=${from}${to ? `&to=${to}` : ''}`
+    : `?days=${days}`
+  return apiFetch<AnalyticsData>(`/brands/${payload.brandId}/analytics${qs}`, token)
 }
 
 export interface IdentityData {
@@ -313,4 +316,34 @@ export async function getAgentWorkflow(workflowId: string): Promise<WorkflowDeta
   if (!payload?.brandId) return null
   const data = await apiFetch<{ workflow: WorkflowDetail }>(`/brands/${payload.brandId}/agents/workflows/${workflowId}`, token)
   return data?.workflow ?? null
+}
+
+// ── Crystal ─────────────────────────────────────────────────────────────────
+
+export interface CrystalConversation {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  _count: { messages: number }
+}
+
+export interface CrystalMessage {
+  id: string
+  role: 'USER' | 'ASSISTANT'
+  content: string
+  tokenCount: number | null
+  createdAt: string
+}
+
+export async function getCrystalConversations(): Promise<CrystalConversation[]> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return []
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return []
+  const data = await apiFetch<{ conversations: CrystalConversation[] }>(
+    `/brands/${payload.brandId}/crystal/conversations`, token
+  )
+  return data?.conversations ?? []
 }

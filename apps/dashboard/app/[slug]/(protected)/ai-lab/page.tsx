@@ -7,7 +7,7 @@ import type { AnalyticsData } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ days?: string }>
+  searchParams: Promise<{ days?: string; from?: string; to?: string }>
 }
 
 function deriveInsights(analytics: AnalyticsData) {
@@ -127,9 +127,9 @@ function deriveInsights(analytics: AnalyticsData) {
 
 export default async function AILabPage({ params, searchParams }: Props) {
   const { slug } = await params
-  const { days: rawDays } = await searchParams
+  const { days: rawDays, from, to } = await searchParams
   const days = Number(rawDays) || 30
-  const analytics = await getAnalytics(days)
+  const analytics = await getAnalytics(days, from, to)
 
   if (!analytics) {
     return (

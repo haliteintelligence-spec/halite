@@ -1,10 +1,11 @@
 import { IngredientLab } from '@/components/intelligence/IngredientLab'
-import { getAnalytics } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
 
 interface Props { params: Promise<{ slug: string }> }
 
 export default async function IngredientsPage({ params: _ }: Props) {
-  const analytics = await getAnalytics()
+  const [analytics, authInfo] = await Promise.all([getAnalytics(), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   return (
     <div className="px-7 py-6">
@@ -18,7 +19,7 @@ export default async function IngredientsPage({ params: _ }: Props) {
         </p>
       </div>
       {analytics ? (
-        <IngredientLab products={analytics.products} />
+        <IngredientLab products={analytics.products} brandId={brandId} />
       ) : (
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load ingredient data.</p>
       )}

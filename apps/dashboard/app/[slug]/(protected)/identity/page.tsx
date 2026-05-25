@@ -1,10 +1,11 @@
-import { getIdentityIntelligence } from '@/lib/api'
+import { getIdentityIntelligence, getTokenAndBrandId } from '@/lib/api'
 import { ConsumerIdentity } from '@/components/intelligence/ConsumerIdentity'
 
 export const metadata = { title: 'Consumer Identity | Halite Intelligence' }
 
 export default async function IdentityPage() {
-  const data = await getIdentityIntelligence()
+  const [data, authInfo] = await Promise.all([getIdentityIntelligence(), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   if (!data) {
     return (
@@ -29,7 +30,7 @@ export default async function IdentityPage() {
           Cross-brand identity layer — who has a portable Halite profile, and what cross-brand signals they carry.
         </p>
       </div>
-      <ConsumerIdentity data={data} />
+      <ConsumerIdentity data={data} brandId={brandId} />
     </div>
   )
 }

@@ -2,11 +2,13 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import { FlaskConical } from 'lucide-react'
 import type { AnalyticsData } from '@/lib/api'
 
 type Props = {
   products: AnalyticsData['products']
+  brandId: string
 }
 
 const CONCERN_LABELS: Record<string, string> = {
@@ -24,7 +26,7 @@ const CONCERN_LABELS: Record<string, string> = {
   DEHYDRATION: 'Dehydration',
 }
 
-export function IngredientLab({ products }: Props) {
+export function IngredientLab({ products, brandId }: Props) {
   const { topIngredients, concernCoverage } = products
 
   const gaps = concernCoverage.filter(c => c.userPct >= 40 && c.coverage < 50)
@@ -38,6 +40,13 @@ export function IngredientLab({ products }: Props) {
           title="Ingredient Intelligence Index"
           subtitle="Key ingredients across your active routines"
           accent="clay"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Ingredient Intelligence Index"
+              dataContext={{ topIngredients }}
+            />
+          }
         >
           <div className="space-y-2.5">
             {topIngredients.map(ing => (
@@ -87,6 +96,13 @@ export function IngredientLab({ products }: Props) {
           title="Concern Coverage Gaps"
           subtitle="High-prevalence concerns with low routine coverage"
           accent="blush"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Concern Coverage Gaps"
+              dataContext={{ gaps }}
+            />
+          }
         >
           <div className="space-y-2">
             {gaps.map(g => (
@@ -138,7 +154,17 @@ export function IngredientLab({ products }: Props) {
 
       {/* Concern Coverage Map */}
       {concernCoverage.length > 0 && (
-        <InsightCard title="Concern Coverage Map" subtitle="How well your routines address each reported concern">
+        <InsightCard
+          title="Concern Coverage Map"
+          subtitle="How well your routines address each reported concern"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Concern Coverage Map"
+              dataContext={{ concernCoverage: concernCoverage.slice(0, 6) }}
+            />
+          }
+        >
           <div className="space-y-3">
             {concernCoverage.slice(0, 6).map(c => (
               <div key={c.concern} className="space-y-1.5">

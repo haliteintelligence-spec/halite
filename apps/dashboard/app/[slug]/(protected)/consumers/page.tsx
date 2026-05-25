@@ -1,16 +1,17 @@
 import { ConsumerPanel } from '@/components/intelligence/ConsumerPanel'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
-import { getAnalytics } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ days?: string }>
+  searchParams: Promise<{ days?: string; from?: string; to?: string }>
 }
 
 export default async function ConsumersPage({ params: _, searchParams }: Props) {
-  const { days: rawDays } = await searchParams
+  const { days: rawDays, from, to } = await searchParams
   const days = Number(rawDays) || 30
-  const analytics = await getAnalytics(days)
+  const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   return (
     <div className="px-7 py-6">
@@ -31,6 +32,7 @@ export default async function ConsumersPage({ params: _, searchParams }: Props) 
           consumers={analytics.consumers}
           checkIns={analytics.checkIns}
           totalConsumers={analytics.summary.totalConsumers}
+          brandId={brandId}
         />
       ) : (
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load consumer data.</p>

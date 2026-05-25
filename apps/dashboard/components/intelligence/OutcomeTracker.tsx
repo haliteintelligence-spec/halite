@@ -2,6 +2,7 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -12,6 +13,7 @@ type Props = {
   checkIns: AnalyticsData['checkIns']
   outcomes: AnalyticsData['outcomes']
   summary: AnalyticsData['summary']
+  brandId: string
 }
 
 const SYMPTOM_LABELS: Record<string, string> = {
@@ -44,7 +46,7 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub?: st
   )
 }
 
-export function OutcomeTracker({ checkIns, outcomes, summary }: Props) {
+export function OutcomeTracker({ checkIns, outcomes, summary, brandId }: Props) {
   const ratingData = checkIns.ratingTrend.map((v, i) => ({ week: weekLabel(i), rating: v }))
   const complianceData = checkIns.complianceTrend.map((v, i) => ({ week: weekLabel(i), pct: v }))
 
@@ -100,7 +102,18 @@ export function OutcomeTracker({ checkIns, outcomes, summary }: Props) {
       {/* Charts row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Skin rating trend */}
-        <InsightCard title="Skin Rating Trend" subtitle="Weekly avg · 12 weeks" accent="clay">
+        <InsightCard
+          title="Skin Rating Trend"
+          subtitle="Weekly avg · 12 weeks"
+          accent="clay"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Skin Rating Trend"
+              dataContext={{ ratingTrend: checkIns.ratingTrend, avgRating: summary.avgRating, totalCheckIns: summary.totalCheckIns }}
+            />
+          }
+        >
           {summary.totalCheckIns === 0 ? (
             <p className="text-[12px] py-6 text-center" style={{ color: 'var(--ink-3)' }}>
               No check-ins yet
@@ -128,7 +141,18 @@ export function OutcomeTracker({ checkIns, outcomes, summary }: Props) {
         </InsightCard>
 
         {/* Compliance trend */}
-        <InsightCard title="Compliance Trend" subtitle="Weekly % · 12 weeks" accent="sage">
+        <InsightCard
+          title="Compliance Trend"
+          subtitle="Weekly % · 12 weeks"
+          accent="sage"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Compliance Trend"
+              dataContext={{ complianceTrend: checkIns.complianceTrend, complianceRate: summary.complianceRate, totalCheckIns: summary.totalCheckIns }}
+            />
+          }
+        >
           {summary.totalCheckIns === 0 ? (
             <p className="text-[12px] py-6 text-center" style={{ color: 'var(--ink-3)' }}>
               No check-ins yet
@@ -161,6 +185,13 @@ export function OutcomeTracker({ checkIns, outcomes, summary }: Props) {
         title="Symptom Breakdown"
         subtitle={`${checkIns.symptoms.length} reported symptoms · ${totalSymptoms} total occurrences`}
         accent="none"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Symptom Breakdown"
+            dataContext={{ symptoms: checkIns.symptoms, positiveCount: checkIns.positiveSymptomCount, negativeCount: checkIns.negativeSymptomCount, totalCheckIns: summary.totalCheckIns }}
+          />
+        }
       >
         {checkIns.symptoms.length === 0 ? (
           <p className="text-[12px] py-4 text-center" style={{ color: 'var(--ink-3)' }}>No symptoms reported yet</p>

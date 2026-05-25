@@ -1,10 +1,11 @@
 import { ProductEngine } from '@/components/intelligence/ProductEngine'
-import { getAnalytics } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
 
 interface Props { params: Promise<{ slug: string }> }
 
 export default async function ProductsPage({ params: _ }: Props) {
-  const analytics = await getAnalytics()
+  const [analytics, authInfo] = await Promise.all([getAnalytics(), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   return (
     <div className="px-7 py-6">
@@ -18,7 +19,7 @@ export default async function ProductsPage({ params: _ }: Props) {
         </p>
       </div>
       {analytics ? (
-        <ProductEngine products={analytics.products} usageRate={analytics.summary.usageRate} />
+        <ProductEngine products={analytics.products} usageRate={analytics.summary.usageRate} brandId={brandId} />
       ) : (
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load product data.</p>
       )}

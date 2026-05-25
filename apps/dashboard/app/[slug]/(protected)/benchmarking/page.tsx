@@ -1,16 +1,17 @@
 import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
-import { getAnalytics } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ days?: string }>
+  searchParams: Promise<{ days?: string; from?: string; to?: string }>
 }
 
 export default async function BenchmarkingPage({ params: _, searchParams }: Props) {
-  const { days: rawDays } = await searchParams
+  const { days: rawDays, from, to } = await searchParams
   const days = Number(rawDays) || 30
-  const analytics = await getAnalytics(days)
+  const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   return (
     <div className="px-7 py-6">
@@ -27,7 +28,7 @@ export default async function BenchmarkingPage({ params: _, searchParams }: Prop
         <TimeframePicker />
       </div>
       {analytics ? (
-        <BenchmarkMatrix analytics={analytics} />
+        <BenchmarkMatrix analytics={analytics} brandId={brandId} />
       ) : (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--border)' }}>
           <p className="text-sm" style={{ color: 'var(--ink-3)' }}>No data yet — benchmarks will populate once consumers start checking in.</p>

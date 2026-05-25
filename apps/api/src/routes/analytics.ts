@@ -10,9 +10,25 @@ export async function analyticsRoutes(server: FastifyInstance) {
     { preHandler: requireBrandAdmin },
     async (request) => {
       const { brandId } = request.params as { brandId: string }
-      const rawDays = (request.query as Record<string, string>).days
-      const days = Math.min(Math.max(Number(rawDays) || 30, 7), 365)
-      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      const q = request.query as Record<string, string>
+      const rawFrom = q.from
+      const rawTo = q.to
+      const dateRe = /^\d{4}-\d{2}-\d{2}$/
+
+      let cutoff: Date
+      let endDate: Date
+
+      if (rawFrom && dateRe.test(rawFrom)) {
+        cutoff = new Date(rawFrom + 'T00:00:00')
+        endDate = rawTo && dateRe.test(rawTo) ? new Date(rawTo + 'T23:59:59') : new Date()
+      } else {
+        const rawDays = q.days
+        const days = Math.min(Math.max(Number(rawDays) || 30, 7), 365)
+        cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        endDate = new Date()
+      }
+
+      const windowMs = endDate.getTime() - cutoff.getTime()
 
       const [endUsers, profiles, checkIns, routineSteps, checkInProducts, refinedCount] = await Promise.all([
         prisma.endUser.findMany({
@@ -24,7 +40,7 @@ export async function analyticsRoutes(server: FastifyInstance) {
           select: { monkSkinTone: true, skinType: true, skinConcerns: true, ageRange: true },
         }),
         prisma.checkIn.findMany({
-          where: { endUser: { brandId }, date: { gte: cutoff } },
+          where: { endUser: { brandId }, date: { gte: cutoff, lte: endDate } },
           select: { date: true, skinRating: true, compliant: true, symptoms: true },
           orderBy: { date: 'asc' },
         }),
@@ -36,7 +52,7 @@ export async function analyticsRoutes(server: FastifyInstance) {
           },
         }),
         prisma.checkInProduct.findMany({
-          where: { checkIn: { endUser: { brandId }, date: { gte: cutoff } } },
+          where: { checkIn: { endUser: { brandId }, date: { gte: cutoff, lte: endDate } } },
           select: {
             productId: true,
             used: true,
@@ -98,16 +114,16 @@ export async function analyticsRoutes(server: FastifyInstance) {
         .map(k => ({ group: AGE_LABELS[k] ?? k, n: ageMap[k] }))
 
       // ── Check-in trend ─────────────────────────────────────────────
-      // Bucket into at most 12 slots; width adapts to selected window
-      const now = Date.now()
+      // Bucket into 12 slots spanning the selected window
+      const endTs = endDate.getTime()
       const trendSlots = 12
-      const slotMs = (days / trendSlots) * 24 * 60 * 60 * 1000
+      const slotMs = windowMs / trendSlots
       const weeklyTrend: number[] = Array(trendSlots).fill(0)
       const ratingAccum: { sum: number; count: number }[] = Array.from({ length: trendSlots }, () => ({ sum: 0, count: 0 }))
       const complianceAccum: { compliant: number; total: number }[] = Array.from({ length: trendSlots }, () => ({ compliant: 0, total: 0 }))
 
       checkIns.forEach(ci => {
-        const age = now - new Date(ci.date).getTime()
+        const age = endTs - new Date(ci.date).getTime()
         const slot = Math.floor(age / slotMs)
         if (slot < trendSlots) {
           weeklyTrend[trendSlots - 1 - slot]!++

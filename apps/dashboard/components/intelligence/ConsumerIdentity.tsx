@@ -2,13 +2,14 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import {
   AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import type { IdentityData } from '@/lib/api'
 
-type Props = { data: IdentityData }
+type Props = { data: IdentityData; brandId: string }
 
 function KpiTile({
   label, value, sub, accent,
@@ -42,7 +43,7 @@ function KpiTile({
   )
 }
 
-export function ConsumerIdentity({ data }: Props) {
+export function ConsumerIdentity({ data, brandId }: Props) {
   const chartData = data.trend.map((t, i) => ({
     label: i === 7 ? 'Now' : i === 6 ? '-1w' : i === 0 ? '-7w' : '',
     identified: t.identified,
@@ -94,6 +95,17 @@ export function ConsumerIdentity({ data }: Props) {
         title="Identification Trend"
         subtitle="Identified vs anonymous · 8 weeks"
         accent="clay"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Consumer Identity — Identification Trend"
+            dataContext={{
+              total: data.total, identified: data.identified, anonymous: data.anonymous,
+              identificationRate: data.identificationRate, crossBrand: data.crossBrand,
+              crossBrandRate: data.crossBrandRate, retentionRate: data.retentionRate, trend: data.trend,
+            }}
+          />
+        }
       >
         {data.total === 0 ? (
           <p className="text-[12px] py-6 text-center" style={{ color: 'var(--ink-3)' }}>

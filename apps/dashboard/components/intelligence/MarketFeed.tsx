@@ -2,6 +2,7 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import { Sparkline } from '@/components/charts/Sparkline'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { AnalyticsData } from '@/lib/api'
@@ -70,9 +71,9 @@ const emerging = [
   { ingredient: 'Fermented Galactomyces', signal: 'rising', note: 'K-beauty crossover ingredient' },
 ]
 
-interface Props { analytics: AnalyticsData }
+interface Props { analytics: AnalyticsData; brandId: string }
 
-export function MarketFeed({ analytics }: Props) {
+export function MarketFeed({ analytics, brandId }: Props) {
   const { products, summary } = analytics
   const brandIngredients = products.topIngredients.map(i => i.name.toLowerCase())
 
@@ -101,6 +102,16 @@ export function MarketFeed({ analytics }: Props) {
         title="Market Signal Feed"
         subtitle="Search & social volume trends · real-time index"
         accent="clay"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Market Signal Feed"
+            dataContext={{
+              signals: signals.map(s => ({ trend: s.trend, growth: s.growth, direction: s.direction, category: s.category, insight: s.insight, alignedWithBrand: isAligned(s.keywords) })),
+              brandIngredients,
+            }}
+          />
+        }
       >
         <div className="space-y-3">
           {signals.map(s => {
@@ -167,7 +178,17 @@ export function MarketFeed({ analytics }: Props) {
       </InsightCard>
 
       {/* Consumer Sentiment */}
-      <InsightCard title="Consumer Sentiment Drivers" subtitle="What matters most in purchase decisions">
+      <InsightCard
+        title="Consumer Sentiment Drivers"
+        subtitle="What matters most in purchase decisions"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Consumer Sentiment Drivers"
+            dataContext={{ sentimentData, totalProducts, cleanAligned, totalConsumers: summary.totalConsumers }}
+          />
+        }
+      >
         <div className="space-y-3">
           {sentimentData.map(s => (
             <div key={s.label} className="flex items-center gap-3">
@@ -189,7 +210,17 @@ export function MarketFeed({ analytics }: Props) {
       </InsightCard>
 
       {/* Emerging Ingredient Radar */}
-      <InsightCard title="Emerging Ingredient Radar" subtitle="Early signals before mainstream adoption">
+      <InsightCard
+        title="Emerging Ingredient Radar"
+        subtitle="Early signals before mainstream adoption"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Emerging Ingredient Radar"
+            dataContext={{ emerging: emergingWithAlignment, brandIngredients }}
+          />
+        }
+      >
         <div className="space-y-2">
           {emergingWithAlignment.map(e => (
             <div

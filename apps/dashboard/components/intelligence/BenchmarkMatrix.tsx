@@ -2,6 +2,7 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import type { AnalyticsData } from '@/lib/api'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
@@ -18,9 +19,9 @@ const INDUSTRY = {
   ingredientCoverage:   74,
 }
 
-interface Props { analytics: AnalyticsData }
+interface Props { analytics: AnalyticsData; brandId: string }
 
-export function BenchmarkMatrix({ analytics }: Props) {
+export function BenchmarkMatrix({ analytics, brandId }: Props) {
   const { summary, products, checkIns } = analytics
 
   // ── Compute real "yours" values ──────────────────────────────────
@@ -118,6 +119,13 @@ export function BenchmarkMatrix({ analytics }: Props) {
         title="Performance vs Industry"
         subtitle="Your brand (clay) vs category average (grey)"
         accent="clay"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Performance vs Industry"
+            dataContext={{ yourMetrics: { acceptance, compliance, satisfactionPct, catalogueComplete, ingredientCoverage, checkInsPerUserMo }, industryMedians: INDUSTRY, aboveMedianCount: benchmarkRows.filter(r => r.better).length, totalMetrics: benchmarkRows.length }}
+          />
+        }
       >
         <div className="flex gap-4 justify-center mb-2">
           <div className="flex items-center gap-2">
@@ -154,7 +162,17 @@ export function BenchmarkMatrix({ analytics }: Props) {
       </InsightCard>
 
       {/* Metric Table */}
-      <InsightCard title="Benchmark Breakdown" subtitle="vs category median">
+      <InsightCard
+        title="Benchmark Breakdown"
+        subtitle="vs category median"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Benchmark Breakdown"
+            dataContext={{ benchmarkRows }}
+          />
+        }
+      >
         <div className="space-y-0">
           {benchmarkRows.map(row => (
             <div
@@ -189,7 +207,17 @@ export function BenchmarkMatrix({ analytics }: Props) {
       </InsightCard>
 
       {/* Check-in Activity (12-week view) */}
-      <InsightCard title="Check-in Activity" subtitle="Your brand vs rolling baseline (last 12 weeks, paired)">
+      <InsightCard
+        title="Check-in Activity vs Baseline"
+        subtitle="Your brand vs rolling baseline (last 12 weeks, paired)"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Check-in Activity vs Baseline"
+            dataContext={{ paired, totalCheckIns: summary.totalCheckIns, totalConsumers: summary.totalConsumers }}
+          />
+        }
+      >
         <ResponsiveContainer width="100%" height={150}>
           <BarChart data={paired} barCategoryGap="35%" margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--ink-3)' }} axisLine={false} tickLine={false} />

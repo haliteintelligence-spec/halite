@@ -2,6 +2,7 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { InsightButton } from '@/components/ui/InsightButton'
 import { Sparkline } from '@/components/charts/Sparkline'
 import { SkinToneBar, SkinToneGrid } from '@/components/charts/SkinToneBar'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts'
@@ -11,6 +12,7 @@ type Props = {
   consumers: AnalyticsData['consumers']
   checkIns: AnalyticsData['checkIns']
   totalConsumers: number
+  brandId: string
 }
 
 const CONCERN_LABELS: Record<string, string> = {
@@ -34,7 +36,7 @@ const SKIN_TYPE_LABELS: Record<string, string> = {
 
 const TONE_KEYS = ['i', 'ii', 'iii', 'iv', 'v', 'vi'] as const
 
-export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
+export function ConsumerPanel({ consumers, checkIns, totalConsumers, brandId }: Props) {
   const skinTypeBar = consumers.skinTypes.map((st, i) => ({
     label: SKIN_TYPE_LABELS[st.type] ?? st.type,
     value: Math.max(st.pct, 1),
@@ -60,6 +62,13 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
         title="Skin Tone Distribution"
         subtitle={`Monk skin tone scale · ${totalConsumers} consumer${totalConsumers !== 1 ? 's' : ''}`}
         accent="clay"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Skin Tone Distribution"
+            dataContext={{ monkSkinTones: consumers.monkSkinTones, skinTypes: consumers.skinTypes, totalConsumers }}
+          />
+        }
       >
         <div className="space-y-4">
           <SkinToneGrid
@@ -91,7 +100,18 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
       </InsightCard>
 
       {/* Check-in Activity */}
-      <InsightCard title="Check-in Activity" subtitle="Weekly · last 12 weeks" accent="sage">
+      <InsightCard
+        title="Check-in Activity"
+        subtitle="Weekly · last 12 weeks"
+        accent="sage"
+        actions={
+          <InsightButton
+            brandId={brandId}
+            viewName="Check-in Activity"
+            dataContext={{ weeklyTrend: checkIns.weeklyTrend, thisWeek: checkIns.thisWeek, lastWeek: checkIns.lastWeek, weekChangePercent: weekChange }}
+          />
+        }
+      >
         <div className="space-y-3">
           <div className="flex items-end justify-between">
             <div>
@@ -116,7 +136,17 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
 
       {/* Top Concerns */}
       {consumers.concerns.length > 0 && (
-        <InsightCard title="Top Consumer Concerns" subtitle="% of consumers reporting">
+        <InsightCard
+          title="Top Consumer Concerns"
+          subtitle="% of consumers reporting"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Top Consumer Concerns"
+              dataContext={{ concerns: consumers.concerns, totalConsumers }}
+            />
+          }
+        >
           <div className="space-y-2.5">
             {consumers.concerns.slice(0, 6).map(c => (
               <div key={c.concern} className="space-y-1">
@@ -142,7 +172,17 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
 
       {/* Age Distribution */}
       {consumers.ageRanges.length > 0 && (
-        <InsightCard title="Age Cohorts" subtitle="Active consumers by age group">
+        <InsightCard
+          title="Age Cohorts"
+          subtitle="Active consumers by age group"
+          actions={
+            <InsightButton
+              brandId={brandId}
+              viewName="Age Cohorts"
+              dataContext={{ ageRanges: consumers.ageRanges, totalConsumers }}
+            />
+          }
+        >
           <ResponsiveContainer width="100%" height={120}>
             <BarChart
               data={consumers.ageRanges}

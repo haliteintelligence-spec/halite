@@ -7,18 +7,19 @@ import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { Users, Package, FlaskConical, TrendingUp } from 'lucide-react'
-import { getAnalytics } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ days?: string }>
+  searchParams: Promise<{ days?: string; from?: string; to?: string }>
 }
 
 export default async function IntelligencePage({ params, searchParams }: Props) {
   const { slug } = await params
-  const { days: rawDays } = await searchParams
+  const { days: rawDays, from, to } = await searchParams
   const days = Number(rawDays) || 30
-  const analytics = await getAnalytics(days)
+  const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
   const s = analytics?.summary
 
   return (
@@ -95,6 +96,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
                     consumers={analytics.consumers}
                     checkIns={analytics.checkIns}
                     totalConsumers={analytics.summary.totalConsumers}
+                    brandId={brandId}
                   />
                 </div>
               </div>
@@ -109,7 +111,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
                       Full view →
                     </a>
                   </div>
-                  <ProductEngine products={analytics.products} usageRate={analytics.summary.usageRate} />
+                  <ProductEngine products={analytics.products} usageRate={analytics.summary.usageRate} brandId={brandId} />
                 </div>
 
                 {/* Outcomes snapshot */}
@@ -150,7 +152,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
                     Full view →
                   </a>
                 </div>
-                <IngredientLab products={analytics.products} />
+                <IngredientLab products={analytics.products} brandId={brandId} />
               </div>
 
               <div>
@@ -162,7 +164,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
                     Full view →
                   </a>
                 </div>
-                <MarketFeed analytics={analytics} />
+                <MarketFeed analytics={analytics} brandId={brandId} />
               </div>
             </div>
 
@@ -176,7 +178,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
                   Full view →
                 </a>
               </div>
-              <BenchmarkMatrix analytics={analytics} />
+              <BenchmarkMatrix analytics={analytics} brandId={brandId} />
             </div>
           </>
         ) : (
