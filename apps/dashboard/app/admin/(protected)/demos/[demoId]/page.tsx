@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft } from 'lucide-react'
-import type { DemoDetail } from '@/lib/admin-api'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save } from 'lucide-react'
+import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 
 export default function DemoDetailPage() {
   const { demoId } = useParams<{ demoId: string }>()
@@ -14,6 +14,11 @@ export default function DemoDetailPage() {
   const [extending, setExtending] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
+  const [wlEnabled, setWlEnabled] = useState(false)
+  const [wlUrl, setWlUrl] = useState('')
+  const [wlTheme, setWlTheme] = useState<BrandThemeConfig | null>(null)
+  const [scraping, setScraping] = useState(false)
+  const [savingWl, setSavingWl] = useState(false)
 
   async function load() {
     const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -24,6 +29,9 @@ export default function DemoDetailPage() {
     if (res.ok) {
       const data = await res.json() as { demo: DemoDetail }
       setDemo(data.demo)
+      setWlEnabled(data.demo.whiteLabelEnabled ?? false)
+      setWlUrl(data.demo.brandWebsiteUrl ?? '')
+      setWlTheme(data.demo.brandThemeConfig ?? null)
     }
     setLoading(false)
   }
@@ -63,6 +71,39 @@ export default function DemoDetailPage() {
     navigator.clipboard.writeText(text)
     setCopied(key)
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  async function handleScrapeTheme() {
+    if (!wlUrl) return
+    setScraping(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}/scrape-theme`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ url: wlUrl }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { theme: BrandThemeConfig }
+        setWlTheme(data.theme)
+      }
+    } finally {
+      setScraping(false)
+    }
+  }
+
+  async function handleSaveWhiteLabel() {
+    setSavingWl(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}/white-label`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ whiteLabelEnabled: wlEnabled, brandWebsiteUrl: wlUrl || null, brandThemeConfig: wlTheme }),
+      })
+    } finally {
+      setSavingWl(false)
+    }
   }
 
   if (loading) return (
@@ -192,7 +233,90 @@ export default function DemoDetailPage() {
         </div>
       )}
 
-      <div className="flex justify-end mt-6">
+      {/* White Label */}
+      <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>White Label Demo</h2>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+              Scrape the prospect's site to show them Halite in their own visual style.
+            </p>
+          </div>
+          <button
+            onClick={() => setWlEnabled(e => !e)}
+            className="flex items-center gap-1.5 text-[12px] font-semibold"
+            style={{ color: wlEnabled ? 'var(--clay)' : 'var(--ink-3)' }}
+          >
+            {wlEnabled ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+            {wlEnabled ? 'On' : 'Off'}
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+              <input
+                type="url"
+                placeholder="https://prospect-website.com"
+                value={wlUrl}
+                onChange={e => setWlUrl(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 rounded-lg text-[12px] outline-none font-mono"
+                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+              />
+            </div>
+            <button
+              onClick={handleScrapeTheme}
+              disabled={!wlUrl || scraping}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold disabled:opacity-40"
+              style={{ background: 'var(--clay)', color: 'white' }}
+            >
+              {scraping ? <Loader2 size={12} className="animate-spin" /> : <Palette size={12} />}
+              {scraping ? 'Scraping…' : 'Extract Theme'}
+            </button>
+          </div>
+
+          {wlTheme && (
+            <div className="rounded-lg p-3 space-y-3" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Extracted Theme Preview</p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['Primary', wlTheme.primary],
+                  ['Primary Light', wlTheme.primaryLight],
+                  ['Accent', wlTheme.accent],
+                  ['Background', wlTheme.background],
+                  ['Text', wlTheme.text],
+                  ['Border', wlTheme.border],
+                ] as [string, string][]).map(([label, color]) => (
+                  <div key={label} className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full border" style={{ background: color, borderColor: 'var(--border)' }} />
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>{label}</p>
+                      <p className="text-[10px] font-mono" style={{ color: 'var(--ink)' }}>{color}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-4 text-[11px]" style={{ color: 'var(--ink-2)' }}>
+                <span>Sans: <strong>{wlTheme.fontSans}</strong></span>
+                <span>Display: <strong>{wlTheme.fontDisplay}</strong></span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={handleSaveWhiteLabel}
+          disabled={savingWl}
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+          style={{ background: 'var(--clay)' }}
+        >
+          {savingWl ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          Save White Label
+        </button>
+      </div>
+
+      <div className="flex justify-end mt-2">
         <button
           onClick={handleDelete}
           disabled={deleting}

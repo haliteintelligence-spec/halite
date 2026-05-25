@@ -32,6 +32,9 @@ export interface DemoSummary {
 }
 
 export interface DemoDetail extends DemoSummary {
+  whiteLabelEnabled: boolean
+  brandWebsiteUrl: string | null
+  brandThemeConfig: BrandThemeConfig | null
   stats: {
     products: number
     consumers: number
@@ -72,10 +75,28 @@ export interface BrandSummary {
   _count: { endUsers: number; products: number }
 }
 
+export interface BrandThemeConfig {
+  primary: string
+  primaryLight: string
+  primaryDark: string
+  background: string
+  surface: string
+  text: string
+  textSecondary: string
+  accent: string
+  border: string
+  fontSans: string
+  fontDisplay: string
+  fontUrl: string | null
+}
+
 export interface BrandDetail extends BrandSummary {
   focusAreas: string[]
   logoUrl: string | null
   apiKey: string
+  whiteLabelEnabled: boolean
+  brandWebsiteUrl: string | null
+  brandThemeConfig: BrandThemeConfig | null
   admins: Array<{ id: string; email: string; name: string; role: string; createdAt: string }>
 }
 

@@ -8,6 +8,7 @@ import { ApiError } from '../lib/errors.js'
 import { processCatalogUpload } from '../lib/catalog-processor.js'
 import { parsePurchaseHistory } from '../lib/purchase-history-processor.js'
 import { provisionDemoEnvironment } from '../lib/demo-generator.js'
+import { scrapeTheme } from '../lib/theme-scraper.js'
 
 export async function adminRoutes(server: FastifyInstance) {
   // ── Platform-wide stats ───────────────────────────────────────────
@@ -377,6 +378,9 @@ export async function adminRoutes(server: FastifyInstance) {
           demoLinkExpiresAt: brand.demoLinkExpiresAt,
           focusAreas: brand.focusAreas,
           createdAt: brand.createdAt,
+          whiteLabelEnabled: brand.whiteLabelEnabled,
+          brandWebsiteUrl: brand.brandWebsiteUrl,
+          brandThemeConfig: brand.brandThemeConfig,
           stats: {
             products: brand._count.products,
             consumers: brand._count.endUsers,
@@ -630,6 +634,47 @@ export async function adminRoutes(server: FastifyInstance) {
       const hashed = await bcrypt.hash(password, 12)
       await prisma.brandAdmin.update({ where: { id: adminId }, data: { password: hashed } })
       return { ok: true }
+    }
+  )
+
+  // ── White-label: save config ───────────────────────────────────────
+  server.patch(
+    '/admin/brands/:brandId/white-label',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        whiteLabelEnabled: z.boolean().optional(),
+        brandWebsiteUrl: z.string().url().optional().nullable(),
+        brandThemeConfig: z.record(z.unknown()).optional().nullable(),
+      })
+      const data = schema.parse(request.body)
+      const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { id: true } })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      const updated = await prisma.brand.update({
+        where: { id: brandId },
+        data: {
+          ...(data.whiteLabelEnabled !== undefined ? { whiteLabelEnabled: data.whiteLabelEnabled } : {}),
+          ...(data.brandWebsiteUrl !== undefined ? { brandWebsiteUrl: data.brandWebsiteUrl } : {}),
+          ...(data.brandThemeConfig !== undefined ? { brandThemeConfig: data.brandThemeConfig as any } : {}),
+        },
+        select: { whiteLabelEnabled: true, brandWebsiteUrl: true, brandThemeConfig: true },
+      })
+      return { ok: true, ...updated }
+    }
+  )
+
+  // ── White-label: scrape theme from URL ────────────────────────────
+  server.post(
+    '/admin/brands/:brandId/scrape-theme',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const { url } = z.object({ url: z.string().url() }).parse(request.body)
+      const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { id: true } })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      const theme = await scrapeTheme(url)
+      return { theme }
     }
   )
 }

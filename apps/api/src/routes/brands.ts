@@ -198,7 +198,7 @@ export async function brandRoutes(server: FastifyInstance) {
       })
       if (!brand) throw new ApiError(404, 'Brand not found')
       const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
-      return { brand: safe }
+      return { brand: { ...safe, whiteLabelEnabled: brand.whiteLabelEnabled, brandThemeConfig: brand.brandThemeConfig } }
     }
   )
 

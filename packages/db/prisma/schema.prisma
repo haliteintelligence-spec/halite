@@ -52,6 +52,11 @@ model Brand {
   demoCreatedBy     String?
   demoLinkExpiresAt DateTime?
 
+  // White-label
+  whiteLabelEnabled Boolean @default(false)
+  brandWebsiteUrl   String?
+  brandThemeConfig  Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

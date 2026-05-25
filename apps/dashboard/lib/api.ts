@@ -58,6 +58,21 @@ async function apiFetch<T>(path: string, token: string): Promise<T | null> {
   } catch { return null }
 }
 
+export interface BrandThemeConfig {
+  primary: string
+  primaryLight: string
+  primaryDark: string
+  background: string
+  surface: string
+  text: string
+  textSecondary: string
+  accent: string
+  border: string
+  fontSans: string
+  fontDisplay: string
+  fontUrl: string | null
+}
+
 export interface BrandProfile {
   id: string
   name: string
@@ -71,6 +86,8 @@ export interface BrandProfile {
   createdAt: string
   isDemo: boolean
   demoLinkExpiresAt: string | null
+  whiteLabelEnabled: boolean
+  brandThemeConfig: BrandThemeConfig | null
 }
 
 async function apiFetchMutate<T>(path: string, token: string, method: string, body?: unknown): Promise<T | null> {

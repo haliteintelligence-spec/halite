@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/db build && pnpm --filter @halite/api build"
+buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/db db:push && pnpm --filter @halite/db build && pnpm --filter @halite/api build"
 
 [deploy]
 startCommand = "node apps/api/dist/server.js"

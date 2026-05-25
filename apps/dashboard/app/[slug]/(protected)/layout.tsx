@@ -3,11 +3,40 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { SideNav } from '@/components/side-nav'
 import { AIInsightPanel } from '@/components/intelligence/AIInsightPanel'
-import { getBrandProfile } from '@/lib/api'
+import { getBrandProfile, type BrandThemeConfig } from '@/lib/api'
 
 interface Props {
   children: ReactNode
   params: Promise<{ slug: string }>
+}
+
+function buildWhiteLabelCSS(t: BrandThemeConfig): string {
+  const fontImport = t.fontUrl
+    ? `@import url('${t.fontUrl}');`
+    : ''
+  return `${fontImport}
+:root {
+  --clay: ${t.primary};
+  --clay-light: ${t.primaryLight};
+  --clay-dim: ${t.primaryDark};
+  --clay-dark: ${t.primaryDark};
+  --porcelain: ${t.background};
+  --porcelain-2: ${t.background};
+  --surface: ${t.surface};
+  --sand-1: ${t.background};
+  --sand-2: ${t.border};
+  --sand-3: ${t.border};
+  --ink: ${t.text};
+  --ink-2: ${t.textSecondary};
+  --ink-3: ${t.textSecondary};
+  --ink-4: ${t.border};
+  --gold: ${t.accent};
+  --gold-light: ${t.primaryLight};
+  --border: ${t.border};
+  --border-sub: ${t.primaryLight};
+  --font-sans: '${t.fontSans}', system-ui, sans-serif;
+  --font-display: '${t.fontDisplay}', Georgia, serif;
+}`
 }
 
 export default async function BrandLayout({ children, params }: Props) {
@@ -18,12 +47,18 @@ export default async function BrandLayout({ children, params }: Props) {
   const profile = await getBrandProfile()
   const isDemo = profile?.isDemo ?? false
   const demoLinkExpiresAt = profile?.demoLinkExpiresAt ?? null
+  const whiteLabelEnabled = profile?.whiteLabelEnabled ?? false
+  const brandThemeConfig = profile?.brandThemeConfig ?? null
 
   const daysLeft = demoLinkExpiresAt
     ? Math.ceil((new Date(demoLinkExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null
 
   return (
+    <>
+      {whiteLabelEnabled && brandThemeConfig && (
+        <style dangerouslySetInnerHTML={{ __html: buildWhiteLabelCSS(brandThemeConfig) }} />
+      )}
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--porcelain)' }}>
       <SideNav slug={slug} isDemo={isDemo} demoLinkExpiresAt={demoLinkExpiresAt} />
 
@@ -53,5 +88,6 @@ export default async function BrandLayout({ children, params }: Props) {
         <AIInsightPanel />
       </div>
     </div>
+    </>
   )
 }
