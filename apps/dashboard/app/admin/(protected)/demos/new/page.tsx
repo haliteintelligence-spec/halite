@@ -4,12 +4,12 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Upload, X, CheckCircle2, Loader2 } from 'lucide-react'
 
-const FOCUS_AREAS = [
-  'Routine Outcomes',
-  'Churn Prediction',
-  'Product Intelligence',
-  'Conversion Lift',
-  'Executive Summary',
+const FOCUS_AREAS: { label: string; value: string }[] = [
+  { label: 'Skincare',   value: 'SKINCARE' },
+  { label: 'Haircare',   value: 'HAIR' },
+  { label: 'Body',       value: 'BODY' },
+  { label: 'Makeup',     value: 'MAKEUP' },
+  { label: 'Wellness',   value: 'WELLNESS' },
 ]
 
 type Step = 1 | 2 | 3
@@ -38,12 +38,12 @@ export default function NewDemoPage() {
   const catalogRef = useRef<HTMLInputElement>(null)
   const purchaseRef = useRef<HTMLInputElement>(null)
 
-  function toggleArea(area: string) {
+  function toggleArea(value: string) {
     setForm(f => ({
       ...f,
-      focusAreas: f.focusAreas.includes(area)
-        ? f.focusAreas.filter(a => a !== area)
-        : [...f.focusAreas, area],
+      focusAreas: f.focusAreas.includes(value)
+        ? f.focusAreas.filter(a => a !== value)
+        : [...f.focusAreas, value],
     }))
   }
 
@@ -128,12 +128,12 @@ export default function NewDemoPage() {
                 Focus Areas (select all that apply)
               </label>
               <div className="flex flex-wrap gap-2">
-                {FOCUS_AREAS.map(area => {
-                  const active = form.focusAreas.includes(area)
+                {FOCUS_AREAS.map(({ label, value }) => {
+                  const active = form.focusAreas.includes(value)
                   return (
                     <button
-                      key={area}
-                      onClick={() => toggleArea(area)}
+                      key={value}
+                      onClick={() => toggleArea(value)}
                       className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
                       style={{
                         background: active ? 'var(--clay)' : 'var(--sand-1)',
@@ -141,7 +141,7 @@ export default function NewDemoPage() {
                         border: `1px solid ${active ? 'var(--clay)' : 'var(--border)'}`,
                       }}
                     >
-                      {area}
+                      {label}
                     </button>
                   )
                 })}

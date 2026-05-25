@@ -248,7 +248,12 @@ export async function adminRoutes(server: FastifyInstance) {
 
       if (!prospectName) throw new ApiError(400, 'prospectName is required')
       if (!catalogBuffer) throw new ApiError(400, 'catalogFile is required')
-      if (focusAreas.length === 0) focusAreas = ['SKINCARE']
+
+      // focusAreas from the form are analytical labels ('Routine Outcomes' etc.)
+      // Brand.focusAreas is a BeautyArea enum — filter to valid values only
+      const VALID_BEAUTY_AREAS = ['SKINCARE','BODY','HAIR','MAKEUP','FRAGRANCE','NAILS','WELLNESS','SUN_CARE','LIP_CARE','EYE_CARE']
+      const brandFocusAreas = focusAreas.filter(a => VALID_BEAUTY_AREAS.includes(a))
+      if (brandFocusAreas.length === 0) brandFocusAreas.push('SKINCARE')
 
       // Determine catalog format
       const ext = catalogFilename.split('.').pop()?.toLowerCase()
@@ -274,7 +279,7 @@ export async function adminRoutes(server: FastifyInstance) {
           demoProspectName: prospectName,
           demoCreatedBy: adminId,
           demoLinkExpiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-          focusAreas: focusAreas as any,
+          focusAreas: brandFocusAreas as any,
           primaryColor: '#C17A47',
           active: true,
         },
@@ -292,7 +297,7 @@ export async function adminRoutes(server: FastifyInstance) {
           await provisionDemoEnvironment({
             prospectName,
             createdByAdminId: adminId,
-            focusAreas,
+            focusAreas: brandFocusAreas,
             consumerCount,
             purchaseMatrix,
             existingBrandId: brand.id,
