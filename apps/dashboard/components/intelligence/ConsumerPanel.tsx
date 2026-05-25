@@ -41,9 +41,9 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
     tone: TONE_KEYS[Math.min(i * 2, 5)],
   }))
 
-  const dominantFitz = consumers.fitzpatrick.reduce(
+  const dominantFitz = consumers.monkSkinTones.reduce(
     (best, f) => f.count > best.count ? f : best,
-    consumers.fitzpatrick[0] ?? { type: 0, pct: 0, count: 0 }
+    consumers.monkSkinTones[0] ?? { type: 0, pct: 0, count: 0 }
   )
   const topConcern = consumers.concerns[0]
 
@@ -63,8 +63,8 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
       >
         <div className="space-y-4">
           <SkinToneGrid
-            data={consumers.fitzpatrick.map(f => ({
-              tone: f.tone,
+            data={consumers.monkSkinTones.map(f => ({
+              tone: String(f.type),
               label: f.label,
               count: f.count,
               pct: f.pct,
@@ -72,7 +72,7 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
             }))}
           />
           <div className="flex gap-4 pt-1">
-            {consumers.fitzpatrick.map(f => (
+            {consumers.monkSkinTones.map(f => (
               <div key={f.type} className="text-center flex-1">
                 <p className="text-[10px] font-semibold" style={{ color: 'var(--ink-3)' }}>
                   {f.type}
@@ -83,7 +83,7 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers }: Props) {
           {skinTypeBar.length > 0 && <SkinToneBar data={skinTypeBar} showLabels height={8} />}
           {dominantFitz.count > 0 && topConcern && (
             <AIBadge>
-              Fitzpatrick {dominantFitz.type} is your most common skin tone ({dominantFitz.pct}% of consumers).{' '}
+              MST {dominantFitz.type} is your most common skin tone ({dominantFitz.pct}% of consumers).{' '}
               {CONCERN_LABELS[topConcern.concern] ?? topConcern.concern} is the top reported concern ({topConcern.pct}% of users).
             </AIBadge>
           )}

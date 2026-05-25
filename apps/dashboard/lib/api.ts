@@ -11,7 +11,7 @@ export interface AnalyticsData {
     usageRate: number | null
   }
   consumers: {
-    fitzpatrick: Array<{ type: number; tone: string; label: string; count: number; pct: number }>
+    monkSkinTones: Array<{ type: number; label: string; count: number; pct: number }>
     skinTypes: Array<{ type: string; count: number; pct: number }>
     concerns: Array<{ concern: string; count: number; pct: number }>
     ageRanges: Array<{ group: string; n: number }>
