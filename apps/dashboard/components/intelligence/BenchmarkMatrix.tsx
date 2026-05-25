@@ -2,41 +2,115 @@
 
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
+import type { AnalyticsData } from '@/lib/api'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
 } from 'recharts'
 
-const radarMetrics = [
-  { metric: 'Acceptance',  yours: 64, industry: 51 },
-  { metric: 'Retention',   yours: 78, industry: 65 },
-  { metric: 'Check-ins',   yours: 84, industry: 60 },
-  { metric: 'Satisfaction', yours: 72, industry: 68 },
-  { metric: 'Compliance',  yours: 61, industry: 58 },
-  { metric: 'Growth',      yours: 88, industry: 72 },
-]
+// Industry medians — realistic reference points, not real cross-brand data
+const INDUSTRY = {
+  acceptance:           51,
+  checkInsPerUserMo:    2.8,
+  compliance:           58,
+  satisfactionPct:      78, // 3.9/5 * 100
+  catalogueComplete:    67,
+  ingredientCoverage:   74,
+}
 
-const benchmarkRows = [
-  { metric: 'Rec acceptance rate',    yours: 64, industry: 51, unit: '%',  better: true },
-  { metric: 'Monthly active users',   yours: 2847, industry: 1200, unit: '',  better: true },
-  { metric: 'Check-ins / user / mo',  yours: 4.2, industry: 2.8, unit: '',  better: true },
-  { metric: '30d retention',          yours: 78, industry: 65, unit: '%',  better: true },
-  { metric: 'Routine compliance',     yours: 61, industry: 58, unit: '%',  better: true },
-  { metric: 'Avg satisfaction (1–5)', yours: 4.1, industry: 3.9, unit: '',  better: true },
-  { metric: 'Catalogue completeness', yours: 43, industry: 67, unit: '%',  better: false },
-  { metric: 'Ingredient coverage',    yours: 58, industry: 74, unit: '%',  better: false },
-]
+interface Props { analytics: AnalyticsData }
 
-const growthData = [
-  { month: 'Nov', yours: 1820, industry: 1100 },
-  { month: 'Dec', yours: 1940, industry: 1130 },
-  { month: 'Jan', yours: 2120, industry: 1160 },
-  { month: 'Feb', yours: 2310, industry: 1190 },
-  { month: 'Mar', yours: 2560, industry: 1220 },
-  { month: 'Apr', yours: 2847, industry: 1250 },
-]
+export function BenchmarkMatrix({ analytics }: Props) {
+  const { summary, products, checkIns } = analytics
 
-export function BenchmarkMatrix() {
+  // ── Compute real "yours" values ──────────────────────────────────
+  const acceptance = summary.usageRate ?? 0
+  const checkInsPerUserMo = summary.totalConsumers > 0
+    ? Math.round((summary.totalCheckIns / summary.totalConsumers / 3) * 10) / 10
+    : 0
+  const compliance = summary.complianceRate ?? 0
+  const satisfactionPct = summary.avgRating ? Math.round((summary.avgRating / 5) * 100) : 0
+  const avgRatingDisplay = summary.avgRating ?? 0
+
+  const catalogueComplete = products.concernCoverage.length > 0
+    ? Math.round(
+        products.concernCoverage.reduce((s, c) => s + c.coverage, 0) / products.concernCoverage.length
+      )
+    : 0
+
+  const ingredientCoverage = Math.min(products.topIngredients.length * 10, 100)
+
+  // ── Radar data (0–100 scale) ─────────────────────────────────────
+  const radarData = [
+    { metric: 'Acceptance',   yours: acceptance,       industry: INDUSTRY.acceptance },
+    { metric: 'Check-ins',    yours: Math.min(checkInsPerUserMo * 20, 100), industry: Math.min(INDUSTRY.checkInsPerUserMo * 20, 100) },
+    { metric: 'Compliance',   yours: compliance,        industry: INDUSTRY.compliance },
+    { metric: 'Satisfaction', yours: satisfactionPct,  industry: INDUSTRY.satisfactionPct },
+    { metric: 'Catalogue',    yours: catalogueComplete, industry: INDUSTRY.catalogueComplete },
+    { metric: 'Ingredients',  yours: ingredientCoverage, industry: INDUSTRY.ingredientCoverage },
+  ]
+
+  // ── Benchmark rows ────────────────────────────────────────────────
+  const benchmarkRows = [
+    {
+      metric: 'Rec acceptance rate',
+      yours: `${acceptance}%`,
+      industry: `${INDUSTRY.acceptance}%`,
+      better: acceptance >= INDUSTRY.acceptance,
+    },
+    {
+      metric: 'Total consumers',
+      yours: summary.totalConsumers.toLocaleString(),
+      industry: '1,200',
+      better: summary.totalConsumers >= 1200,
+    },
+    {
+      metric: 'Check-ins / user / mo',
+      yours: checkInsPerUserMo,
+      industry: INDUSTRY.checkInsPerUserMo,
+      better: checkInsPerUserMo >= INDUSTRY.checkInsPerUserMo,
+    },
+    {
+      metric: 'Routine compliance',
+      yours: `${compliance}%`,
+      industry: `${INDUSTRY.compliance}%`,
+      better: compliance >= INDUSTRY.compliance,
+    },
+    {
+      metric: 'Avg satisfaction (1–5)',
+      yours: avgRatingDisplay || '—',
+      industry: '3.9',
+      better: avgRatingDisplay >= 3.9,
+    },
+    {
+      metric: 'Catalogue completeness',
+      yours: `${catalogueComplete}%`,
+      industry: `${INDUSTRY.catalogueComplete}%`,
+      better: catalogueComplete >= INDUSTRY.catalogueComplete,
+    },
+    {
+      metric: 'Ingredient coverage',
+      yours: `${ingredientCoverage}%`,
+      industry: `${INDUSTRY.ingredientCoverage}%`,
+      better: ingredientCoverage >= INDUSTRY.ingredientCoverage,
+    },
+  ]
+
+  // ── Check-in trend (last 12 weeks → grouped into 6 pairs) ───────
+  const paired = Array.from({ length: 6 }, (_, i) => ({
+    label: `W${i * 2 + 1}–${i * 2 + 2}`,
+    yours: (checkIns.weeklyTrend[i * 2] ?? 0) + (checkIns.weeklyTrend[i * 2 + 1] ?? 0),
+    baseline: Math.round(summary.totalCheckIns / 12) * 2,
+  }))
+
+  // ── AI summary ───────────────────────────────────────────────────
+  const aboveCount = benchmarkRows.filter(r => r.better).length
+  const aiSummary = `${aboveCount} of ${benchmarkRows.length} metrics are at or above the industry median. ${
+    catalogueComplete < INDUSTRY.catalogueComplete
+      ? `Catalogue completeness (${catalogueComplete}% vs ${INDUSTRY.catalogueComplete}% median) is the highest-impact gap to close.`
+      : `Strong catalogue and ingredient coverage — focus on maintaining recommendation acceptance.`
+  }`
+
   return (
     <div className="space-y-4">
       {/* Radar Comparison */}
@@ -56,7 +130,7 @@ export function BenchmarkMatrix() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={220}>
-          <RadarChart data={radarMetrics} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
+          <RadarChart data={radarData} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
             <PolarGrid stroke="var(--border)" />
             <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10, fill: 'var(--ink-3)' }} />
             <Radar
@@ -82,7 +156,7 @@ export function BenchmarkMatrix() {
       {/* Metric Table */}
       <InsightCard title="Benchmark Breakdown" subtitle="vs category median">
         <div className="space-y-0">
-          {benchmarkRows.map((row, i) => (
+          {benchmarkRows.map(row => (
             <div
               key={row.metric}
               className="flex items-center gap-3 py-2.5 border-b last:border-0"
@@ -91,10 +165,10 @@ export function BenchmarkMatrix() {
               <p className="flex-1 text-[12px]" style={{ color: 'var(--ink-2)' }}>{row.metric}</p>
               <div className="flex items-center gap-3">
                 <span className="text-[12px] font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
-                  {row.yours}{row.unit}
+                  {row.yours}
                 </span>
                 <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-                  vs {row.industry}{row.unit}
+                  vs {row.industry}
                 </span>
                 <span
                   className="text-[10px] font-semibold px-2 py-0.5 rounded"
@@ -110,18 +184,15 @@ export function BenchmarkMatrix() {
           ))}
         </div>
         <div className="mt-3">
-          <AIBadge>
-            You outperform on engagement metrics (check-ins, retention) but lag on catalogue
-            completeness. Expanding ingredient variety could unlock further recommendation accuracy gains.
-          </AIBadge>
+          <AIBadge>{aiSummary}</AIBadge>
         </div>
       </InsightCard>
 
-      {/* Growth Trajectory */}
-      <InsightCard title="User Growth Trajectory" subtitle="Your brand vs industry benchmark baseline">
+      {/* Check-in Activity (12-week view) */}
+      <InsightCard title="Check-in Activity" subtitle="Your brand vs rolling baseline (last 12 weeks, paired)">
         <ResponsiveContainer width="100%" height={150}>
-          <BarChart data={growthData} barCategoryGap="35%" margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
-            <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--ink-3)' }} axisLine={false} tickLine={false} />
+          <BarChart data={paired} barCategoryGap="35%" margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--ink-3)' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: 'var(--ink-3)' }} axisLine={false} tickLine={false} />
             <Tooltip
               cursor={{ fill: 'var(--porcelain-2)' }}
@@ -130,13 +201,13 @@ export function BenchmarkMatrix() {
                   <div className="text-[11px] px-2.5 py-2 rounded-lg shadow" style={{ background: 'var(--ink)', color: 'white' }}>
                     <p className="font-semibold mb-1">{label}</p>
                     {payload.map((p: any) => (
-                      <p key={p.name}>{p.name === 'yours' ? 'You' : 'Industry'}: {p.value.toLocaleString()}</p>
+                      <p key={p.name}>{p.name === 'yours' ? 'Check-ins' : 'Baseline'}: {p.value}</p>
                     ))}
                   </div>
                 ) : null
               }
             />
-            <Bar dataKey="industry" fill="var(--border)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="baseline" fill="var(--border)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
             <Bar dataKey="yours" fill="var(--clay)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>

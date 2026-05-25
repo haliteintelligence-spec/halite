@@ -1,45 +1,145 @@
-'use client'
-
-import { Sparkles, Zap, TrendingUp, AlertCircle } from 'lucide-react'
+import { Sparkles, Zap, TrendingUp, AlertCircle, BookOpen } from 'lucide-react'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightCard } from '@/components/ui/InsightCard'
-import { use } from 'react'
-
-const analyses = [
-  {
-    title: 'Catalogue-Consumer Alignment Report',
-    date: 'Today, 09:14',
-    summary: 'Your catalogue addresses 61% of expressed consumer concerns. The largest gap is hyperpigmentation treatment for Fitzpatrick III–VI consumers, who represent 50% of your active base.',
-    tags: ['Catalogue', 'Consumer', 'Gap Analysis'],
-    status: 'complete',
-  },
-  {
-    title: 'Recommendation Engine Performance Audit',
-    date: 'Yesterday, 15:32',
-    summary: 'The engine performs strongest on serums (+82% acceptance) and weakest on treatments (+52%). Adding ingredient-concern tagging to treatments could improve acceptance by an estimated 8–12%.',
-    tags: ['Products', 'Performance'],
-    status: 'complete',
-  },
-  {
-    title: 'Market Trend × Your Positioning',
-    date: '2 days ago, 11:08',
-    summary: 'You have strong alignment with the barrier repair trend (ceramides, centella) but low alignment with the microbiome skincare trend (no probiotic/prebiotic products). This represents a whitespace opportunity.',
-    tags: ['Market', 'Trends'],
-    status: 'complete',
-  },
-]
-
-const actions = [
-  { icon: AlertCircle, label: 'Add azelaic acid product', urgency: 'Critical', module: 'Catalogue' },
-  { icon: TrendingUp,  label: 'Launch barrier repair bundle', urgency: 'High', module: 'Marketing' },
-  { icon: Zap,         label: 'Tag products with concerns', urgency: 'Medium', module: 'Products' },
-  { icon: Sparkles,    label: 'Expand SPF for deeper tones', urgency: 'High', module: 'Catalogue' },
-]
+import { getAnalytics } from '@/lib/api'
+import type { AnalyticsData } from '@/lib/api'
 
 interface Props { params: Promise<{ slug: string }> }
 
-export default function AILabPage({ params }: Props) {
-  const { slug } = use(params)
+function deriveInsights(analytics: AnalyticsData) {
+  const { summary, consumers, products } = analytics
+
+  // ── Analyses ──────────────────────────────────────────────────────
+  const analyses: { title: string; summary: string; tags: string[] }[] = []
+
+  // 1. Catalogue-consumer alignment
+  if (products.concernCoverage.length > 0) {
+    const covered = products.concernCoverage.filter(c => c.coverage > 0).length
+    const pct = Math.round((covered / products.concernCoverage.length) * 100)
+    const topGap = [...products.concernCoverage]
+      .sort((a, b) => b.userPct - a.userPct)
+      .find(c => c.coverage === 0)
+    analyses.push({
+      title: 'Catalogue-Consumer Alignment Report',
+      summary: `Your catalogue addresses ${pct}% of expressed consumer concerns.${
+        topGap
+          ? ` The largest gap is ${topGap.concern.toLowerCase()} — ${topGap.userPct}% of your consumers mention it but you have no product coverage.`
+          : ' Consumer concern coverage is strong across your active range.'
+      }`,
+      tags: ['Catalogue', 'Consumer', 'Gap Analysis'],
+    })
+  }
+
+  // 2. Recommendation performance by category
+  if (products.categoryPerf.length > 0) {
+    const sorted = [...products.categoryPerf].sort((a, b) => b.acceptance - a.acceptance)
+    const best = sorted[0]!
+    const worst = sorted[sorted.length - 1]!
+    const avgAcc = Math.round(
+      products.categoryPerf.reduce((s, c) => s + c.acceptance, 0) / products.categoryPerf.length
+    )
+    analyses.push({
+      title: 'Recommendation Engine Performance Audit',
+      summary: `The engine performs strongest on ${best.category.toLowerCase()} (${best.acceptance}% usage rate) and weakest on ${worst.category.toLowerCase()} (${worst.acceptance}%). Overall average acceptance: ${avgAcc}%.`,
+      tags: ['Products', 'Performance'],
+    })
+  }
+
+  // 3. Consumer skin profile
+  if (consumers.concerns.length > 0) {
+    const top3 = consumers.concerns.slice(0, 3)
+    const topType = consumers.skinTypes[0]
+    analyses.push({
+      title: 'Consumer Skin Profile',
+      summary: `Top consumer concerns: ${top3.map(c => `${c.concern.toLowerCase()} (${c.pct}%)`).join(', ')}.${
+        topType ? ` Dominant skin type: ${topType.type.toLowerCase()} at ${topType.pct}% of your base.` : ''
+      } ${summary.avgRating ? `Average skin satisfaction rating: ${summary.avgRating}/5.` : ''}`,
+      tags: ['Consumer', 'Profile'],
+    })
+  }
+
+  // ── Action queue ──────────────────────────────────────────────────
+  type Urgency = 'Critical' | 'High' | 'Medium'
+  const actions: { icon: typeof AlertCircle; label: string; urgency: Urgency; module: string }[] = []
+
+  // Catalogue gaps: top uncovered concerns
+  const gaps = [...products.concernCoverage]
+    .filter(c => c.coverage === 0 && c.userPct > 10)
+    .sort((a, b) => b.userPct - a.userPct)
+    .slice(0, 2)
+  gaps.forEach(g => {
+    actions.push({
+      icon: AlertCircle,
+      label: `Add product targeting ${g.concern.toLowerCase()} (${g.userPct}% of consumers)`,
+      urgency: g.userPct > 30 ? 'Critical' : 'High',
+      module: 'Catalogue',
+    })
+  })
+
+  // Low-acceptance category
+  if (products.categoryPerf.length > 0) {
+    const worst = [...products.categoryPerf].sort((a, b) => a.acceptance - b.acceptance)[0]!
+    if (worst.acceptance < 65) {
+      actions.push({
+        icon: TrendingUp,
+        label: `Improve ${worst.category.toLowerCase()} recommendation acceptance — currently ${worst.acceptance}%`,
+        urgency: 'Medium',
+        module: 'Products',
+      })
+    }
+  }
+
+  // Compliance nudge
+  if (summary.complianceRate !== null && summary.complianceRate < 65) {
+    actions.push({
+      icon: Zap,
+      label: `Boost routine compliance — currently ${summary.complianceRate}%`,
+      urgency: 'Medium',
+      module: 'Routines',
+    })
+  }
+
+  // Fallback
+  if (actions.length === 0) {
+    actions.push({
+      icon: Sparkles,
+      label: 'Review ingredient coverage against top consumer concerns',
+      urgency: 'Medium',
+      module: 'Catalogue',
+    })
+  }
+
+  // ── Intelligence score (0–100) ────────────────────────────────────
+  const ratingScore = summary.avgRating ? (summary.avgRating / 5) * 100 : 50
+  const score = Math.round(
+    ratingScore * 0.35 +
+    (summary.complianceRate ?? 50) * 0.35 +
+    (summary.usageRate ?? 50) * 0.30
+  )
+  const scoreLabel = score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 50 ? 'Fair' : 'Developing'
+
+  return { analyses, actions, score, scoreLabel }
+}
+
+export default async function AILabPage({ params }: Props) {
+  const { slug } = await params
+  const analytics = await getAnalytics()
+
+  if (!analytics) {
+    return (
+      <div className="px-7 py-6">
+        <div className="mb-6">
+          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>Lab</p>
+          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>AI Lab</h1>
+        </div>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--border)' }}>
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>No data yet — analyses will appear once consumers start checking in.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const { analyses, actions, score, scoreLabel } = deriveInsights(analytics)
 
   return (
     <div className="px-7 py-6">
@@ -49,7 +149,7 @@ export default function AILabPage({ params }: Props) {
         </p>
         <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>AI Lab</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-          Halite AI analyses, cross-module insights & strategic recommendations
+          Cross-module intelligence reports & strategic recommendations for {slug}
         </p>
       </div>
 
@@ -57,36 +157,41 @@ export default function AILabPage({ params }: Props) {
         {/* Analysis Feed */}
         <div className="xl:col-span-2 space-y-4">
           <InsightCard title="AI Analyses" subtitle="Cross-module intelligence reports" accent="clay">
-            <div className="space-y-4">
-              {analyses.map((a, i) => (
-                <div
-                  key={i}
-                  className="p-4 rounded-xl space-y-2"
-                  style={{ background: 'var(--porcelain-2)', border: '1px solid var(--border-sub)' }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{a.title}</p>
-                    <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--ink-3)' }}>{a.date}</span>
+            {analyses.length > 0 ? (
+              <div className="space-y-4">
+                {analyses.map((a, i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl space-y-2"
+                    style={{ background: 'var(--porcelain-2)', border: '1px solid var(--border-sub)' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{a.title}</p>
+                    </div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>{a.summary}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {a.tags.map(t => (
+                        <span
+                          key={t}
+                          className="text-[10px] px-2 py-0.5 rounded-full"
+                          style={{ background: 'var(--clay-light)', color: 'var(--clay-dim)' }}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-[12px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>{a.summary}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {a.tags.map(t => (
-                      <span
-                        key={t}
-                        className="text-[10px] px-2 py-0.5 rounded-full"
-                        style={{ background: 'var(--clay-light)', color: 'var(--clay-dim)' }}
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] py-4 text-center" style={{ color: 'var(--ink-3)' }}>
+                Analyses will generate once check-in data is available.
+              </p>
+            )}
           </InsightCard>
         </div>
 
-        {/* Action Queue */}
+        {/* Action Queue + Score */}
         <div className="space-y-4">
           <InsightCard title="Action Queue" subtitle="AI-prioritised next steps" accent="clay">
             <div className="space-y-2">
@@ -126,11 +231,11 @@ export default function AILabPage({ params }: Props) {
                 className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-semibold"
                 style={{ background: 'var(--clay-light)', color: 'var(--clay)' }}
               >
-                72
+                {score}
               </div>
-              <p className="text-[12px] mt-3 font-medium" style={{ color: 'var(--ink-2)' }}>Good</p>
+              <p className="text-[12px] mt-3 font-medium" style={{ color: 'var(--ink-2)' }}>{scoreLabel}</p>
               <p className="text-[11px] mt-1 text-center" style={{ color: 'var(--ink-3)' }}>
-                Top 22nd percentile vs beauty brands on Halite
+                Composite of satisfaction, compliance & product acceptance
               </p>
             </div>
           </InsightCard>

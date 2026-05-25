@@ -1,9 +1,12 @@
 import { MarketFeed } from '@/components/intelligence/MarketFeed'
+import { getAnalytics } from '@/lib/api'
 
 interface Props { params: Promise<{ slug: string }> }
 
 export default async function MarketPage({ params }: Props) {
   const { slug } = await params
+  const analytics = await getAnalytics()
+
   return (
     <div className="px-7 py-6">
       <div className="mb-6">
@@ -15,7 +18,13 @@ export default async function MarketPage({ params }: Props) {
           Trend signals, consumer sentiment shifts & emerging ingredient radar
         </p>
       </div>
-      <MarketFeed />
+      {analytics ? (
+        <MarketFeed analytics={analytics} />
+      ) : (
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--border)' }}>
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load market data.</p>
+        </div>
+      )}
     </div>
   )
 }

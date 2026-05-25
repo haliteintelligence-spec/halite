@@ -163,8 +163,21 @@ export default async function IntelligencePage({ params }: Props) {
                     Full view →
                   </a>
                 </div>
-                <MarketFeed />
+                <MarketFeed analytics={analytics} />
               </div>
+            </div>
+
+            {/* Full-width benchmarking */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                  Brand Benchmarking
+                </h2>
+                <a href={`/${slug}/benchmarking`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
+                  Full view →
+                </a>
+              </div>
+              <BenchmarkMatrix analytics={analytics} />
             </div>
           </>
         ) : (
@@ -177,19 +190,6 @@ export default async function IntelligencePage({ params }: Props) {
             </p>
           </div>
         )}
-
-        {/* Full-width benchmarking */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
-              Brand Benchmarking
-            </h2>
-            <a href={`/${slug}/benchmarking`} className="text-[11px] hover:opacity-70 transition-opacity" style={{ color: 'var(--clay)' }}>
-              Full view →
-            </a>
-          </div>
-          <BenchmarkMatrix />
-        </div>
       </div>
     </div>
   )
