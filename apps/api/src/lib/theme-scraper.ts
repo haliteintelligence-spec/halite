@@ -30,20 +30,20 @@ const DEFAULT_THEME: BrandThemeConfig = {
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
-  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null
+  return m ? [parseInt(m[1]!, 16), parseInt(m[2]!, 16), parseInt(m[3]!, 16)] : null
 }
 
 function lighten(hex: string, amount: number): string {
   const rgb = hexToRgb(hex)
   if (!rgb) return hex
-  const [r, g, b] = rgb.map(v => Math.min(255, Math.round(v + (255 - v) * amount)))
+  const [r, g, b] = rgb.map(v => Math.min(255, Math.round(v + (255 - v) * amount))) as [number, number, number]
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
 function darken(hex: string, amount: number): string {
   const rgb = hexToRgb(hex)
   if (!rgb) return hex
-  const [r, g, b] = rgb.map(v => Math.max(0, Math.round(v * (1 - amount))))
+  const [r, g, b] = rgb.map(v => Math.max(0, Math.round(v * (1 - amount)))) as [number, number, number]
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
@@ -58,7 +58,7 @@ function extractColors(html: string): string[] {
   const re = /#([0-9a-fA-F]{6})\b/g
   let m: RegExpExecArray | null
   while ((m = re.exec(html)) !== null) {
-    found.add(`#${m[1].toLowerCase()}`)
+    found.add(`#${m[1]!.toLowerCase()}`)
   }
   return [...found]
 }
@@ -71,7 +71,7 @@ function pickPrimary(colors: string[]): string | null {
   })
   if (candidates.length === 0) return null
   // Find the most "saturated" looking color by comparing R/G/B spread
-  let best = candidates[0]
+  let best = candidates[0]!
   let bestSpread = 0
   for (const c of candidates) {
     const rgb = hexToRgb(c)
@@ -90,13 +90,13 @@ function extractFonts(html: string): { fontSans: string; fontDisplay: string; fo
   const gfRe = /href=["']([^"']*fonts\.googleapis\.com\/css[^"']*)["']/gi
   let m: RegExpExecArray | null
   while ((m = gfRe.exec(html)) !== null) {
-    const url = m[1].replace(/&amp;/g, '&')
+    const url = m[1]!.replace(/&amp;/g, '&')
     fontUrl = url
     // Extract family names from ?family=Inter:wght@400;700|Playfair+Display
     const familyRe = /family=([^&"']+)/gi
     let fm: RegExpExecArray | null
     while ((fm = familyRe.exec(url)) !== null) {
-      const families = fm[1].split('|').map(f => f.split(':')[0].replace(/\+/g, ' ').trim())
+      const families = fm[1]!.split('|').map(f => f.split(':')[0]!.replace(/\+/g, ' ').trim())
       fonts.push(...families)
     }
     break
@@ -106,7 +106,7 @@ function extractFonts(html: string): { fontSans: string; fontDisplay: string; fo
   if (fonts.length === 0) {
     const ffRe = /font-family:\s*["']?([A-Za-z][A-Za-z0-9 _-]+?)["']?\s*[;,{]/g
     while ((m = ffRe.exec(html)) !== null) {
-      const name = m[1].trim()
+      const name = m[1]!.trim()
       if (name && !fonts.includes(name)) fonts.push(name)
     }
   }
@@ -138,13 +138,13 @@ export async function scrapeTheme(url: string): Promise<BrandThemeConfig> {
   let primary: string | null = null
   const themeColorMatch = /meta[^>]+name=["']theme-color["'][^>]+content=["'](#[0-9a-fA-F]{6})["']/i.exec(html)
     ?? /meta[^>]+content=["'](#[0-9a-fA-F]{6})["'][^>]+name=["']theme-color["']/i.exec(html)
-  if (themeColorMatch) primary = themeColorMatch[1].toLowerCase()
+  if (themeColorMatch) primary = themeColorMatch[1]!.toLowerCase()
 
   // CSS custom properties — look for --primary, --brand, --color-primary etc.
   if (!primary) {
     const cssVarRe = /--(?:primary|brand|accent|color-primary|main-color|brand-color)\s*:\s*(#[0-9a-fA-F]{6})/i
     const cssMatch = cssVarRe.exec(html)
-    if (cssMatch) primary = cssMatch[1].toLowerCase()
+    if (cssMatch) primary = cssMatch[1]!.toLowerCase()
   }
 
   // Fallback: pick from all hex colors in the document
