@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* ── Melanin palette (Fitzpatrick I–VI) ──────── */
+    /* ── Melanin palette (Monk Skin Tone Scale 1–10) ─ */
     --melanin-i:   #f9e8d0;
     --melanin-ii:  #e8c99a;
     --melanin-iii: #c8976a;
@@ -16,26 +16,45 @@
     --font-display: var(--font-playfair);
     --font-sans:    var(--font-inter);
 
-    /* ── Intelligence Design System ──────────────── */
-    --ink:          #0f0e0d;
-    --ink-2:        #2e2a27;
-    --ink-3:        #6b5e55;
-    --porcelain:    #f8f6f3;
-    --porcelain-2:  #f1ece6;
-    --surface:      #ffffff;
-    --clay:         #bf7a5a;
-    --clay-light:   #f3e4da;
-    --clay-dim:     #8a5540;
-    --gold:         #c8923a;
-    --gold-light:   #fdf3e3;
+    /* ── Halite Intelligence Design System ───────── */
+
+    /* Text */
+    --ink:          #1A0A12;   /* Body text */
+    --ink-2:        #4A2A38;   /* Secondary text — muted plum */
+    --ink-3:        #8B6575;   /* Tertiary text, labels — dusty rose */
+    --ink-4:        #C4B5BD;   /* Disabled, placeholder — muted pink */
+
+    /* Backgrounds */
+    --porcelain:    #FAF6F0;   /* Body background — ivory */
+    --porcelain-2:  #F2EBE0;   /* Card backgrounds, table headers — ivory 2 */
+    --surface:      #ffffff;   /* Pure white surface */
+    --sand-1:       #F8F3EE;   /* Alternating rows, subtle fills — ivory 3 */
+    --sand-2:       #E8DDD0;   /* Borders, dividers — sand */
+    --sand-3:       #C4B5BD;   /* Stronger border — muted pink */
+
+    /* Brand — Burgundy */
+    --clay:         #450F2A;   /* Primary brand: buttons, headings, active states */
+    --clay-light:   #F5E6ED;   /* Light burgundy tint — backgrounds, chips */
+    --clay-dim:     #6B1E3F;   /* Hover / lighter burgundy */
+    --clay-dark:    #2D0A1C;   /* Footer, deepest bg */
+
+    /* Accent — Gold */
+    --gold:         #C17A47;   /* Section labels, stat cards, accent */
+    --gold-light:   #FEF0E0;   /* Light gold tint */
+
+    /* Status — Sage (positive) */
     --sage:         #6b9e78;
     --sage-light:   #e9f4ec;
+
+    /* Status — Blush (negative/alert) */
     --blush:        #c07070;
     --blush-light:  #f7edec;
-    --border:       #e4dcd4;
-    --border-sub:   #ede7e0;
 
-    /* ── Aliases (auth pages + legacy) ───────────── */
+    /* Borders */
+    --border:       #E8DDD0;   /* Primary border — sand */
+    --border-sub:   #F2EBE0;   /* Subtle border */
+
+    /* ── Aliases ─────────────────────────────────── */
     --bg:         var(--porcelain);
     --bg-surface: var(--surface);
     --bg-muted:   var(--porcelain-2);
@@ -56,5 +75,5 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--sand-2); border-radius: 2px; }
 }

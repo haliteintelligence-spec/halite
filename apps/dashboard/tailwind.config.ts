@@ -18,16 +18,23 @@ const config: Config = {
           DEFAULT: 'var(--ink)',
           2:       'var(--ink-2)',
           3:       'var(--ink-3)',
+          4:       'var(--ink-4)',
         },
         porcelain: {
           DEFAULT: 'var(--porcelain)',
           2:       'var(--porcelain-2)',
         },
         surface: 'var(--surface)',
+        sand: {
+          1: 'var(--sand-1)',
+          2: 'var(--sand-2)',
+          3: 'var(--sand-3)',
+        },
         clay: {
           DEFAULT: 'var(--clay)',
           light:   'var(--clay-light)',
           dim:     'var(--clay-dim)',
+          dark:    'var(--clay-dark)',
         },
         gold: {
           DEFAULT: 'var(--gold)',
