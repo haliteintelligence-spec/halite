@@ -26,6 +26,16 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { InsightAccordion } from '@/components/intelligence/InsightAccordion'
+import type { DerivedInsight, DerivedAction } from '@/components/intelligence/AIInsightPanel'
+
+interface Intelligence {
+  insights: DerivedInsight[]
+  actions: DerivedAction[]
+  score: number
+  scoreLabel: string
+  todaySignal: string
+}
 
 const nav = [
   { href: '',              label: 'Overview',      icon: LayoutGrid,   section: null },
@@ -47,10 +57,12 @@ export function SideNav({
   slug,
   isDemo = false,
   demoLinkExpiresAt = null,
+  intelligence = null,
 }: {
   slug: string
   isDemo?: boolean
   demoLinkExpiresAt?: string | null
+  intelligence?: Intelligence | null
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -58,10 +70,13 @@ export function SideNav({
 
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [intellOpen, setIntelOpen] = useState(true)
 
   useEffect(() => {
     const saved = localStorage.getItem('halite-nav-collapsed')
     if (saved === 'true') setCollapsed(true)
+    const savedIntel = localStorage.getItem('halite-intel-open')
+    if (savedIntel === 'false') setIntelOpen(false)
   }, [])
 
   useEffect(() => {
@@ -80,12 +95,12 @@ export function SideNav({
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const overview     = nav.filter(n => !n.section)
-  const intelligence = nav.filter(n => n.section === 'Intelligence')
-  const agents       = nav.filter(n => n.section === 'Agents')
-  const catalog      = nav.filter(n => n.section === 'Catalog')
-  const lab          = nav.filter(n => n.section === 'Lab')
-  const settings     = nav.filter(n => n.section === 'Settings')
+  const overview      = nav.filter(n => !n.section)
+  const intelNav      = nav.filter(n => n.section === 'Intelligence')
+  const agents        = nav.filter(n => n.section === 'Agents')
+  const catalog       = nav.filter(n => n.section === 'Catalog')
+  const lab           = nav.filter(n => n.section === 'Lab')
+  const settings      = nav.filter(n => n.section === 'Settings')
 
   const daysLeft = demoLinkExpiresAt
     ? Math.ceil((new Date(demoLinkExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -213,7 +228,7 @@ export function SideNav({
               Intelligence
             </p>
             <div className="space-y-0.5">
-              {intelligence.map(item => <NavItem key={item.href} {...item} />)}
+              {intelNav.map(item => <NavItem key={item.href} {...item} />)}
             </div>
           </div>
 
@@ -279,6 +294,93 @@ export function SideNav({
               {settings.map(item => <NavItem key={item.href} {...item} />)}
             </div>
           </div>
+
+          {/* Intelligence section — hidden in icon-only collapsed mode */}
+          {intelligence && (
+            <div className={clsx(collapsed && 'md:hidden')}>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '12px', paddingTop: '12px' }}>
+                <button
+                  onClick={() => {
+                    const next = !intellOpen
+                    setIntelOpen(next)
+                    localStorage.setItem('halite-intel-open', String(next))
+                  }}
+                  className="flex items-center justify-between w-full px-3 mb-2"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles size={9} style={{ color: 'var(--clay)' }} />
+                    <p className="text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      Intelligence
+                    </p>
+                  </div>
+                  <ChevronRight
+                    size={10}
+                    className={clsx('transition-transform duration-150', intellOpen ? 'rotate-90' : '')}
+                    style={{ color: 'rgba(255,255,255,0.2)' }}
+                  />
+                </button>
+
+                {intellOpen && (
+                  <>
+                    <InsightAccordion insights={intelligence.insights} />
+
+                    <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+
+                    {/* Recommended actions */}
+                    <div className="px-3 pb-3">
+                      <p className="text-[8px] font-semibold tracking-[0.14em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                        Recommended Actions
+                      </p>
+                      <div className="space-y-1.5">
+                        {intelligence.actions.map((a, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-2 p-2 rounded-lg"
+                            style={{ background: 'rgba(255,255,255,0.04)' }}
+                          >
+                            <span
+                              className="text-[8px] font-bold w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 mt-0.5"
+                              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)' }}
+                            >
+                              {i + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] leading-snug" style={{ color: 'rgba(255,255,255,0.65)' }}>{a.label}</p>
+                              <span
+                                className="inline-block text-[8px] px-1 py-0.5 rounded mt-0.5"
+                                style={{
+                                  background: a.urgency === 'Critical' ? 'rgba(239,68,68,0.18)' : a.urgency === 'High' ? 'rgba(251,191,36,0.18)' : 'rgba(107,158,120,0.18)',
+                                  color: a.urgency === 'Critical' ? '#f87171' : a.urgency === 'High' ? '#fbbf24' : '#6b9e78',
+                                }}
+                              >
+                                {a.urgency}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Intelligence score */}
+                    <div
+                      className="mx-3 mb-2 p-2.5 rounded-xl"
+                      style={{ background: 'rgba(191,122,90,0.10)', border: '1px solid rgba(191,122,90,0.18)' }}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Sparkles size={9} style={{ color: 'var(--clay)' }} />
+                        <p className="text-[10px] font-semibold" style={{ color: 'var(--clay)' }}>
+                          {intelligence.score} · {intelligence.scoreLabel}
+                        </p>
+                      </div>
+                      <p className="text-[10px] leading-snug" style={{ color: 'rgba(255,255,255,0.42)' }}>
+                        {intelligence.todaySignal}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Footer */}

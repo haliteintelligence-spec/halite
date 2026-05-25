@@ -35,7 +35,7 @@ export interface DerivedAction {
   module: string
 }
 
-function derivePanel(analytics: AnalyticsData): {
+export function derivePanel(analytics: AnalyticsData): {
   insights: DerivedInsight[]
   actions: DerivedAction[]
   score: number
