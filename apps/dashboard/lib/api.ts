@@ -237,13 +237,13 @@ export async function getUploadHistory(): Promise<UploadRecord[] | null> {
   return data?.uploads ?? null
 }
 
-export async function getAnalytics(): Promise<AnalyticsData | null> {
+export async function getAnalytics(days = 30): Promise<AnalyticsData | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value
   if (!token) return null
   const payload = decodeToken(token)
   if (!payload?.brandId) return null
-  return apiFetch<AnalyticsData>(`/brands/${payload.brandId}/analytics`, token)
+  return apiFetch<AnalyticsData>(`/brands/${payload.brandId}/analytics?days=${days}`, token)
 }
 
 export interface IdentityData {

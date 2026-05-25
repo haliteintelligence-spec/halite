@@ -1,10 +1,14 @@
 import { Sparkles, Zap, TrendingUp, AlertCircle, BookOpen } from 'lucide-react'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightCard } from '@/components/ui/InsightCard'
+import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { getAnalytics } from '@/lib/api'
 import type { AnalyticsData } from '@/lib/api'
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ days?: string }>
+}
 
 function deriveInsights(analytics: AnalyticsData) {
   const { summary, consumers, products } = analytics
@@ -121,16 +125,21 @@ function deriveInsights(analytics: AnalyticsData) {
   return { analyses, actions, score, scoreLabel }
 }
 
-export default async function AILabPage({ params }: Props) {
+export default async function AILabPage({ params, searchParams }: Props) {
   const { slug } = await params
-  const analytics = await getAnalytics()
+  const { days: rawDays } = await searchParams
+  const days = Number(rawDays) || 30
+  const analytics = await getAnalytics(days)
 
   if (!analytics) {
     return (
       <div className="px-7 py-6">
-        <div className="mb-6">
-          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>Lab</p>
-          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>AI Lab</h1>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>Lab</p>
+            <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>AI Lab</h1>
+          </div>
+          <TimeframePicker />
         </div>
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--border)' }}>
           <p className="text-sm" style={{ color: 'var(--ink-3)' }}>No data yet — analyses will appear once consumers start checking in.</p>
@@ -143,14 +152,17 @@ export default async function AILabPage({ params }: Props) {
 
   return (
     <div className="px-7 py-6">
-      <div className="mb-6">
-        <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
-          Lab
-        </p>
-        <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>AI Lab</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-          Cross-module intelligence reports & strategic recommendations for {slug}
-        </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
+            Lab
+          </p>
+          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>AI Lab</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
+            Cross-module intelligence reports & strategic recommendations for {slug}
+          </p>
+        </div>
+        <TimeframePicker />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

@@ -5,16 +5,20 @@ import { IngredientLab } from '@/components/intelligence/IngredientLab'
 import { MarketFeed } from '@/components/intelligence/MarketFeed'
 import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
 import { AIBadge } from '@/components/ui/AIBadge'
+import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { Users, Package, FlaskConical, TrendingUp } from 'lucide-react'
 import { getAnalytics } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ days?: string }>
 }
 
-export default async function IntelligencePage({ params }: Props) {
+export default async function IntelligencePage({ params, searchParams }: Props) {
   const { slug } = await params
-  const analytics = await getAnalytics()
+  const { days: rawDays } = await searchParams
+  const days = Number(rawDays) || 30
+  const analytics = await getAnalytics(days)
   const s = analytics?.summary
 
   return (
@@ -33,12 +37,7 @@ export default async function IntelligencePage({ params }: Props) {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <div
-            className="text-[11px] px-3 py-1.5 rounded-lg"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink-3)' }}
-          >
-            Last 30 days
-          </div>
+          <TimeframePicker />
           <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--sage)' }} title="Live data" />
         </div>
       </div>

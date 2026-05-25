@@ -62,13 +62,19 @@ export async function agentRoutes(server: FastifyInstance) {
     async (request, reply) => {
       const { brandId } = request.params as { brandId: string }
 
+      const outputFormatEnum = z.enum(['insight_cards', 'risk_alerts', 'product_recommendations', 'executive_briefing', 'narrative_report'])
+
       const schema = z.object({
         name: z.string().min(1).max(100),
         description: z.string().max(500).optional(),
         trigger: z.enum(['manual', 'scheduled_daily', 'scheduled_weekly', 'on_checkin', 'on_new_consumer']),
+        triggerOptions: z.object({
+          day: z.string().optional(),
+          hour: z.string().optional(),
+        }).optional(),
         dataSources: z.array(z.enum(['consumers', 'products', 'checkIns', 'routines'])).min(1),
         objectivePrompt: z.string().min(20).max(4000),
-        outputFormat: z.enum(['insight_cards', 'risk_alerts', 'product_recommendations', 'executive_briefing', 'narrative_report']),
+        outputFormats: z.array(outputFormatEnum).min(1),
       })
 
       const data = schema.parse(request.body)
@@ -82,9 +88,10 @@ export async function agentRoutes(server: FastifyInstance) {
           isPrebuilt: false,
           config: {
             trigger: data.trigger,
+            triggerOptions: data.triggerOptions ?? {},
             dataSources: data.dataSources,
             objectivePrompt: data.objectivePrompt,
-            outputSchema: { type: data.outputFormat },
+            outputSchema: { types: data.outputFormats },
             filters: {},
           },
         },

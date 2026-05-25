@@ -7,35 +7,58 @@ import { ChevronRight, ChevronLeft } from 'lucide-react'
 type Step = 1 | 2 | 3 | 4
 
 const TRIGGERS = [
-  { value: 'manual',            label: 'Manual',         desc: 'Run on demand' },
-  { value: 'scheduled_weekly',  label: 'Weekly',         desc: 'Every Monday morning' },
-  { value: 'scheduled_daily',   label: 'Daily',          desc: 'Every day at 8 AM' },
-  { value: 'on_new_consumer',   label: 'New Consumer',   desc: 'When a new consumer joins' },
-  { value: 'on_checkin',        label: 'Check-in',       desc: 'After each routine check-in' },
+  { value: 'manual',           label: 'Manual',       desc: 'Run on demand' },
+  { value: 'scheduled_weekly', label: 'Weekly',        desc: 'Choose day of week' },
+  { value: 'scheduled_daily',  label: 'Daily',         desc: 'Choose time of day' },
+  { value: 'on_new_consumer',  label: 'New Consumer',  desc: 'When a new consumer joins' },
+  { value: 'on_checkin',       label: 'Check-in',      desc: 'After each routine check-in' },
+]
+
+const DAYS_OF_WEEK = [
+  { value: 'monday',    label: 'Mon' },
+  { value: 'tuesday',   label: 'Tue' },
+  { value: 'wednesday', label: 'Wed' },
+  { value: 'thursday',  label: 'Thu' },
+  { value: 'friday',    label: 'Fri' },
+  { value: 'saturday',  label: 'Sat' },
+  { value: 'sunday',    label: 'Sun' },
+]
+
+const HOURS_OF_DAY = [
+  { value: '06:00', label: '6 AM' },
+  { value: '08:00', label: '8 AM' },
+  { value: '10:00', label: '10 AM' },
+  { value: '12:00', label: '12 PM' },
+  { value: '14:00', label: '2 PM' },
+  { value: '16:00', label: '4 PM' },
+  { value: '18:00', label: '6 PM' },
+  { value: '20:00', label: '8 PM' },
 ]
 
 const DATA_SOURCES = [
-  { value: 'consumers',  label: 'Consumer Profiles' },
-  { value: 'products',   label: 'Product Catalog' },
-  { value: 'checkIns',   label: 'Check-in Data' },
-  { value: 'routines',   label: 'Routine History' },
+  { value: 'consumers', label: 'Consumer Profiles' },
+  { value: 'products',  label: 'Product Catalog' },
+  { value: 'checkIns',  label: 'Check-in Data' },
+  { value: 'routines',  label: 'Routine History' },
 ]
 
 const OUTPUT_FORMATS = [
-  { value: 'insight_cards',          label: 'Insight Cards',        desc: 'Concise findings in card format' },
-  { value: 'risk_alerts',            label: 'Risk Alerts',          desc: 'Flagged items requiring attention' },
-  { value: 'product_recommendations',label: 'Product Recommendations', desc: 'Ranked product suggestions' },
-  { value: 'executive_briefing',     label: 'Executive Briefing',   desc: 'C-level summary paragraph' },
-  { value: 'narrative_report',       label: 'Narrative Report',     desc: 'Full narrative analysis' },
+  { value: 'insight_cards',           label: 'Insight Cards',          desc: 'Concise findings in card format' },
+  { value: 'risk_alerts',             label: 'Risk Alerts',            desc: 'Flagged items requiring attention' },
+  { value: 'product_recommendations', label: 'Product Recommendations', desc: 'Ranked product suggestions' },
+  { value: 'executive_briefing',      label: 'Executive Briefing',     desc: 'C-level summary paragraph' },
+  { value: 'narrative_report',        label: 'Narrative Report',       desc: 'Full narrative analysis' },
 ]
 
 interface FormState {
   name: string
   description: string
   trigger: string
+  triggerDay: string
+  triggerHour: string
   dataSources: string[]
   objectivePrompt: string
-  outputFormat: string
+  outputFormats: string[]
 }
 
 export default function NewAgentPage() {
@@ -46,9 +69,11 @@ export default function NewAgentPage() {
     name: '',
     description: '',
     trigger: 'manual',
+    triggerDay: 'monday',
+    triggerHour: '08:00',
     dataSources: ['consumers', 'products'],
     objectivePrompt: '',
-    outputFormat: 'insight_cards',
+    outputFormats: ['insight_cards'],
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -59,6 +84,15 @@ export default function NewAgentPage() {
       dataSources: f.dataSources.includes(src)
         ? f.dataSources.filter(s => s !== src)
         : [...f.dataSources, src],
+    }))
+  }
+
+  function toggleFormat(fmt: string) {
+    setForm(f => ({
+      ...f,
+      outputFormats: f.outputFormats.includes(fmt)
+        ? f.outputFormats.length > 1 ? f.outputFormats.filter(s => s !== fmt) : f.outputFormats
+        : [...f.outputFormats, fmt],
     }))
   }
 
@@ -78,9 +112,13 @@ export default function NewAgentPage() {
           name: form.name,
           description: form.description || undefined,
           trigger: form.trigger,
+          triggerOptions: {
+            day: form.trigger === 'scheduled_weekly' ? form.triggerDay : undefined,
+            hour: form.trigger === 'scheduled_daily' ? form.triggerHour : undefined,
+          },
           dataSources: form.dataSources,
           objectivePrompt: form.objectivePrompt,
-          outputFormat: form.outputFormat,
+          outputFormats: form.outputFormats,
         }),
       })
       const data = await res.json() as { workflow?: { id: string }; error?: string }
@@ -93,6 +131,12 @@ export default function NewAgentPage() {
   }
 
   const stepLabels = ['Name', 'Trigger', 'Objective', 'Output']
+
+  const triggerDesc = form.trigger === 'scheduled_weekly'
+    ? `Every ${form.triggerDay.charAt(0).toUpperCase() + form.triggerDay.slice(1)} at 8 AM`
+    : form.trigger === 'scheduled_daily'
+    ? `Every day at ${HOURS_OF_DAY.find(h => h.value === form.triggerHour)?.label ?? form.triggerHour}`
+    : TRIGGERS.find(t => t.value === form.trigger)?.desc ?? ''
 
   return (
     <div className="p-8 max-w-2xl">
@@ -125,6 +169,7 @@ export default function NewAgentPage() {
         className="rounded-xl p-6"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
       >
+        {/* ── Step 1: Name ── */}
         {step === 1 && (
           <div className="space-y-5">
             <div>
@@ -153,14 +198,11 @@ export default function NewAgentPage() {
                 style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
               />
             </div>
-            <NavButtons
-              onNext={() => setStep(2)}
-              nextDisabled={!form.name.trim()}
-              showBack={false}
-            />
+            <NavButtons onNext={() => setStep(2)} nextDisabled={!form.name.trim()} showBack={false} />
           </div>
         )}
 
+        {/* ── Step 2: Trigger ── */}
         {step === 2 && (
           <div className="space-y-5">
             <div>
@@ -188,6 +230,70 @@ export default function NewAgentPage() {
                 ))}
               </div>
             </div>
+
+            {/* Sub-options for weekly */}
+            {form.trigger === 'scheduled_weekly' && (
+              <div
+                className="rounded-xl p-4 space-y-2"
+                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}
+              >
+                <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  Day of week
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {DAYS_OF_WEEK.map(d => (
+                    <button
+                      key={d.value}
+                      onClick={() => setForm(f => ({ ...f, triggerDay: d.value }))}
+                      className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                      style={{
+                        background: form.triggerDay === d.value ? 'var(--clay)' : 'var(--surface)',
+                        color: form.triggerDay === d.value ? 'white' : 'var(--ink)',
+                        border: `1px solid ${form.triggerDay === d.value ? 'var(--clay)' : 'var(--border)'}`,
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sub-options for daily */}
+            {form.trigger === 'scheduled_daily' && (
+              <div
+                className="rounded-xl p-4 space-y-2"
+                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}
+              >
+                <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  Time of day
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {HOURS_OF_DAY.map(h => (
+                    <button
+                      key={h.value}
+                      onClick={() => setForm(f => ({ ...f, triggerHour: h.value }))}
+                      className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                      style={{
+                        background: form.triggerHour === h.value ? 'var(--clay)' : 'var(--surface)',
+                        color: form.triggerHour === h.value ? 'white' : 'var(--ink)',
+                        border: `1px solid ${form.triggerHour === h.value ? 'var(--clay)' : 'var(--border)'}`,
+                      }}
+                    >
+                      {h.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Preview */}
+            {triggerDesc && (
+              <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                Schedule: <span style={{ color: 'var(--ink)' }}>{triggerDesc}</span>
+              </p>
+            )}
+
             <div>
               <label className="block text-[11px] font-semibold tracking-wide uppercase mb-2" style={{ color: 'var(--ink-3)' }}>
                 Data Sources
@@ -212,14 +318,11 @@ export default function NewAgentPage() {
                 })}
               </div>
             </div>
-            <NavButtons
-              onBack={() => setStep(1)}
-              onNext={() => setStep(3)}
-              nextDisabled={form.dataSources.length === 0}
-            />
+            <NavButtons onBack={() => setStep(1)} onNext={() => setStep(3)} nextDisabled={form.dataSources.length === 0} />
           </div>
         )}
 
+        {/* ── Step 3: Objective ── */}
         {step === 3 && (
           <div className="space-y-5">
             <div>
@@ -241,39 +344,57 @@ export default function NewAgentPage() {
                 {form.objectivePrompt.length} / 4000 characters (min 20)
               </p>
             </div>
-            <NavButtons
-              onBack={() => setStep(2)}
-              onNext={() => setStep(4)}
-              nextDisabled={form.objectivePrompt.trim().length < 20}
-            />
+            <NavButtons onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={form.objectivePrompt.trim().length < 20} />
           </div>
         )}
 
+        {/* ── Step 4: Output ── */}
         {step === 4 && (
           <div className="space-y-5">
             <div>
-              <label className="block text-[11px] font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--ink-3)' }}>
+              <label className="block text-[11px] font-semibold tracking-wide uppercase mb-1" style={{ color: 'var(--ink-3)' }}>
                 Output Format
               </label>
+              <p className="text-[12px] mb-3" style={{ color: 'var(--ink-3)' }}>
+                Select one or more — the agent will produce all selected formats.
+              </p>
               <div className="space-y-2">
-                {OUTPUT_FORMATS.map(f => (
-                  <button
-                    key={f.value}
-                    onClick={() => setForm(s => ({ ...s, outputFormat: f.value }))}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all"
-                    style={{
-                      background: form.outputFormat === f.value ? 'var(--clay)' : 'var(--sand-1)',
-                      border: `1px solid ${form.outputFormat === f.value ? 'var(--clay)' : 'var(--border)'}`,
-                    }}
-                  >
-                    <span className="text-[13px] font-medium" style={{ color: form.outputFormat === f.value ? 'white' : 'var(--ink)' }}>
-                      {f.label}
-                    </span>
-                    <span className="text-[12px]" style={{ color: form.outputFormat === f.value ? 'rgba(255,255,255,0.7)' : 'var(--ink-3)' }}>
-                      {f.desc}
-                    </span>
-                  </button>
-                ))}
+                {OUTPUT_FORMATS.map(f => {
+                  const active = form.outputFormats.includes(f.value)
+                  return (
+                    <button
+                      key={f.value}
+                      onClick={() => toggleFormat(f.value)}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all"
+                      style={{
+                        background: active ? 'var(--clay)' : 'var(--sand-1)',
+                        border: `1px solid ${active ? 'var(--clay)' : 'var(--border)'}`,
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                          style={{
+                            background: active ? 'white' : 'transparent',
+                            border: `1.5px solid ${active ? 'white' : 'var(--border)'}`,
+                          }}
+                        >
+                          {active && (
+                            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                              <path d="M1 3.5L3.5 6L8 1" stroke="var(--clay)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-[13px] font-medium" style={{ color: active ? 'white' : 'var(--ink)' }}>
+                          {f.label}
+                        </span>
+                      </div>
+                      <span className="text-[12px]" style={{ color: active ? 'rgba(255,255,255,0.7)' : 'var(--ink-3)' }}>
+                        {f.desc}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
