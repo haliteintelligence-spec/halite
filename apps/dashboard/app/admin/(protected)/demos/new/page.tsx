@@ -56,8 +56,8 @@ export default function NewDemoPage() {
       fd.append('prospectName', form.prospectName)
       fd.append('consumerCount', String(form.consumerCount))
       fd.append('focusAreas', JSON.stringify(form.focusAreas))
-      fd.append('catalog', form.catalogFile)
-      if (form.purchaseFile) fd.append('purchaseHistory', form.purchaseFile)
+      fd.append('catalogFile', form.catalogFile)
+      if (form.purchaseFile) fd.append('purchaseFile', form.purchaseFile)
 
       const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos`, {
