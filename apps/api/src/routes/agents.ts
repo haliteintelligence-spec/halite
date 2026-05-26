@@ -118,6 +118,7 @@ export async function agentRoutes(server: FastifyInstance) {
         dataSources: z.array(z.string()).optional(),
         objectivePrompt: z.string().min(20).max(4000).optional(),
         outputFormat: z.string().optional(),
+        deliveryEmails: z.array(z.string().email()).max(5).optional(),
       })
 
       const data = schema.parse(request.body)
@@ -133,6 +134,7 @@ export async function agentRoutes(server: FastifyInstance) {
         ...(data.dataSources !== undefined ? { dataSources: data.dataSources } : {}),
         ...(data.objectivePrompt !== undefined ? { objectivePrompt: data.objectivePrompt } : {}),
         ...(data.outputFormat !== undefined ? { outputSchema: { type: data.outputFormat } } : {}),
+        ...(data.deliveryEmails !== undefined ? { deliveryEmails: data.deliveryEmails } : {}),
       }
 
       const workflow = await prisma.agentWorkflow.update({

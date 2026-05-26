@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, CheckCircle2, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Mail } from 'lucide-react'
+import { ArrowLeft, Play, CheckCircle2, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Mail, X as XIcon, Check } from 'lucide-react'
 import type { AgentRun } from '@/lib/api'
 
 interface WorkflowDetail {
@@ -28,6 +28,14 @@ const TYPE_LABELS: Record<string, string> = {
   CUSTOM:                'Custom',
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+
+function getTokenAndBrandId() {
+  const token = document.cookie.match(/halite_token=([^;]+)/)?.[1]
+  const brandId = token ? (JSON.parse(atob(token.split('.')[1])) as { brandId: string }).brandId : null
+  return { token: token ?? null, brandId }
+}
+
 export default function AgentDetailPage() {
   const { slug, workflowId } = useParams<{ slug: string; workflowId: string }>()
   const [workflow, setWorkflow] = useState<WorkflowDetail | null>(null)
@@ -36,10 +44,9 @@ export default function AgentDetailPage() {
   const [expandedRun, setExpandedRun] = useState<string | null>(null)
 
   async function load() {
-    const token = document.cookie.match(/halite_token=([^;]+)/)?.[1]
-    const brandId = token ? (JSON.parse(atob(token.split('.')[1])) as { brandId: string }).brandId : null
+    const { token, brandId } = getTokenAndBrandId()
     if (!brandId) return
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brands/${brandId}/agents/workflows/${workflowId}`, {
+    const res = await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       cache: 'no-store',
     })
@@ -62,10 +69,9 @@ export default function AgentDetailPage() {
 
   async function triggerRun() {
     setRunning(true)
-    const token = document.cookie.match(/halite_token=([^;]+)/)?.[1]
-    const brandId = token ? (JSON.parse(atob(token.split('.')[1])) as { brandId: string }).brandId : null
+    const { token, brandId } = getTokenAndBrandId()
     if (!brandId) return
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brands/${brandId}/agents/workflows/${workflowId}/run`, {
+    await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}/run`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -123,17 +129,11 @@ export default function AgentDetailPage() {
           >
             {TYPE_LABELS[workflow.type] ?? workflow.type}
           </span>
-          {(() => {
-            const emails = (workflow.config?.deliveryEmails as string[] | undefined) ?? []
-            return emails.length > 0 ? (
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                <Mail size={11} style={{ color: 'var(--ink-3)' }} />
-                {emails.map(e => (
-                  <span key={e} className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{e}</span>
-                ))}
-              </div>
-            ) : null
-          })()}
+          <EmailDeliveryEditor
+            workflowId={workflowId}
+            initialEmails={(workflow.config?.deliveryEmails as string[] | undefined) ?? []}
+            onSaved={load}
+          />
         </div>
 
         <button
@@ -213,6 +213,141 @@ export default function AgentDetailPage() {
           ))
         )}
       </div>
+    </div>
+  )
+}
+
+function EmailDeliveryEditor({
+  workflowId,
+  initialEmails,
+  onSaved,
+}: {
+  workflowId: string
+  initialEmails: string[]
+  onSaved: () => void
+}) {
+  const [emails, setEmails] = useState<string[]>(initialEmails)
+  const [input, setInput] = useState('')
+  const [inputError, setInputError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  async function save(next: string[]) {
+    setSaving(true)
+    setSaved(false)
+    const { token, brandId } = getTokenAndBrandId()
+    if (!brandId) return
+    await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ deliveryEmails: next }),
+    })
+    setSaving(false)
+    setSaved(true)
+    onSaved()
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  function addEmail() {
+    const email = input.trim().toLowerCase()
+    if (!email) return
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setInputError('Invalid email'); return }
+    if (emails.includes(email)) { setInputError('Already added'); return }
+    if (emails.length >= 5) { setInputError('Maximum 5 emails'); return }
+    const next = [...emails, email]
+    setEmails(next)
+    setInput('')
+    setInputError('')
+    save(next)
+  }
+
+  function removeEmail(email: string) {
+    const next = emails.filter(e => e !== email)
+    setEmails(next)
+    save(next)
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-[11px] transition-opacity hover:opacity-70"
+        style={{ color: 'var(--ink-3)' }}
+      >
+        <Mail size={11} />
+        {emails.length > 0
+          ? `${emails.length} delivery email${emails.length !== 1 ? 's' : ''}`
+          : 'Add delivery emails'}
+        <span className="text-[10px]">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div
+          className="mt-2 rounded-xl p-4 space-y-3"
+          style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}
+        >
+          <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+            Outputs sent to these addresses when a run completes. Up to 5.
+          </p>
+
+          {emails.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {emails.map(e => (
+                <span
+                  key={e}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+                >
+                  {e}
+                  <button
+                    onClick={() => removeEmail(e)}
+                    className="hover:opacity-60 transition-opacity"
+                    disabled={saving}
+                  >
+                    <XIcon size={10} style={{ color: 'var(--ink-3)' }} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {emails.length < 5 && (
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={input}
+                onChange={e => { setInput(e.target.value); setInputError('') }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEmail() } }}
+                placeholder="name@example.com"
+                className="flex-1 px-3 py-1.5 rounded-lg text-[12px] outline-none"
+                style={{ background: 'var(--surface)', border: `1px solid ${inputError ? '#e57373' : 'var(--border)'}`, color: 'var(--ink)' }}
+              />
+              <button
+                onClick={addEmail}
+                disabled={saving || !input.trim()}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-medium disabled:opacity-40 transition-opacity flex-shrink-0"
+                style={{ background: 'var(--clay)', color: 'white' }}
+              >
+                Add
+              </button>
+            </div>
+          )}
+
+          {inputError && <p className="text-[11px]" style={{ color: '#e57373' }}>{inputError}</p>}
+
+          {(saving || saved) && (
+            <div className="flex items-center gap-1.5">
+              {saving
+                ? <Loader2 size={11} className="animate-spin" style={{ color: 'var(--clay)' }} />
+                : <Check size={11} style={{ color: '#1a7a3c' }} />}
+              <span className="text-[11px]" style={{ color: saving ? 'var(--clay)' : '#1a7a3c' }}>
+                {saving ? 'Saving…' : 'Saved'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
