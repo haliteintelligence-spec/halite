@@ -23,6 +23,8 @@ import {
   ChevronRight,
   Zap,
   X,
+  Telescope,
+  Layers,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -46,8 +48,10 @@ const nav = [
   { href: '/products',     label: 'Products',      icon: Package,      section: 'Intelligence' },
   { href: '/ingredients',  label: 'Ingredients',   icon: FlaskConical, section: 'Intelligence' },
   { href: '/market',       label: 'Market',        icon: TrendingUp,   section: 'Intelligence' },
-  { href: '/benchmarking', label: 'Benchmarking',  icon: BarChart3,    section: 'Intelligence' },
-  { href: '/agents',       label: 'Agents',        icon: Bot,          section: 'Agents' },
+  { href: '/benchmarking',              label: 'Benchmarking',  icon: BarChart3,  section: 'Intelligence' },
+  { href: '/predictive',               label: 'Predictive',    icon: Telescope,  section: 'Predictive' },
+  { href: '/predictive/supply-chain',  label: 'Supply Chain',  icon: Layers,     section: 'Predictive' },
+  { href: '/agents',                   label: 'Agents',        icon: Bot,        section: 'Agents' },
   { href: '/catalog',      label: 'Catalog',       icon: BookOpen,     section: 'Catalog' },
   { href: '/ai-lab',       label: 'AI Lab',        icon: Zap,          section: 'Lab' },
   { href: '/settings',     label: 'Settings',      icon: Settings,     section: 'Settings' },
@@ -97,6 +101,7 @@ export function SideNav({
 
   const overview      = nav.filter(n => !n.section)
   const intelNav      = nav.filter(n => n.section === 'Intelligence')
+  const predictive    = nav.filter(n => n.section === 'Predictive')
   const agents        = nav.filter(n => n.section === 'Agents')
   const catalog       = nav.filter(n => n.section === 'Catalog')
   const lab           = nav.filter(n => n.section === 'Lab')
@@ -229,6 +234,18 @@ export function SideNav({
             </p>
             <div className="space-y-0.5">
               {intelNav.map(item => <NavItem key={item.href} {...item} />)}
+            </div>
+          </div>
+
+          <div>
+            <p className={clsx(
+              'text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30 px-3 mb-2',
+              collapsed && 'md:hidden'
+            )}>
+              Predictive
+            </p>
+            <div className="space-y-0.5">
+              {predictive.map(item => <NavItem key={item.href} {...item} />)}
             </div>
           </div>
 
