@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { Resend } from 'resend'
 import { prisma } from '@halite/db'
 // AgentWorkflow type inlined to avoid module resolution issues
 interface AgentWorkflow {
@@ -22,6 +23,7 @@ interface WorkflowConfig {
   objectivePrompt: string
   outputSchema: Record<string, unknown>
   filters: Record<string, unknown>
+  deliveryEmails?: string[]
 }
 
 export async function runAgentWorkflow(
@@ -101,6 +103,11 @@ The JSON must be valid and parseable. Wrap it in a \`\`\`json block.`
       },
     })
 
+    const deliveryEmails = config.deliveryEmails ?? []
+    if (deliveryEmails.length > 0 && process.env.RESEND_API_KEY) {
+      sendRunEmail(workflow.name, brand?.name ?? 'Your brand', output, deliveryEmails).catch(console.error)
+    }
+
     return run.id
   } catch (err) {
     await prisma.agentRun.update({
@@ -113,6 +120,58 @@ The JSON must be valid and parseable. Wrap it in a \`\`\`json block.`
 
 function fillTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`)
+}
+
+async function sendRunEmail(
+  workflowName: string,
+  brandName: string,
+  output: unknown,
+  recipients: string[],
+): Promise<void> {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  const out = output as Record<string, unknown>
+  const summary = typeof out?.summary === 'string' ? out.summary : ''
+  const insights: string[] = Array.isArray(out?.insights) ? (out.insights as string[]) : []
+  const recommendations: string[] = Array.isArray(out?.recommendations) ? (out.recommendations as string[]) : []
+
+  const insightRows = insights.map((ins, i) =>
+    `<tr><td style="padding:8px 0;border-bottom:1px solid #f0e8e0;font-size:13px;color:#1c1410;">${i + 1}. ${ins}</td></tr>`
+  ).join('')
+
+  const recRows = recommendations.map(r =>
+    `<li style="margin-bottom:6px;font-size:13px;color:#6b4f3a;">· ${r}</li>`
+  ).join('')
+
+  const fallback = !summary && insights.length === 0
+    ? `<pre style="font-size:12px;color:#6b4f3a;white-space:pre-wrap;background:#faf7f4;padding:16px;border-radius:8px;">${JSON.stringify(output, null, 2)}</pre>`
+    : ''
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+      <p style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#9c8878;margin-bottom:8px;">Halite Intelligence</p>
+      <h2 style="font-size:22px;color:#1c1410;margin:0 0 4px;">${workflowName}</h2>
+      <p style="font-size:13px;color:#9c8878;margin:0 0 24px;">${brandName} · Agent Run Complete</p>
+      ${summary ? `<p style="font-size:14px;color:#6b4f3a;line-height:1.6;margin-bottom:24px;">${summary}</p>` : ''}
+      ${insights.length > 0 ? `
+        <p style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#9c8878;margin-bottom:8px;">Insights</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">${insightRows}</table>
+      ` : ''}
+      ${recommendations.length > 0 ? `
+        <p style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#9c8878;margin-bottom:8px;">Recommendations</p>
+        <ul style="padding-left:0;list-style:none;margin:0 0 24px;">${recRows}</ul>
+      ` : ''}
+      ${fallback}
+      <hr style="border:none;border-top:1px solid #e8ddd3;margin:32px 0;"/>
+      <p style="font-size:12px;color:#9c8878;">Sent by Halite Intelligence · ${brandName}</p>
+    </div>`
+
+  await resend.emails.send({
+    from: 'Halite Intelligence <info@haliteintelligence.com>',
+    to: recipients,
+    subject: `${workflowName} — Agent Run Complete`,
+    html,
+  })
 }
 
 // ── Data hydrators ────────────────────────────────────────────────────────────

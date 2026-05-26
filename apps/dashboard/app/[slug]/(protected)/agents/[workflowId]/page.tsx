@@ -3,8 +3,21 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, CheckCircle2, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
-import type { AgentRun, WorkflowDetail } from '@/lib/api'
+import { ArrowLeft, Play, CheckCircle2, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Mail } from 'lucide-react'
+import type { AgentRun } from '@/lib/api'
+
+interface WorkflowDetail {
+  id: string
+  name: string
+  description: string | null
+  type: string
+  isPrebuilt: boolean
+  isActive: boolean
+  createdAt: string
+  config?: Record<string, unknown>
+  _count: { runs: number }
+  runs: AgentRun[]
+}
 
 const TYPE_LABELS: Record<string, string> = {
   ROUTINE_OUTCOME:       'Routine Outcomes',
@@ -110,6 +123,17 @@ export default function AgentDetailPage() {
           >
             {TYPE_LABELS[workflow.type] ?? workflow.type}
           </span>
+          {(() => {
+            const emails = (workflow.config?.deliveryEmails as string[] | undefined) ?? []
+            return emails.length > 0 ? (
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <Mail size={11} style={{ color: 'var(--ink-3)' }} />
+                {emails.map(e => (
+                  <span key={e} className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{e}</span>
+                ))}
+              </div>
+            ) : null
+          })()}
         </div>
 
         <button

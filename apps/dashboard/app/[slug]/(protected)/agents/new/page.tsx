@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, ChevronLeft } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Mail, X as XIcon } from 'lucide-react'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -59,6 +59,7 @@ interface FormState {
   dataSources: string[]
   objectivePrompt: string
   outputFormats: string[]
+  deliveryEmails: string[]
 }
 
 export default function NewAgentPage() {
@@ -74,6 +75,7 @@ export default function NewAgentPage() {
     dataSources: ['consumers', 'products'],
     objectivePrompt: '',
     outputFormats: ['insight_cards'],
+    deliveryEmails: [],
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -119,6 +121,7 @@ export default function NewAgentPage() {
           dataSources: form.dataSources,
           objectivePrompt: form.objectivePrompt,
           outputFormats: form.outputFormats,
+          deliveryEmails: form.deliveryEmails.length > 0 ? form.deliveryEmails : undefined,
         }),
       })
       const data = await res.json() as { workflow?: { id: string }; error?: string }
@@ -398,6 +401,19 @@ export default function NewAgentPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-[11px] font-semibold tracking-wide uppercase mb-1" style={{ color: 'var(--ink-3)' }}>
+                Email Delivery (optional)
+              </label>
+              <p className="text-[12px] mb-3" style={{ color: 'var(--ink-3)' }}>
+                Send agent outputs to up to 5 email addresses when a run completes.
+              </p>
+              <EmailInput
+                emails={form.deliveryEmails}
+                onChange={emails => setForm(f => ({ ...f, deliveryEmails: emails }))}
+              />
+            </div>
+
             {error && (
               <p className="text-[12px]" style={{ color: '#e57373' }}>{error}</p>
             )}
@@ -422,6 +438,71 @@ export default function NewAgentPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function EmailInput({ emails, onChange }: { emails: string[]; onChange: (emails: string[]) => void }) {
+  const [input, setInput] = useState('')
+  const [inputError, setInputError] = useState('')
+
+  function add() {
+    const email = input.trim().toLowerCase()
+    if (!email) return
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setInputError('Invalid email address'); return }
+    if (emails.includes(email)) { setInputError('Already added'); return }
+    if (emails.length >= 5) { setInputError('Maximum 5 emails'); return }
+    onChange([...emails, email])
+    setInput('')
+    setInputError('')
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Mail size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+          <input
+            type="email"
+            value={input}
+            onChange={e => { setInput(e.target.value); setInputError('') }}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+            placeholder="name@example.com"
+            className="w-full pl-8 pr-3 py-2 rounded-lg text-[13px] outline-none"
+            style={{ background: 'var(--sand-1)', border: `1px solid ${inputError ? '#e57373' : 'var(--border)'}`, color: 'var(--ink)' }}
+            disabled={emails.length >= 5}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={add}
+          disabled={emails.length >= 5 || !input.trim()}
+          className="px-3 py-2 rounded-lg text-[12px] font-medium disabled:opacity-40 transition-opacity flex-shrink-0"
+          style={{ background: 'var(--clay)', color: 'white' }}
+        >
+          Add
+        </button>
+      </div>
+      {inputError && <p className="text-[11px]" style={{ color: '#e57373' }}>{inputError}</p>}
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {emails.map(email => (
+            <span
+              key={email}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]"
+              style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+            >
+              {email}
+              <button type="button" onClick={() => onChange(emails.filter(e => e !== email))} className="hover:opacity-60 transition-opacity">
+                <XIcon size={10} style={{ color: 'var(--ink-3)' }} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {emails.length >= 5 && (
+        <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Maximum of 5 email addresses reached.</p>
+      )}
     </div>
   )
 }

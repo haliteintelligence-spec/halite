@@ -75,6 +75,7 @@ export async function agentRoutes(server: FastifyInstance) {
         dataSources: z.array(z.enum(['consumers', 'products', 'checkIns', 'routines'])).min(1),
         objectivePrompt: z.string().min(20).max(4000),
         outputFormats: z.array(outputFormatEnum).min(1),
+        deliveryEmails: z.array(z.string().email()).max(5).optional(),
       })
 
       const data = schema.parse(request.body)
@@ -93,6 +94,7 @@ export async function agentRoutes(server: FastifyInstance) {
             objectivePrompt: data.objectivePrompt,
             outputSchema: { types: data.outputFormats },
             filters: {},
+            deliveryEmails: data.deliveryEmails ?? [],
           },
         },
       })

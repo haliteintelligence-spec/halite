@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { getAgentWorkflows } from '@/lib/api'
-import { Bot, Plus, Play, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react'
+import { getAgentWorkflows, getBrandProfile } from '@/lib/api'
+import { Bot, Plus, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react'
+import { RunNowButton } from './RunNowButton'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -17,7 +18,8 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default async function AgentsPage({ params }: Props) {
   const { slug } = await params
-  const workflows = await getAgentWorkflows()
+  const [workflows, brand] = await Promise.all([getAgentWorkflows(), getBrandProfile()])
+  const isDemo = brand?.isDemo ?? false
 
   const prebuilt = workflows.filter(w => w.isPrebuilt)
   const custom = workflows.filter(w => !w.isPrebuilt)
@@ -50,7 +52,7 @@ export default async function AgentsPage({ params }: Props) {
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {prebuilt.map(w => (
-              <WorkflowCard key={w.id} workflow={w} slug={slug} />
+              <WorkflowCard key={w.id} workflow={w} slug={slug} isDemo={isDemo} />
             ))}
           </div>
         </section>
@@ -63,7 +65,7 @@ export default async function AgentsPage({ params }: Props) {
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {custom.map(w => (
-              <WorkflowCard key={w.id} workflow={w} slug={slug} />
+              <WorkflowCard key={w.id} workflow={w} slug={slug} isDemo={isDemo} />
             ))}
           </div>
         </section>
@@ -92,53 +94,61 @@ export default async function AgentsPage({ params }: Props) {
   )
 }
 
-function WorkflowCard({ workflow, slug }: { workflow: ReturnType<typeof getAgentWorkflows> extends Promise<(infer T)[]> ? T : never; slug: string }) {
+type Workflow = Awaited<ReturnType<typeof getAgentWorkflows>>[number]
+
+function WorkflowCard({ workflow, slug, isDemo }: { workflow: Workflow; slug: string; isDemo: boolean }) {
   const lastRun = workflow.runs[0]
   const typeLabel = TYPE_LABELS[workflow.type] ?? workflow.type
 
   return (
-    <Link
-      href={`/${slug}/agents/${workflow.id}`}
-      className="block rounded-xl p-4 transition-all hover:shadow-sm"
-      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{workflow.name}</p>
-          {workflow.description && (
-            <p className="text-[12px] mt-0.5 line-clamp-2" style={{ color: 'var(--ink-3)' }}>
-              {workflow.description}
-            </p>
+    <div className="relative rounded-xl transition-all hover:shadow-sm" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <Link
+        href={`/${slug}/agents/${workflow.id}`}
+        className="block p-4"
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{workflow.name}</p>
+            {workflow.description && (
+              <p className="text-[12px] mt-0.5 line-clamp-2" style={{ color: 'var(--ink-3)' }}>
+                {workflow.description}
+              </p>
+            )}
+          </div>
+          {workflow.isPrebuilt && (
+            <span
+              className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
+              style={{ background: 'var(--clay)', color: 'white' }}
+            >
+              BUILT-IN
+            </span>
           )}
         </div>
-        {workflow.isPrebuilt && (
+        <div className="flex items-center justify-between mt-3">
           <span
-            className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
-            style={{ background: 'var(--clay)', color: 'white' }}
+            className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+            style={{ background: 'var(--sand-1)', color: 'var(--ink-3)', border: '1px solid var(--border)' }}
           >
-            BUILT-IN
+            {typeLabel}
           </span>
-        )}
-      </div>
-      <div className="flex items-center justify-between mt-3">
-        <span
-          className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--sand-1)', color: 'var(--ink-3)', border: '1px solid var(--border)' }}
-        >
-          {typeLabel}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {lastRun ? (
-            <RunStatusIcon status={lastRun.status} />
-          ) : (
-            <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Never run</span>
-          )}
-          <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-            {workflow._count.runs} run{workflow._count.runs !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {lastRun ? (
+              <RunStatusIcon status={lastRun.status} />
+            ) : (
+              <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Never run</span>
+            )}
+            <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+              {workflow._count.runs} run{workflow._count.runs !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+      {isDemo && (
+        <div className="px-4 pb-3 -mt-1">
+          <RunNowButton workflowId={workflow.id} />
+        </div>
+      )}
+    </div>
   )
 }
 

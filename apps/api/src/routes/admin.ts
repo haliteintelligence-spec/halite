@@ -190,7 +190,7 @@ export async function adminRoutes(server: FastifyInstance) {
 
       const resend = new Resend(process.env.RESEND_API_KEY)
       await resend.emails.send({
-        from: 'Halite Intelligence <onboarding@resend.dev>',
+        from: 'Halite Intelligence <info@haliteintelligence.com>',
         to: brand.admins.map(a => a.email),
         subject,
         html: `
