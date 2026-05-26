@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, Activity } from 'lucide-react'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, Activity, ChevronDown, ChevronRight } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 
@@ -35,6 +35,7 @@ export default function DemoDetailPage() {
   const [savingWl, setSavingWl] = useState(false)
   const [loginEvents, setLoginEvents] = useState<LoginEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
+  const [accessOpen, setAccessOpen] = useState(false)
 
   async function load() {
     const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -258,24 +259,32 @@ export default function DemoDetailPage() {
       </div>
 
       <div
-        className="rounded-xl p-5 mb-4"
+        className="rounded-xl mb-4 overflow-hidden"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
       >
-        <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>
-          Access Credentials
-        </h2>
-        <div className="space-y-3">
-          <CredRow label="Login URL (custom domain)" value={demo.loginUrl} onCopy={() => copyText(demo.loginUrl, 'url')} copied={copied === 'url'} isLink />
-          <CredRow
-            label="Login URL (Railway)"
-            value={`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`}
-            onCopy={() => copyText(`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`, 'rail')}
-            copied={copied === 'rail'}
-            isLink
-          />
-          <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />
-          <CredRow label="Password" value={demo.password} onCopy={() => copyText(demo.password, 'pw')} copied={copied === 'pw'} />
-        </div>
+        <button
+          onClick={() => setAccessOpen(o => !o)}
+          className="w-full flex items-center justify-between p-5 hover:bg-black/[0.02] transition-colors"
+        >
+          <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+            Access Credentials
+          </h2>
+          {accessOpen ? <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} /> : <ChevronRight size={14} style={{ color: 'var(--ink-3)' }} />}
+        </button>
+        {accessOpen && (
+          <div className="px-5 pb-5 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <CredRow label="Login URL (custom domain)" value={demo.loginUrl} onCopy={() => copyText(demo.loginUrl, 'url')} copied={copied === 'url'} isLink />
+            <CredRow
+              label="Login URL (Railway)"
+              value={`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`}
+              onCopy={() => copyText(`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`, 'rail')}
+              copied={copied === 'rail'}
+              isLink
+            />
+            <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />
+            <CredRow label="Password" value={demo.password} onCopy={() => copyText(demo.password, 'pw')} copied={copied === 'pw'} />
+          </div>
+        )}
       </div>
 
       <div
