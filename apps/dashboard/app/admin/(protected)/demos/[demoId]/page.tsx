@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save } from 'lucide-react'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 
@@ -15,6 +15,10 @@ export default function DemoDetailPage() {
   const [extending, setExtending] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
+  const [entering, setEntering] = useState(false)
+  const [togglingActive, setTogglingActive] = useState(false)
+  const [showExtendInput, setShowExtendInput] = useState(false)
+  const [extendDays, setExtendDays] = useState(15)
   const [wlEnabled, setWlEnabled] = useState(false)
   const [wlUrl, setWlUrl] = useState('')
   const [wlTheme, setWlTheme] = useState<BrandThemeConfig | null>(null)
@@ -52,9 +56,42 @@ export default function DemoDetailPage() {
     await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}/access`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ days: extendDays }),
     })
     await load()
     setExtending(false)
+    setShowExtendInput(false)
+  }
+
+  async function toggleActive() {
+    if (!demo) return
+    setTogglingActive(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ active: !demo.active }),
+    })
+    await load()
+    setTogglingActive(false)
+  }
+
+  async function enterDashboard() {
+    if (!demo) return
+    setEntering(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}/impersonate`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error('Failed to create session')
+      const data = await res.json() as { token: string; slug: string }
+      document.cookie = `halite_token=${data.token}; path=/; max-age=86400; SameSite=Lax`
+      window.open(`/${data.slug}`, '_blank')
+    } finally {
+      setEntering(false)
+    }
   }
 
   async function handleDelete() {
@@ -138,6 +175,27 @@ export default function DemoDetailPage() {
           <p className="text-sm mt-0.5" style={{ color: 'var(--ink-3)' }}>{demo.slug}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleActive}
+            disabled={togglingActive}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-opacity disabled:opacity-40"
+            style={{
+              background: demo.active ? '#d4f4dd' : '#fee2e2',
+              color: demo.active ? '#1a7a3c' : '#b91c1c',
+            }}
+          >
+            {togglingActive ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}
+            {demo.active ? 'Active' : 'Inactive'}
+          </button>
+          <button
+            onClick={enterDashboard}
+            disabled={entering || !demo.active}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-85"
+            style={{ background: 'var(--clay)' }}
+          >
+            {entering ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+            {entering ? 'Entering…' : 'Enter Dashboard'}
+          </button>
           <StatusBadge status={demo.status} />
         </div>
       </div>
@@ -218,15 +276,47 @@ export default function DemoDetailPage() {
               </span>
             )}
           </div>
-          <button
-            onClick={extendAccess}
-            disabled={extending}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-opacity disabled:opacity-50"
-            style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
-          >
-            {extending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            {daysLeft !== null && daysLeft > 0 ? 'Extend 15 days' : 'Reactivate'}
-          </button>
+          {!showExtendInput ? (
+            <button
+              onClick={() => setShowExtendInput(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-opacity"
+              style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+            >
+              <RefreshCw size={12} />
+              {daysLeft !== null && daysLeft > 0 ? 'Extend' : 'Reactivate'}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-lg px-2 py-1" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={extendDays}
+                  onChange={e => setExtendDays(Math.min(30, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-10 text-center text-[12px] outline-none bg-transparent"
+                  style={{ color: 'var(--ink)' }}
+                />
+                <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>days</span>
+              </div>
+              <button
+                onClick={() => setShowExtendInput(false)}
+                className="px-2 py-1.5 rounded-lg text-[11px]"
+                style={{ color: 'var(--ink-3)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={extendAccess}
+                disabled={extending}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-50"
+                style={{ background: 'var(--clay)' }}
+              >
+                {extending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                Confirm
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

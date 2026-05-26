@@ -377,6 +377,7 @@ export async function adminRoutes(server: FastifyInstance) {
           slug: brand.slug,
           prospectName: brand.demoProspectName,
           status: demoBrandStatus(brand),
+          active: brand.active,
           loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${brand.slug}/login`,
           email: brand.admins[0]?.email ?? null,
           password: `demo-${brand.slug}`,
@@ -398,19 +399,42 @@ export async function adminRoutes(server: FastifyInstance) {
     }
   )
 
-  // Extend access window
+  // Extend access window (accepts optional days param, 1–30, default 15)
   server.post(
     '/admin/demos/:demoId/access',
     { preHandler: requireHaliteAdmin },
     async (request) => {
       const { demoId } = request.params as { demoId: string }
+      const { days } = z.object({ days: z.number().int().min(1).max(30).default(15) }).parse(request.body ?? {})
       const brand = await prisma.brand.findFirst({ where: { id: demoId, isDemo: true } })
       if (!brand) throw new ApiError(404, 'Demo not found')
 
-      const newExpiry = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+      const newExpiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
       await prisma.brand.update({ where: { id: demoId }, data: { demoLinkExpiresAt: newExpiry } })
 
-      return { demoLinkExpiresAt: newExpiry, message: 'Access extended by 15 days' }
+      return { demoLinkExpiresAt: newExpiry, message: `Access extended by ${days} days` }
+    }
+  )
+
+  // Impersonate a brand admin (admin enter brand dashboard without login)
+  server.post(
+    '/admin/brands/:brandId/impersonate',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        select: { id: true, slug: true, admins: { select: { id: true }, take: 1 } },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+      const admin = brand.admins[0]
+      if (!admin) throw new ApiError(400, 'Brand has no admins to impersonate')
+
+      const token = server.jwt.sign(
+        { role: 'brand_admin', adminId: admin.id, brandId: brand.id },
+        { expiresIn: '24h' }
+      )
+      return { token, slug: brand.slug }
     }
   )
 

@@ -32,6 +32,7 @@ export interface DemoSummary {
 }
 
 export interface DemoDetail extends DemoSummary {
+  active: boolean
   whiteLabelEnabled: boolean
   brandWebsiteUrl: string | null
   brandThemeConfig: BrandThemeConfig | null

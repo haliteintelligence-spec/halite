@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, Save, UserPlus, Power, Copy, Check, Trash2, Globe, Palette, ToggleLeft, ToggleRight, ShoppingBag } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, UserPlus, Power, Copy, Check, Trash2, Globe, Palette, ToggleLeft, ToggleRight, ShoppingBag, ExternalLink } from 'lucide-react'
 import type { BrandDetail, BrandThemeConfig } from '@/lib/admin-api'
 
 const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
@@ -32,6 +32,7 @@ export default function BrandDetailPage() {
   const [savingWl, setSavingWl] = useState(false)
   const [embedCopied, setEmbedCopied] = useState(false)
   const [error, setError] = useState('')
+  const [entering, setEntering] = useState(false)
 
   function token() {
     return document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -169,6 +170,24 @@ export default function BrandDetailPage() {
     }
   }
 
+  async function enterDashboard() {
+    setEntering(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${brandId}/impersonate`, {
+        method: 'POST',
+        headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+      })
+      if (!res.ok) throw new Error('Failed to create session')
+      const data = await res.json() as { token: string; slug: string }
+      document.cookie = `halite_token=${data.token}; path=/; max-age=86400; SameSite=Lax`
+      window.open(`/${data.slug}`, '_blank')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to enter dashboard')
+    } finally {
+      setEntering(false)
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center gap-2 p-8" style={{ color: 'var(--ink-3)' }}>
       <Loader2 size={16} className="animate-spin" /><span className="text-sm">Loading…</span>
@@ -259,7 +278,18 @@ export default function BrandDetailPage() {
 
       {/* Login info + API key */}
       <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--ink-3)' }}>Dashboard Access</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Dashboard Access</h2>
+          <button
+            onClick={enterDashboard}
+            disabled={entering || !brand.active}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-85"
+            style={{ background: 'var(--clay)' }}
+          >
+            {entering ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+            {entering ? 'Entering…' : 'Enter Dashboard'}
+          </button>
+        </div>
         {[
           { label: 'Slug', value: brand.slug, key: 'slug' },
           { label: 'Login URL (custom domain)', value: `${brand.slug}.haliteintelligence.com/login`, key: 'url', href: `https://${brand.slug}.haliteintelligence.com/login` },
