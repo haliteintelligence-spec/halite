@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power } from 'lucide-react'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, ChevronDown, ChevronRight } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 import { DemoDetailTabs } from './_tabs'
