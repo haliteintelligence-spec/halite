@@ -3,8 +3,9 @@ import { Telescope, TrendingUp, TrendingDown, Minus, AlertTriangle, Layers, Arro
 import { InsightCard } from '@/components/ui/InsightCard'
 import { MetricTile } from '@/components/ui/MetricTile'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
-import { getAnalytics, getTimeframe } from '@/lib/api'
+import { getAnalytics, getTimeframe, getTokenAndBrandId } from '@/lib/api'
 import type { AnalyticsData } from '@/lib/api'
+import { InsightButton } from '@/components/ui/InsightButton'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -165,7 +166,8 @@ export default async function PredictivePage({ params, searchParams }: Props) {
   const { slug } = await params
   const rawSP = await searchParams
   const { days, from, to } = await getTimeframe(rawSP)
-  const analytics = await getAnalytics(days, from, to)
+  const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   if (!analytics) {
     return (
@@ -239,6 +241,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
           subtitle="History (solid) + 4-week projection (dashed)"
           accent="clay"
           className="xl:col-span-2"
+          actions={<InsightButton brandId={brandId} viewName="Check-in Demand Forecast" dataContext={{ trend: f.trend, projected4w: f.projected4w, projectedTotal30d: f.projectedTotal30d, demandDelta: f.demandDelta, trendDir: f.trendDir, confidence: f.confidence, confidenceScore: f.confidenceScore, wowDelta: f.wowDelta }} />}
         >
           {f.trend.length >= 2 ? (
             <div>
@@ -285,7 +288,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
         </InsightCard>
 
         {/* Churn Risk Index */}
-        <InsightCard title="Churn Risk Index" subtitle="Estimated from compliance & engagement" accent="blush">
+        <InsightCard title="Churn Risk Index" subtitle="Estimated from compliance & engagement" accent="blush" actions={<InsightButton brandId={brandId} viewName="Churn Risk Index" dataContext={{ highRiskPct: f.highRiskPct, medRiskPct: f.medRiskPct, lowRiskPct: f.lowRiskPct, atRiskConsumers: f.atRiskConsumers, totalConsumers: analytics.summary.totalConsumers, complianceRate: analytics.summary.complianceRate }} />}>
           <div className="space-y-3">
             {[
               { label: 'High Risk', pct: f.highRiskPct, color: 'var(--blush)', bg: 'var(--blush-light)' },
@@ -317,7 +320,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         {/* Category Trajectory */}
-        <InsightCard title="Category Performance Trajectory" subtitle="Acceptance vs platform average" accent="gold">
+        <InsightCard title="Category Performance Trajectory" subtitle="Acceptance vs platform average" accent="gold" actions={<InsightButton brandId={brandId} viewName="Category Performance Trajectory" dataContext={{ categories: f.categories, avgAcceptance: f.avgAcceptance }} />}>
           {f.categories.length > 0 ? (
             <div className="space-y-2">
               {f.categories
@@ -355,7 +358,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
         </InsightCard>
 
         {/* Concern Momentum */}
-        <InsightCard title="Concern Momentum" subtitle="Consumer demand signals & coverage risk" accent="sage">
+        <InsightCard title="Concern Momentum" subtitle="Consumer demand signals & coverage risk" accent="sage" actions={<InsightButton brandId={brandId} viewName="Concern Momentum" dataContext={{ concernMomentum: f.concernMomentum }} />}>
           {f.concernMomentum.length > 0 ? (
             <div className="space-y-2">
               {f.concernMomentum
@@ -393,7 +396,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
       </div>
 
       {/* Re-engagement Priority List */}
-      <InsightCard title="Re-engagement Priority List" subtitle="Consumer cohorts ranked by churn risk — act before they disengage" accent="blush" className="mb-4">
+      <InsightCard title="Re-engagement Priority List" subtitle="Consumer cohorts ranked by churn risk — act before they disengage" accent="blush" className="mb-4" actions={<InsightButton brandId={brandId} viewName="Re-engagement Priority List" dataContext={{ atRiskConsumers: f.atRiskConsumers, highRiskPct: f.highRiskPct, medRiskPct: f.medRiskPct, totalConsumers: analytics.summary.totalConsumers, complianceRate: analytics.summary.complianceRate }} />}>
         <div className="space-y-3">
           {[
             {
@@ -441,7 +444,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         {/* Compliance Alerts */}
-        <InsightCard title="Compliance Alerts" subtitle="Threshold warnings based on current adherence patterns" accent="gold">
+        <InsightCard title="Compliance Alerts" subtitle="Threshold warnings based on current adherence patterns" accent="gold" actions={<InsightButton brandId={brandId} viewName="Compliance Alerts" dataContext={{ complianceRate: analytics.summary.complianceRate, thisWeek: analytics.checkIns.thisWeek, lastWeek: analytics.checkIns.lastWeek, atRiskConsumers: f.atRiskConsumers, totalConsumers: analytics.summary.totalConsumers }} />}>
           <div className="space-y-3">
             {[
               {
@@ -495,7 +498,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
         </InsightCard>
 
         {/* Win-back Timing */}
-        <InsightCard title="Win-back Timing" subtitle="Optimal re-engagement windows based on engagement decay patterns" accent="sage">
+        <InsightCard title="Win-back Timing" subtitle="Optimal re-engagement windows based on engagement decay patterns" accent="sage" actions={<InsightButton brandId={brandId} viewName="Win-back Timing" dataContext={{ complianceRate: analytics.summary.complianceRate, highRiskPct: f.highRiskPct, trendDir: f.trendDir, atRiskConsumers: f.atRiskConsumers }} />}>
           <div className="space-y-3">
             {[
               {

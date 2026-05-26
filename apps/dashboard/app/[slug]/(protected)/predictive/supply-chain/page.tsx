@@ -3,8 +3,9 @@ import { ArrowLeft, Layers, Package, FlaskConical, AlertTriangle, TrendingUp, Tr
 import { InsightCard } from '@/components/ui/InsightCard'
 import { MetricTile } from '@/components/ui/MetricTile'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
-import { getAnalytics, getTimeframe } from '@/lib/api'
+import { getAnalytics, getTimeframe, getTokenAndBrandId } from '@/lib/api'
 import type { AnalyticsData } from '@/lib/api'
+import { InsightButton } from '@/components/ui/InsightButton'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -105,7 +106,8 @@ export default async function SupplyChainPage({ params, searchParams }: Props) {
   const { slug } = await params
   const rawSP = await searchParams
   const { days, from, to } = await getTimeframe(rawSP)
-  const analytics = await getAnalytics(days, from, to)
+  const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
+  const brandId = authInfo?.brandId ?? ''
 
   if (!analytics) {
     return (
@@ -185,6 +187,7 @@ export default async function SupplyChainPage({ params, searchParams }: Props) {
           title="Ingredient Demand Forecast"
           subtitle="Projected monthly & quarterly consumption"
           accent="clay"
+          actions={<InsightButton brandId={brandId} viewName="Ingredient Demand Forecast" dataContext={{ ingredientForecasts: sc.ingredientForecasts, usageRate: analytics.summary.usageRate, activeIngredients: sc.activeIngredients }} />}
         >
           {sc.ingredientForecasts.length > 0 ? (
             <div>
@@ -233,6 +236,7 @@ export default async function SupplyChainPage({ params, searchParams }: Props) {
           title="Product Stock Planning"
           subtitle="Projected units needed at current adoption rates"
           accent="gold"
+          actions={<InsightButton brandId={brandId} viewName="Product Stock Planning" dataContext={{ productForecasts: sc.productForecasts.slice(0, 8), highDemandProducts: sc.highDemandProducts, totalProjected30d: sc.totalProjected30d }} />}
         >
           {sc.productForecasts.length > 0 ? (
             <div>
@@ -278,6 +282,7 @@ export default async function SupplyChainPage({ params, searchParams }: Props) {
           title="Coverage Gap Pipeline"
           subtitle="Concerns with consumer demand but no product coverage"
           accent="blush"
+          actions={<InsightButton brandId={brandId} viewName="Coverage Gap Pipeline" dataContext={{ gapPipeline: sc.gapPipeline, coverageGaps: sc.coverageGaps }} />}
         >
           {sc.gapPipeline.length > 0 ? (
             <div className="space-y-2">
@@ -328,6 +333,7 @@ export default async function SupplyChainPage({ params, searchParams }: Props) {
           title="Category Demand Forecast"
           subtitle="Momentum and projected unit volumes by category"
           accent="sage"
+          actions={<InsightButton brandId={brandId} viewName="Category Demand Forecast" dataContext={{ categoryForecasts: sc.categoryForecasts, avgCatAcceptance: sc.avgCatAcceptance }} />}
         >
           {sc.categoryForecasts.length > 0 ? (
             <div className="space-y-3">
