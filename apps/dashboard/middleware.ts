@@ -8,12 +8,16 @@ export function middleware(request: NextRequest) {
   // Extract subdomain — e.g. "luxe" from "luxe.haliteintelligence.com"
   const subdomain = hostname.replace(`.${rootDomain}`, '')
 
-  // Pass through for the root domain itself, www, or localhost
+  // Known service subdomains — not brand slugs, pass through as-is
+  const serviceSubdomains = ['portal', 'app', 'dashboard', 'admin', 'www']
+
+  // Pass through for the root domain itself, www, localhost, or a known service subdomain
   if (
     hostname === rootDomain ||
     hostname === `www.${rootDomain}` ||
     hostname.startsWith('localhost') ||
-    subdomain === hostname // no subdomain found
+    subdomain === hostname || // no subdomain found
+    serviceSubdomains.includes(subdomain)
   ) {
     return NextResponse.next()
   }
