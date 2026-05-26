@@ -3,7 +3,6 @@
 import { use, useState } from 'react'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { PasswordStrength, isPasswordValid } from '@/components/ui/PasswordStrength'
-import { SettingsSubNav } from '../SettingsSubNav'
 import { CheckCircle } from 'lucide-react'
 
 interface Props {
@@ -83,8 +82,6 @@ export default function SecurityPage({ params }: Props) {
 
   return (
     <div className="px-7 py-6">
-      <SettingsSubNav slug={slug} />
-
       <div className="max-w-md">
         <h2 className="text-[13px] font-semibold mb-1" style={{ color: 'var(--ink)' }}>Change Password</h2>
         <p className="text-[12px] mb-6" style={{ color: 'var(--ink-3)' }}>
