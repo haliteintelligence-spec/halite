@@ -3,18 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, Activity, ChevronDown, ChevronRight } from 'lucide-react'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
-
-interface LoginEvent {
-  id: string
-  adminEmail: string
-  adminName: string
-  ip: string | null
-  method: 'LOGIN' | 'REGISTER' | 'IMPERSONATE'
-  createdAt: string
-}
+import { DemoDetailTabs } from './_tabs'
 
 export default function DemoDetailPage() {
   const { demoId } = useParams<{ demoId: string }>()
@@ -33,10 +25,7 @@ export default function DemoDetailPage() {
   const [wlTheme, setWlTheme] = useState<BrandThemeConfig | null>(null)
   const [scraping, setScraping] = useState(false)
   const [savingWl, setSavingWl] = useState(false)
-  const [loginEvents, setLoginEvents] = useState<LoginEvent[]>([])
-  const [loadingEvents, setLoadingEvents] = useState(false)
   const [accessOpen, setAccessOpen] = useState(false)
-  const [activityOpen, setActivityOpen] = useState(false)
 
   async function load() {
     const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -55,22 +44,6 @@ export default function DemoDetailPage() {
   }
 
   useEffect(() => { load() }, [demoId])
-
-  async function loadLoginEvents() {
-    setLoadingEvents(true)
-    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}/login-events`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      cache: 'no-store',
-    })
-    if (res.ok) {
-      const data = await res.json() as { events: LoginEvent[] }
-      setLoginEvents(data.events)
-    }
-    setLoadingEvents(false)
-  }
-
-  useEffect(() => { loadLoginEvents() }, [demoId])
 
   // poll while generating
   useEffect(() => {
@@ -228,6 +201,8 @@ export default function DemoDetailPage() {
           <StatusBadge status={demo.status} />
         </div>
       </div>
+
+      <DemoDetailTabs demoId={demoId} />
 
       {demo.status === 'generating' && (
         <div
@@ -459,59 +434,6 @@ export default function DemoDetailPage() {
           {savingWl ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           Save White Label
         </button>
-      </div>
-
-      {/* Login Activity */}
-      <div className="rounded-xl mb-4 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <button
-          onClick={() => setActivityOpen(o => !o)}
-          className="w-full flex items-center justify-between p-5 hover:bg-black/[0.02] transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Activity size={13} style={{ color: 'var(--ink-3)' }} />
-            <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Login Activity</h2>
-          </div>
-          {activityOpen ? <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} /> : <ChevronRight size={14} style={{ color: 'var(--ink-3)' }} />}
-        </button>
-        {activityOpen && (
-          <div className="px-5 pb-5" style={{ borderTop: '1px solid var(--border)' }}>
-            {loadingEvents ? (
-              <div className="flex items-center gap-2 py-2" style={{ color: 'var(--ink-3)' }}>
-                <Loader2 size={13} className="animate-spin" />
-                <span className="text-[12px]">Loading…</span>
-              </div>
-            ) : loginEvents.length === 0 ? (
-              <p className="text-[12px] mt-4" style={{ color: 'var(--ink-3)' }}>No login activity yet.</p>
-            ) : (
-              <div>
-                {loginEvents.map((ev, i) => (
-                  <div key={ev.id} className="flex items-center justify-between py-2.5"
-                    style={i < loginEvents.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}}>
-                    <div className="flex-1 min-w-0 mr-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>{ev.adminName}</p>
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                          style={
-                            ev.method === 'LOGIN' ? { background: '#d4f4dd', color: '#1a7a3c' } :
-                            ev.method === 'REGISTER' ? { background: '#dbeafe', color: '#1d4ed8' } :
-                            { background: '#fef3c7', color: '#92400e' }
-                          }>
-                          {ev.method}
-                        </span>
-                      </div>
-                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
-                        {ev.adminEmail}{ev.ip ? ` · ${ev.ip}` : ''}
-                      </p>
-                    </div>
-                    <p className="text-[11px] flex-shrink-0 tabular-nums" style={{ color: 'var(--ink-3)' }}>
-                      {new Date(ev.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="flex justify-end mt-2">
