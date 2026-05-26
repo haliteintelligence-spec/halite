@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { IntegrationStatus } from '@/lib/api'
-import { CheckCircle, RefreshCw, Unlink, ExternalLink, Loader2, Copy, Check, RotateCcw } from 'lucide-react'
+import { CheckCircle, RefreshCw, Unlink, ExternalLink, Loader2, Copy, Check, RotateCcw, Eye, EyeOff } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -37,6 +37,7 @@ export function IntegrationsClient({
   const [connectError, setConnectError] = useState('')
   const [currentApiKey, setCurrentApiKey] = useState(apiKey)
   const [keyCopied, setKeyCopied] = useState(false)
+  const [keyVisible, setKeyVisible] = useState(false)
   const [rotating, setRotating] = useState(false)
 
   const authHeaders = { Authorization: `Bearer ${token}` }
@@ -123,8 +124,13 @@ export function IntegrationsClient({
         </div>
         <div className="px-6 py-5 space-y-4">
           {currentApiKey ? (
-            <div className="flex items-center gap-3 p-3 rounded-xl font-mono text-[12px]" style={{ background: 'var(--sand-1)', border: '1px solid var(--sand-2)' }}>
-              <span className="flex-1 truncate" style={{ color: 'var(--ink)' }}>{currentApiKey}</span>
+            <div className="flex items-center gap-2 p-3 rounded-xl font-mono text-[12px]" style={{ background: 'var(--sand-1)', border: '1px solid var(--sand-2)' }}>
+              <span className="flex-1 truncate" style={{ color: 'var(--ink)' }}>
+                {keyVisible ? currentApiKey : '•'.repeat(currentApiKey.length)}
+              </span>
+              <button onClick={() => setKeyVisible(v => !v)} className="flex-shrink-0 p-1 rounded hover:opacity-70 transition-opacity">
+                {keyVisible ? <EyeOff size={14} style={{ color: 'var(--ink-3)' }} /> : <Eye size={14} style={{ color: 'var(--ink-3)' }} />}
+              </button>
               <button onClick={copyKey} className="flex-shrink-0 p-1 rounded hover:opacity-70 transition-opacity">
                 {keyCopied ? <Check size={14} style={{ color: '#16a34a' }} /> : <Copy size={14} style={{ color: 'var(--ink-3)' }} />}
               </button>
