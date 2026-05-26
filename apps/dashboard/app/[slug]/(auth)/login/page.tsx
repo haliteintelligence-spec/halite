@@ -2,6 +2,8 @@
 
 import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -43,6 +45,13 @@ export default function LoginPage({ params }: Props) {
     router.push(`/${slug}`)
   }
 
+  const inputBase = 'w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors focus:ring-1'
+  const inputStyle = {
+    border: '1px solid var(--border)',
+    color: 'var(--text-1)',
+    background: 'var(--bg-surface)',
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg)' }}>
       <div className="w-full max-w-sm">
@@ -63,35 +72,28 @@ export default function LoginPage({ params }: Props) {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors focus:ring-1"
-                style={{
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-1)',
-                  background: 'var(--bg-surface)',
-                }}
+                onChange={e => setEmail(e.target.value)}
+                className={inputBase}
+                style={inputStyle}
               />
             </div>
             <div>
               <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: 'var(--text-2)' }}>
                 Password
               </label>
-              <input
-                type="password"
-                required
+              <PasswordInput
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors focus:ring-1"
-                style={{
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-1)',
-                  background: 'var(--bg-surface)',
-                }}
+                onChange={setPassword}
+                required
+                autoComplete="current-password"
+                inputClassName={`${inputBase} pr-10`}
+                inputStyle={inputStyle}
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm" style={{ color: '#e57373' }}>{error}</p>}
 
             <button
               type="submit"
@@ -102,6 +104,13 @@ export default function LoginPage({ params }: Props) {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          <p className="text-center text-xs mt-5" style={{ color: 'var(--text-3)' }}>
+            New to {slug}?{' '}
+            <Link href={`/${slug}/register`} className="font-medium hover:opacity-70 transition-opacity" style={{ color: 'var(--text-1)' }}>
+              Create an account
+            </Link>
+          </p>
         </div>
       </div>
     </div>

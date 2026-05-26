@@ -9,6 +9,7 @@ const TABS = [
   { label: 'Widget',        href: '/widget' },
   { label: 'Team',          href: '/team' },
   { label: 'Integrations',  href: '/integrations' },
+  { label: 'Security',      href: '/security' },
 ]
 
 export function SettingsSubNav({ slug }: { slug: string }) {

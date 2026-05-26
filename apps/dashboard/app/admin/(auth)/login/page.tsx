@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -31,6 +32,12 @@ export default function AdminLoginPage() {
     }
   }
 
+  const inputStyle = {
+    background: 'var(--sand-1)',
+    border: '1px solid var(--border)',
+    color: 'var(--ink)',
+  }
+
   return (
     <div
       className="min-h-screen flex items-center justify-center"
@@ -58,11 +65,7 @@ export default function AdminLoginPage() {
               onChange={e => setEmail(e.target.value)}
               required
               className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
-              style={{
-                background: 'var(--sand-1)',
-                border: '1px solid var(--border)',
-                color: 'var(--ink)',
-              }}
+              style={inputStyle}
               placeholder="admin@haliteintelligence.com"
             />
           </div>
@@ -70,17 +73,14 @@ export default function AdminLoginPage() {
             <label className="block text-[11px] font-medium mb-1.5" style={{ color: 'var(--ink-3)' }}>
               Password
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={setPassword}
               required
-              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-              style={{
-                background: 'var(--sand-1)',
-                border: '1px solid var(--border)',
-                color: 'var(--ink)',
-              }}
+              autoComplete="current-password"
+              inputClassName="w-full px-3 py-2.5 pr-10 rounded-lg text-sm outline-none"
+              inputStyle={inputStyle}
+              iconColor="var(--ink)"
             />
           </div>
 

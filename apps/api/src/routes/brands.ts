@@ -442,6 +442,38 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Brand Admin: change own password ─────────────────────────────
+  server.post(
+    '/:brandId/change-password',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const jwt = request.user as { adminId: string; brandId: string }
+      if (jwt.brandId !== brandId) throw new ApiError(403, 'Forbidden')
+
+      const schema = z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string()
+          .min(10, 'Password must be at least 10 characters')
+          .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+          .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+          .regex(/[0-9]/, 'Must contain at least one number')
+          .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character'),
+      })
+      const { currentPassword, newPassword } = schema.parse(request.body)
+
+      const admin = await prisma.brandAdmin.findFirst({ where: { id: jwt.adminId, brandId } })
+      if (!admin) throw new ApiError(404, 'Admin not found')
+
+      const valid = await bcrypt.compare(currentPassword, admin.password)
+      if (!valid) throw new ApiError(400, 'Current password is incorrect')
+
+      const hashed = await bcrypt.hash(newPassword, 12)
+      await prisma.brandAdmin.update({ where: { id: admin.id }, data: { password: hashed } })
+      return { ok: true }
+    }
+  )
+
   // ── Brand Admin: find similar products ────────────────────────────
   server.get(
     '/:brandId/products/:productId/similar',

@@ -9,6 +9,13 @@ const loginSchema = z.object({
   password: z.string().min(8),
 })
 
+const strongPasswordSchema = z.string()
+  .min(10, 'Password must be at least 10 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
+
 export async function authRoutes(server: FastifyInstance) {
   // Halite admin login
   server.post('/halite-admin/login', async (request, reply) => {
@@ -47,6 +54,49 @@ export async function authRoutes(server: FastifyInstance) {
       token,
       admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role },
       brand: admin.brand,
+    })
+  })
+
+  // Brand admin registration (self-service account creation)
+  server.post('/brand-admin/register', async (request, reply) => {
+    const schema = z.object({
+      slug: z.string().min(1),
+      email: z.string().email(),
+      name: z.string().min(1).max(100),
+      password: strongPasswordSchema,
+    })
+    const data = schema.parse(request.body)
+
+    const brand = await prisma.brand.findUnique({
+      where: { slug: data.slug },
+      select: { id: true, slug: true, name: true, active: true, _count: { select: { admins: true } } },
+    })
+    if (!brand) throw new ApiError(404, 'Brand not found')
+    if (!brand.active) throw new ApiError(403, 'Brand account is inactive')
+
+    const existing = await prisma.brandAdmin.findFirst({
+      where: { brandId: brand.id, email: data.email },
+    })
+    if (existing) throw new ApiError(409, 'An account with this email already exists for this brand')
+
+    const hashedPassword = await bcrypt.hash(data.password, 12)
+    const role = brand._count.admins === 0 ? 'OWNER' : 'MEMBER'
+
+    const admin = await prisma.brandAdmin.create({
+      data: { brandId: brand.id, email: data.email, name: data.name, password: hashedPassword, role: role as any },
+      select: { id: true, email: true, name: true, role: true },
+    })
+
+    const token = server.jwt.sign({
+      role: 'brand_admin',
+      adminId: admin.id,
+      brandId: brand.id,
+    })
+
+    return reply.status(201).send({
+      token,
+      admin,
+      brand: { id: brand.id, slug: brand.slug, name: brand.name },
     })
   })
 
