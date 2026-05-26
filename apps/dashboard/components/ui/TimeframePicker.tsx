@@ -11,6 +11,9 @@ const PRESETS = [
   { days: 365, label: 'Last 12 months' },
 ]
 
+const COOKIE_NAME = 'halite_tf'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 90
+
 function fmtDate(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -18,6 +21,16 @@ function fmtDate(iso: string): string {
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+function saveCookie(qs: string) {
+  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(qs)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`
+}
+
+function readCookie(): string {
+  if (typeof document === 'undefined') return ''
+  const m = document.cookie.match(/(?:^|;\s*)halite_tf=([^;]+)/)
+  return m ? decodeURIComponent(m[1]!) : ''
 }
 
 export function TimeframePicker() {
@@ -30,12 +43,33 @@ export function TimeframePicker() {
 
   const urlFrom = searchParams.get('from') ?? ''
   const urlTo = searchParams.get('to') ?? ''
-  const currentDays = Number(searchParams.get('days')) || 30
+  const urlDays = Number(searchParams.get('days')) || 0
 
   const isCustom = !!urlFrom
+  // Effective days for display: URL param, or fall back to 30 for preset label
+  const currentDays = urlDays || 30
 
   const [customFrom, setCustomFrom] = useState(urlFrom || '')
   const [customTo, setCustomTo] = useState(urlTo || todayISO())
+
+  // On mount: if this page has no timeframe in the URL, restore the saved cookie
+  useEffect(() => {
+    if (urlFrom || urlDays) return
+    const saved = readCookie()
+    if (!saved) return
+    const p = new URLSearchParams(saved)
+    const params = new URLSearchParams(searchParams.toString())
+    if (p.get('from')) {
+      params.set('from', p.get('from')!)
+      if (p.get('to')) params.set('to', p.get('to')!)
+      else params.delete('to')
+    } else if (p.get('days')) {
+      params.set('days', p.get('days')!)
+      params.delete('from')
+      params.delete('to')
+    }
+    router.replace(`${pathname}?${params.toString()}`)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const buttonLabel = isCustom
     ? `${fmtDate(urlFrom)} – ${urlTo ? fmtDate(urlTo) : 'Today'}`
@@ -46,6 +80,7 @@ export function TimeframePicker() {
     params.set('days', String(days))
     params.delete('from')
     params.delete('to')
+    saveCookie(`days=${days}`)
     router.push(`${pathname}?${params.toString()}`)
     setOpen(false)
     setShowCustom(false)
@@ -55,9 +90,9 @@ export function TimeframePicker() {
     if (!customFrom) return
     const params = new URLSearchParams(searchParams.toString())
     params.set('from', customFrom)
-    if (customTo) params.set('to', customTo)
-    else params.delete('to')
+    if (customTo) { params.set('to', customTo) } else { params.delete('to') }
     params.delete('days')
+    saveCookie(`from=${customFrom}${customTo ? `&to=${customTo}` : ''}`)
     router.push(`${pathname}?${params.toString()}`)
     setOpen(false)
     setShowCustom(false)
@@ -99,7 +134,6 @@ export function TimeframePicker() {
             minWidth: showCustom ? '240px' : '160px',
           }}
         >
-          {/* Presets */}
           {PRESETS.map(opt => (
             <button
               key={opt.days}
@@ -112,10 +146,8 @@ export function TimeframePicker() {
             </button>
           ))}
 
-          {/* Divider */}
           <div className="mx-3" style={{ height: '1px', background: 'var(--border)' }} />
 
-          {/* Custom toggle */}
           {!showCustom ? (
             <button
               onClick={() => {
@@ -140,11 +172,7 @@ export function TimeframePicker() {
                   max={customTo || todayISO()}
                   onChange={e => setCustomFrom(e.target.value)}
                   className="w-full text-[12px] px-2 py-1.5 rounded-lg outline-none"
-                  style={{
-                    background: 'var(--porcelain-2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--ink)',
-                  }}
+                  style={{ background: 'var(--porcelain-2)', border: '1px solid var(--border)', color: 'var(--ink)' }}
                 />
               </div>
               <div className="space-y-1.5">
@@ -156,11 +184,7 @@ export function TimeframePicker() {
                   max={todayISO()}
                   onChange={e => setCustomTo(e.target.value)}
                   className="w-full text-[12px] px-2 py-1.5 rounded-lg outline-none"
-                  style={{
-                    background: 'var(--porcelain-2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--ink)',
-                  }}
+                  style={{ background: 'var(--porcelain-2)', border: '1px solid var(--border)', color: 'var(--ink)' }}
                 />
               </div>
               <div className="flex gap-2 pt-1">

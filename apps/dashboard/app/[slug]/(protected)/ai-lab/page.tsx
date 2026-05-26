@@ -2,7 +2,7 @@ import { Sparkles, Zap, TrendingUp, AlertCircle, BookOpen } from 'lucide-react'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
-import { getAnalytics } from '@/lib/api'
+import { getAnalytics, getTimeframe } from '@/lib/api'
 import type { AnalyticsData } from '@/lib/api'
 
 interface Props {
@@ -127,8 +127,8 @@ function deriveInsights(analytics: AnalyticsData) {
 
 export default async function AILabPage({ params, searchParams }: Props) {
   const { slug } = await params
-  const { days: rawDays, from, to } = await searchParams
-  const days = Number(rawDays) || 30
+  const rawSP = await searchParams
+  const { days, from, to } = await getTimeframe(rawSP)
   const analytics = await getAnalytics(days, from, to)
 
   if (!analytics) {

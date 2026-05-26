@@ -1,6 +1,6 @@
 import { OutcomeTracker } from '@/components/intelligence/OutcomeTracker'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
-import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId, getTimeframe } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -8,8 +8,8 @@ interface Props {
 }
 
 export default async function OutcomesPage({ params: _, searchParams }: Props) {
-  const { days: rawDays, from, to } = await searchParams
-  const days = Number(rawDays) || 30
+  const rawSP = await searchParams
+  const { days, from, to } = await getTimeframe(rawSP)
   const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
   const brandId = authInfo?.brandId ?? ''
 

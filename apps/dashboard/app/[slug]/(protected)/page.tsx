@@ -7,7 +7,7 @@ import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { Users, Package, FlaskConical, TrendingUp } from 'lucide-react'
-import { getAnalytics, getTokenAndBrandId } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId, getTimeframe } from '@/lib/api'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -16,8 +16,8 @@ interface Props {
 
 export default async function IntelligencePage({ params, searchParams }: Props) {
   const { slug } = await params
-  const { days: rawDays, from, to } = await searchParams
-  const days = Number(rawDays) || 30
+  const rawSP = await searchParams
+  const { days, from, to } = await getTimeframe(rawSP)
   const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
   const brandId = authInfo?.brandId ?? ''
   const s = analytics?.summary

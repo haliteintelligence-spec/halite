@@ -237,6 +237,27 @@ export async function getUploadHistory(): Promise<UploadRecord[] | null> {
   return data?.uploads ?? null
 }
 
+export async function getTimeframe(raw: { days?: string; from?: string; to?: string }): Promise<{
+  days: number
+  from: string | undefined
+  to: string | undefined
+}> {
+  if (raw.days || raw.from) {
+    return { days: Number(raw.days) || 30, from: raw.from, to: raw.to }
+  }
+  const cookieStore = await cookies()
+  const saved = cookieStore.get('halite_tf')?.value
+  if (saved) {
+    const p = new URLSearchParams(saved)
+    return {
+      days: Number(p.get('days')) || 30,
+      from: p.get('from') ?? undefined,
+      to: p.get('to') ?? undefined,
+    }
+  }
+  return { days: 30, from: undefined, to: undefined }
+}
+
 export async function getAnalytics(days = 30, from?: string, to?: string): Promise<AnalyticsData | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('halite_token')?.value
