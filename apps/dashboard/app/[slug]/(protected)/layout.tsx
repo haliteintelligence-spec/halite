@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { SideNav } from '@/components/side-nav'
 import { MobileNavToggle } from '@/components/ui/MobileNavToggle'
-import { derivePanel } from '@/components/intelligence/AIInsightPanel'
 import { getBrandProfile, getAnalytics, type BrandThemeConfig } from '@/lib/api'
 
 interface Props {
@@ -45,12 +44,11 @@ export default async function BrandLayout({ children, params }: Props) {
   const token = (await cookies()).get('halite_token')?.value
   if (!token) redirect(`/${slug}/login`)
 
-  const [profile, analytics] = await Promise.all([getBrandProfile(), getAnalytics()])
+  const profile = await getBrandProfile()
   const isDemo = profile?.isDemo ?? false
   const demoLinkExpiresAt = profile?.demoLinkExpiresAt ?? null
   const whiteLabelEnabled = profile?.whiteLabelEnabled ?? false
   const brandThemeConfig = profile?.brandThemeConfig ?? null
-  const intelligence = analytics ? derivePanel(analytics) : null
 
   const daysLeft = demoLinkExpiresAt
     ? Math.ceil((new Date(demoLinkExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -62,7 +60,7 @@ export default async function BrandLayout({ children, params }: Props) {
         <style dangerouslySetInnerHTML={{ __html: buildWhiteLabelCSS(brandThemeConfig) }} />
       )}
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--porcelain)' }}>
-      <SideNav slug={slug} isDemo={isDemo} demoLinkExpiresAt={demoLinkExpiresAt} intelligence={intelligence} />
+      <SideNav slug={slug} isDemo={isDemo} demoLinkExpiresAt={demoLinkExpiresAt} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {isDemo && (
