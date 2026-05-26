@@ -274,12 +274,11 @@ export default function DemoDetailPage() {
         </button>
         {accessOpen && (
           <div className="px-5 pb-5 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <CredRow label="Login URL (custom domain)" value={demo.loginUrl} onCopy={() => copyText(demo.loginUrl, 'url')} copied={copied === 'url'} isLink />
             <CredRow
-              label="Login URL (Railway)"
-              value={`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`}
-              onCopy={() => copyText(`${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/${demo.slug}/login`, 'rail')}
-              copied={copied === 'rail'}
+              label="Login URL"
+              value={`https://portal.haliteintelligence.com/${demo.slug}/login`}
+              onCopy={() => copyText(`https://portal.haliteintelligence.com/${demo.slug}/login`, 'url')}
+              copied={copied === 'url'}
               isLink
             />
             <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />

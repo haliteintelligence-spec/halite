@@ -225,7 +225,7 @@ export default function BrandDetailPage() {
 
   if (!brand) return <div className="p-8"><p className="text-sm" style={{ color: 'var(--ink-3)' }}>Brand not found.</p></div>
 
-  const railwayBase = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  const portalBase = 'https://portal.haliteintelligence.com'
 
   return (
     <div className="max-w-3xl">
@@ -311,7 +311,7 @@ export default function BrandDetailPage() {
           onClick={() => setAccessOpen(o => !o)}
           className="w-full flex items-center justify-between p-5 hover:bg-black/[0.02] transition-colors"
         >
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Dashboard Access</h2>
+          <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Access Credentials</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={e => { e.stopPropagation(); enterDashboard() }}
@@ -329,8 +329,7 @@ export default function BrandDetailPage() {
           <div className="px-5 pb-5" style={{ borderTop: '1px solid var(--border)' }}>
             {[
               { label: 'Slug', value: brand.slug, key: 'slug' },
-              { label: 'Login URL (custom domain)', value: `${brand.slug}.haliteintelligence.com/login`, key: 'url' },
-              { label: 'Login URL (Railway)', value: `${railwayBase}/${brand.slug}/login`, key: 'rail' },
+              { label: 'Login URL', value: `${portalBase}/${brand.slug}/login`, key: 'url' },
               { label: 'API Key', value: brand.apiKey, key: 'apikey' },
             ].map(({ label, value, key }, i, arr) => (
               <div key={key} className="flex items-center justify-between py-2"
