@@ -129,6 +129,7 @@ export function InsightButton({ brandId, viewName, dataContext }: Props) {
           try {
             const parsed = JSON.parse(raw)
             if (parsed.text) setContent(prev => prev + parsed.text)
+            if (parsed.error) { setError(true); break }
           } catch {}
         }
       }

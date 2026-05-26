@@ -43,25 +43,36 @@ Structure your response exactly as follows:
 ## Watch Out For
 1–2 brief warnings or things to monitor based on this data.`
 
+      // Stream headers — set before any write so the browser gets them immediately
+      const origin = (request.headers['origin'] as string) ?? ''
+      reply.raw.setHeader('Access-Control-Allow-Origin', origin || '*')
+      reply.raw.setHeader('Access-Control-Allow-Credentials', 'true')
+      reply.raw.setHeader('Vary', 'Origin')
       reply.raw.setHeader('Content-Type', 'text/event-stream')
       reply.raw.setHeader('Cache-Control', 'no-cache')
       reply.raw.setHeader('Connection', 'keep-alive')
+      reply.raw.setHeader('X-Accel-Buffering', 'no') // disable Railway/nginx response buffering
 
-      const stream = await anthropic.messages.stream({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        system: `You are an AI intelligence analyst embedded in the Halite Intelligence platform for beauty brands. When given a dashboard view's data, generate a focused, structured insight report. Be specific — cite the actual numbers from the data. Keep the response concise and actionable. Brand managers need clear next steps, not lengthy analysis. Format with markdown headers (##) and bullet points.`,
-        messages: [{ role: 'user', content: userPrompt }],
-      })
+      try {
+        const stream = await anthropic.messages.stream({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1200,
+          system: `You are an AI intelligence analyst embedded in the Halite Intelligence platform for beauty brands. When given a dashboard view's data, generate a focused, structured insight report. Be specific — cite the actual numbers from the data. Keep the response concise and actionable. Brand managers need clear next steps, not lengthy analysis. Format with markdown headers (##) and bullet points.`,
+          messages: [{ role: 'user', content: userPrompt }],
+        })
 
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          reply.raw.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            reply.raw.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+          }
         }
-      }
 
-      reply.raw.write(`data: [DONE]\n\n`)
-      reply.raw.end()
+        reply.raw.write(`data: [DONE]\n\n`)
+      } catch (err) {
+        reply.raw.write(`data: ${JSON.stringify({ error: 'Failed to generate insight' })}\n\n`)
+      } finally {
+        reply.raw.end()
+      }
     }
   )
 }

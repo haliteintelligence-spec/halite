@@ -110,7 +110,8 @@ async function streamAndPersist(
   userMessage: string,
   systemPrompt: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
-  reply: any
+  reply: any,
+  origin: string = ''
 ) {
   const anthropic = getAnthropic()
 
@@ -125,9 +126,13 @@ async function streamAndPersist(
   ]
 
   // Stream response
+  reply.raw.setHeader('Access-Control-Allow-Origin', origin || '*')
+  reply.raw.setHeader('Access-Control-Allow-Credentials', 'true')
+  reply.raw.setHeader('Vary', 'Origin')
   reply.raw.setHeader('Content-Type', 'text/event-stream')
   reply.raw.setHeader('Cache-Control', 'no-cache')
   reply.raw.setHeader('Connection', 'keep-alive')
+  reply.raw.setHeader('X-Accel-Buffering', 'no')
 
   let fullResponse = ''
   let inputTokens = 0
@@ -281,7 +286,8 @@ export async function crystalRoutes(server: FastifyInstance) {
       }))
 
       const systemPrompt = await buildBrandContext(brandId)
-      await streamAndPersist(conversationId, message, systemPrompt, history, reply)
+      const origin = (request.headers['origin'] as string) ?? ''
+      await streamAndPersist(conversationId, message, systemPrompt, history, reply, origin)
     }
   )
 
@@ -413,7 +419,8 @@ export async function adminCrystalRoutes(server: FastifyInstance) {
       }))
 
       const systemPrompt = await buildHaliteContext()
-      await streamAndPersist(conversationId, message, systemPrompt, history, reply)
+      const origin = (request.headers['origin'] as string) ?? ''
+      await streamAndPersist(conversationId, message, systemPrompt, history, reply, origin)
     }
   )
 
