@@ -18,7 +18,7 @@ type WidgetCategory =
   | 'Predictive Insights'
   | 'Supply Chain'
   | 'Identity'
-  | 'Crystal AI'
+  | 'Halite AI'
   | 'Retention & Churn'
 
 interface LibraryWidget {
@@ -660,34 +660,34 @@ const WIDGETS: LibraryWidget[] = [
     pageHref: '/benchmarking', pageName: 'Benchmarking',
   },
 
-  // ── Crystal AI ────────────────────────────────────────────────────────────
+  // ── Halite AI ────────────────────────────────────────────────────────────
   {
     id: 'cry-conversation-list',
     name: 'Conversation History',
     description: 'Sidebar list of past AI conversations with title, timestamp, message count, and delete action.',
-    category: 'Crystal AI', type: 'list', tags: ['ai', 'chat'],
-    pageHref: '/crystal', pageName: 'Crystal AI',
+    category: 'Halite AI', type: 'list', tags: ['ai', 'chat'],
+    pageHref: '/crystal', pageName: 'Halite AI',
   },
   {
     id: 'cry-starter-questions',
     name: 'Starter Question Grid',
     description: '4 contextual suggested prompts shown in the empty state to guide first interaction.',
-    category: 'Crystal AI', type: 'interactive', tags: ['ai', 'chat'],
-    pageHref: '/crystal', pageName: 'Crystal AI',
+    category: 'Halite AI', type: 'interactive', tags: ['ai', 'chat'],
+    pageHref: '/crystal', pageName: 'Halite AI',
   },
   {
     id: 'cry-chat-messages',
     name: 'Chat Message Thread',
     description: 'Full streaming chat interface with user bubbles, AI response bubbles, and loading cursor.',
-    category: 'Crystal AI', type: 'interactive', tags: ['ai', 'chat'],
-    pageHref: '/crystal', pageName: 'Crystal AI',
+    category: 'Halite AI', type: 'interactive', tags: ['ai', 'chat'],
+    pageHref: '/crystal', pageName: 'Halite AI',
   },
   {
     id: 'cry-message-input',
     name: 'Chat Input Bar',
     description: 'Auto-growing multi-line input with send button, supporting streaming AI responses.',
-    category: 'Crystal AI', type: 'interactive', tags: ['ai', 'chat'],
-    pageHref: '/crystal', pageName: 'Crystal AI',
+    category: 'Halite AI', type: 'interactive', tags: ['ai', 'chat'],
+    pageHref: '/crystal', pageName: 'Halite AI',
   },
 ]
 
@@ -696,7 +696,7 @@ const WIDGETS: LibraryWidget[] = [
 const ALL_CATEGORIES: WidgetCategory[] = [
   'Overview', 'Consumer Intelligence', 'Product Performance', 'Ingredient Lab',
   'Market Signals', 'Benchmarking', 'Outcomes', 'AI Lab',
-  'Predictive Insights', 'Retention & Churn', 'Supply Chain', 'Identity', 'Crystal AI',
+  'Predictive Insights', 'Retention & Churn', 'Supply Chain', 'Identity', 'Halite AI',
 ]
 
 const TYPE_CONFIG: Record<WidgetType, { label: string; icon: React.ElementType; color: string; bg: string }> = {

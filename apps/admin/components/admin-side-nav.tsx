@@ -9,7 +9,7 @@ const nav = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/brands', label: 'Brands', icon: Store },
   { href: '/insights', label: 'Insights', icon: BarChart2 },
-  { href: '/crystal', label: 'Crystal AI', icon: MessageCircle },
+  { href: '/crystal', label: 'Halite AI', icon: MessageCircle },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
