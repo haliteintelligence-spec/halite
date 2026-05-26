@@ -495,7 +495,7 @@ export function CrystalClient({ slug, brandId, initialConversations, activeConvI
             </button>
           </div>
           <p className="text-[10px] mt-1.5 text-center" style={{ color: 'var(--ink-3)' }}>
-            Enter to send · Shift+Enter for new line · Powered by Claude
+            Enter to send · Shift+Enter for new line
           </p>
         </div>
       </div>
