@@ -157,7 +157,7 @@ export function DemoForm() {
 
       {error && (
         <p className="text-[12px]" style={{ color: 'rgba(250,246,240,0.6)' }}>
-          Something went wrong — email us directly at haliteintelligence@gmail.com
+          Something went wrong — email us directly at demo@haliteintelligence.com
         </p>
       )}
 
