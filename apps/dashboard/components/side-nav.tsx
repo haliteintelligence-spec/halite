@@ -97,7 +97,7 @@ export function SideNav({
     : null
 
   function handleLogout() {
-    document.cookie = 'halite_token=; path=/; max-age=0'
+    document.cookie = `halite_token=; path=/${slug}; max-age=0`
     router.push(`/${slug}/login`)
   }
 

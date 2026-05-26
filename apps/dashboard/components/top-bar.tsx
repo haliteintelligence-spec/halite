@@ -6,7 +6,7 @@ export function TopBar({ slug }: { slug: string }) {
   const router = useRouter()
 
   function handleLogout() {
-    document.cookie = 'halite_token=; path=/; max-age=0'
+    document.cookie = `halite_token=; path=/${slug}; max-age=0`
     router.push(`/${slug}/login`)
   }
 

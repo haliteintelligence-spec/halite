@@ -116,7 +116,7 @@ export default function DemoDetailPage() {
       })
       if (!res.ok) throw new Error('Failed to create session')
       const data = await res.json() as { token: string; slug: string }
-      document.cookie = `halite_token=${data.token}; path=/; max-age=86400; SameSite=Lax`
+      document.cookie = `halite_token=${data.token}; path=/${data.slug}; max-age=86400; SameSite=Lax`
       window.open(`/${data.slug}`, '_blank')
     } finally {
       setEntering(false)

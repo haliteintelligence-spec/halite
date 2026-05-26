@@ -41,7 +41,7 @@ export default function LoginPage({ params }: Props) {
       return
     }
 
-    document.cookie = `halite_token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    document.cookie = `halite_token=${data.token}; path=/${slug}; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
     router.push(`/${slug}`)
   }
 
