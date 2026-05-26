@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
   try {
     await resend.emails.send({
-      from: 'Halite Demo Form <onboarding@resend.dev>',
+      from: 'Halite Demo Form <demo@haliteintelligence.com>',
       to: 'demo@haliteintelligence.com',
       replyTo: email,
       subject: `Demo request — ${brand}`,
