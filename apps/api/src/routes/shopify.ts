@@ -156,6 +156,7 @@ export async function shopifyRoutes(server: FastifyInstance) {
     const { signature, shop, path_prefix, logged_in_customer_id, ...rest } = query
 
     if (!signature) throw new ApiError(400, 'Missing proxy signature')
+    if (!shop) throw new ApiError(400, 'Missing shop param')
 
     // Proxy signature: sort all params (excl. signature), concatenate as key=value (no &), HMAC-SHA256
     const message = Object.entries({ shop, path_prefix, logged_in_customer_id, ...rest })
