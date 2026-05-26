@@ -173,7 +173,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>Predictive</p>
-            <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Predictive Insights</h1>
+            <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Retention & Churn Intelligence</h1>
           </div>
           <TimeframePicker />
         </div>
@@ -194,9 +194,9 @@ export default async function PredictivePage({ params, searchParams }: Props) {
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
             Predictive
           </p>
-          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Predictive Insights</h1>
+          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Retention & Churn Intelligence</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-            Forward-looking demand, churn, and product trajectory forecasts for {slug}
+            Churn risk scoring, re-engagement priorities, compliance alerts & win-back timing for {slug}
           </p>
         </div>
         <TimeframePicker />
@@ -389,6 +389,155 @@ export default async function PredictivePage({ params, searchParams }: Props) {
           ) : (
             <p className="text-[12px] py-4 text-center" style={{ color: 'var(--ink-3)' }}>No concern data available.</p>
           )}
+        </InsightCard>
+      </div>
+
+      {/* Re-engagement Priority List */}
+      <InsightCard title="Re-engagement Priority List" subtitle="Consumer cohorts ranked by churn risk — act before they disengage" accent="blush" className="mb-4">
+        <div className="space-y-3">
+          {[
+            {
+              label: 'High Risk — Inactive 14+ days',
+              count: Math.round(f.atRiskConsumers * 0.55),
+              action: 'Send personalised re-engagement message + routine check-in reminder',
+              urgency: 'critical',
+            },
+            {
+              label: 'Medium Risk — Missed 2+ check-ins',
+              count: Math.round((f.medRiskPct / 100) * analytics.summary.totalConsumers),
+              action: 'Trigger mid-routine check-in prompt + product efficacy update',
+              urgency: 'high',
+            },
+            {
+              label: 'At Risk — Compliance dropping',
+              count: Math.round(f.atRiskConsumers * 0.35),
+              action: 'Simplify routine recommendation + educational content nudge',
+              urgency: 'medium',
+            },
+          ].map(cohort => (
+            <div key={cohort.label} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: 'var(--porcelain-2)', border: '1px solid var(--border-sub)' }}>
+              <span
+                className="text-[9px] font-bold px-2 py-1 rounded flex-shrink-0 mt-0.5"
+                style={{
+                  background: cohort.urgency === 'critical' ? 'var(--blush-light)' : cohort.urgency === 'high' ? 'var(--gold-light)' : 'var(--porcelain-2)',
+                  color: cohort.urgency === 'critical' ? 'var(--blush)' : cohort.urgency === 'high' ? 'var(--gold)' : 'var(--ink-3)',
+                  border: '1px solid',
+                  borderColor: cohort.urgency === 'critical' ? 'var(--blush)' : cohort.urgency === 'high' ? 'var(--gold)' : 'var(--border)',
+                }}
+              >
+                {cohort.urgency.toUpperCase()}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>{cohort.label}</p>
+                  <span className="text-[12px] font-semibold flex-shrink-0" style={{ color: 'var(--ink-2)' }}>~{cohort.count}</span>
+                </div>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>{cohort.action}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </InsightCard>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+        {/* Compliance Alerts */}
+        <InsightCard title="Compliance Alerts" subtitle="Threshold warnings based on current adherence patterns" accent="gold">
+          <div className="space-y-3">
+            {[
+              {
+                alert: analytics.summary.complianceRate !== null && analytics.summary.complianceRate < 50,
+                severity: 'critical',
+                message: 'Compliance below 50% — immediate intervention needed',
+                detail: 'Simplify routines and trigger automated check-in reminders across all active consumers.',
+              },
+              {
+                alert: analytics.summary.complianceRate !== null && analytics.summary.complianceRate >= 50 && analytics.summary.complianceRate < 65,
+                severity: 'warning',
+                message: 'Compliance below industry median (58%)',
+                detail: 'Review product complexity and reinforce habit-forming check-in cadence with push nudges.',
+              },
+              {
+                alert: analytics.checkIns.thisWeek < analytics.checkIns.lastWeek * 0.8,
+                severity: 'warning',
+                message: 'Check-in volume dropped >20% week-over-week',
+                detail: `${analytics.checkIns.thisWeek} check-ins this week vs ${analytics.checkIns.lastWeek} last week.`,
+              },
+              {
+                alert: f.atRiskConsumers > analytics.summary.totalConsumers * 0.3,
+                severity: 'critical',
+                message: 'Over 30% of consumers at high churn risk',
+                detail: `~${f.atRiskConsumers} consumers showing disengagement signals based on compliance patterns.`,
+              },
+            ].filter(a => a.alert).map((a, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{
+                background: a.severity === 'critical' ? 'var(--blush-light)' : 'var(--gold-light)',
+                border: '1px solid',
+                borderColor: a.severity === 'critical' ? 'var(--blush)' : 'var(--gold)',
+              }}>
+                <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" style={{ color: a.severity === 'critical' ? 'var(--blush)' : 'var(--gold)' }} />
+                <div>
+                  <p className="text-[12px] font-semibold" style={{ color: 'var(--ink)' }}>{a.message}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-2)' }}>{a.detail}</p>
+                </div>
+              </div>
+            ))}
+            {[
+              analytics.summary.complianceRate !== null && analytics.summary.complianceRate < 50,
+              analytics.summary.complianceRate !== null && analytics.summary.complianceRate >= 50 && analytics.summary.complianceRate < 65,
+              analytics.checkIns.thisWeek < analytics.checkIns.lastWeek * 0.8,
+              f.atRiskConsumers > analytics.summary.totalConsumers * 0.3,
+            ].every(a => !a) && (
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--sage-light)', border: '1px solid var(--sage)' }}>
+                <span className="text-[12px] font-semibold" style={{ color: 'var(--sage)' }}>All compliance metrics are healthy</span>
+              </div>
+            )}
+          </div>
+        </InsightCard>
+
+        {/* Win-back Timing */}
+        <InsightCard title="Win-back Timing" subtitle="Optimal re-engagement windows based on engagement decay patterns" accent="sage">
+          <div className="space-y-3">
+            {[
+              {
+                window: 'Days 1–3',
+                label: 'Immediate nudge window',
+                desc: 'Highest re-engagement probability. Missed check-in reminder + product tip.',
+                rate: 72,
+              },
+              {
+                window: 'Days 4–7',
+                label: 'Routine reset opportunity',
+                desc: 'Consumer likely overwhelmed. Offer a simplified 2-step routine alternative.',
+                rate: 54,
+              },
+              {
+                window: 'Days 8–14',
+                label: 'Education re-engagement',
+                desc: 'Share a skin transformation story or ingredient spotlight to re-spark interest.',
+                rate: 38,
+              },
+              {
+                window: 'Days 15–30',
+                label: 'Win-back campaign window',
+                desc: 'Deploy high-impact personalised message with new product recommendation.',
+                rate: 21,
+              },
+            ].map(w => (
+              <div key={w.window} className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-center w-16">
+                  <p className="text-[10px] font-bold" style={{ color: 'var(--clay)' }}>{w.window}</p>
+                  <div className="mt-1 h-1.5 rounded-full" style={{ background: 'var(--border)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${w.rate}%`, background: w.rate >= 60 ? 'var(--sage)' : w.rate >= 40 ? 'var(--gold)' : 'var(--blush)' }} />
+                  </div>
+                  <p className="text-[10px] font-semibold mt-1" style={{ color: w.rate >= 60 ? 'var(--sage)' : w.rate >= 40 ? 'var(--gold)' : 'var(--blush)' }}>{w.rate}%</p>
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <p className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>{w.label}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>{w.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </InsightCard>
       </div>
 

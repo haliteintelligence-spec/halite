@@ -1,4 +1,5 @@
 import { IngredientLab } from '@/components/intelligence/IngredientLab'
+import { IngredientExtended } from '@/components/intelligence/IngredientExtended'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { getAnalytics, getTokenAndBrandId, getTimeframe } from '@/lib/api'
 
@@ -20,15 +21,22 @@ export default async function IngredientsPage({ params: _, searchParams }: Props
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
             Intelligence
           </p>
-          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Ingredients</h1>
+          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Ingredient Lab & Product Performance</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-            Ingredient intelligence index, coverage gaps & concern mapping
+            Ingredient efficacy index, reaction flags, formulation gaps & product rankings
           </p>
         </div>
         <TimeframePicker />
       </div>
       {analytics ? (
-        <IngredientLab products={analytics.products} brandId={brandId} />
+        <>
+          <IngredientLab products={analytics.products} brandId={brandId} />
+          <IngredientExtended
+            products={analytics.products}
+            symptoms={analytics.checkIns.symptoms}
+            brandId={brandId}
+          />
+        </>
       ) : (
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load ingredient data.</p>
       )}

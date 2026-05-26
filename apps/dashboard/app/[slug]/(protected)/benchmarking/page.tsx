@@ -1,4 +1,5 @@
 import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
+import { BenchmarkExtended } from '@/components/intelligence/BenchmarkExtended'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { getAnalytics, getTokenAndBrandId, getTimeframe } from '@/lib/api'
 
@@ -20,15 +21,18 @@ export default async function BenchmarkingPage({ params: _, searchParams }: Prop
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
             Intelligence
           </p>
-          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Benchmarking</h1>
+          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Benchmarking & Market Comparison</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-            Performance vs industry benchmarks, peer comparison & growth trajectory
+            Market trends, concern benchmarks, demographic gaps & portfolio fit vs industry standards
           </p>
         </div>
         <TimeframePicker />
       </div>
       {analytics ? (
-        <BenchmarkMatrix analytics={analytics} brandId={brandId} />
+        <>
+          <BenchmarkMatrix analytics={analytics} brandId={brandId} />
+          <BenchmarkExtended analytics={analytics} brandId={brandId} />
+        </>
       ) : (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--border)' }}>
           <p className="text-sm" style={{ color: 'var(--ink-3)' }}>No data yet — benchmarks will populate once consumers start checking in.</p>

@@ -19,6 +19,7 @@ type WidgetCategory =
   | 'Supply Chain'
   | 'Identity'
   | 'Crystal AI'
+  | 'Retention & Churn'
 
 interface LibraryWidget {
   id: string
@@ -518,6 +519,147 @@ const WIDGETS: LibraryWidget[] = [
     pageHref: '/identity', pageName: 'Identity',
   },
 
+  // ── Consumer Command Center (new) ─────────────────────────────────────────
+  {
+    id: 'con-cmd-active-consumers',
+    name: 'Active Consumers KPI',
+    description: 'Live count of registered consumers with pulse indicator in the command center header.',
+    category: 'Consumer Intelligence', type: 'metric', tags: ['kpi', 'consumers', 'command-center'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-cmd-compliance',
+    name: 'Routine Compliance KPI',
+    description: 'Compliance rate tile in the 5-KPI command center row on the consumers page.',
+    category: 'Consumer Intelligence', type: 'metric', tags: ['kpi', 'compliance', 'command-center'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-cmd-skin-score',
+    name: 'Avg Skin Score KPI',
+    description: 'Average skin satisfaction score tile in the command center (out of 5).',
+    category: 'Consumer Intelligence', type: 'metric', tags: ['kpi', 'outcomes', 'command-center'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-cmd-concerns',
+    name: 'Active Concerns KPI',
+    description: 'Count of concerns reported by more than 10% of consumers in the command center.',
+    category: 'Consumer Intelligence', type: 'metric', tags: ['kpi', 'concerns', 'command-center'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-cmd-checkins-week',
+    name: 'Check-ins This Week KPI',
+    description: 'This week\'s check-in count tile in the 5-KPI consumer command center row.',
+    category: 'Consumer Intelligence', type: 'metric', tags: ['kpi', 'check-ins', 'command-center'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-skin-score-trend',
+    name: 'Skin Score Trend Chart',
+    description: 'Line chart of average consumer skin satisfaction rating over time (1–5 scale) with industry reference line at 3.9.',
+    category: 'Consumer Intelligence', type: 'chart', tags: ['trend', 'skin score', 'ratings'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-compliance-trend',
+    name: 'Compliance Rate Trend Chart',
+    description: 'Weekly compliance bar chart colour-coded by threshold — green ≥70%, amber 50–70%, red <50%, with industry median reference.',
+    category: 'Consumer Intelligence', type: 'chart', tags: ['trend', 'compliance'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+  {
+    id: 'con-concern-map',
+    name: 'Concern Map Overlay',
+    description: 'Dual-progress-bar map of consumer demand (clay) vs product coverage — gap badges for under-served concerns.',
+    category: 'Consumer Intelligence', type: 'chart', tags: ['concerns', 'coverage', 'gap'],
+    pageHref: '/consumers', pageName: 'Consumers',
+  },
+
+  // ── Ingredient Lab Extended (new) ─────────────────────────────────────────
+  {
+    id: 'ing-efficacy-index',
+    name: 'Ingredient Efficacy Index',
+    description: 'Top ingredients ranked by consumer outcome score with progress bars and concern tags — score 80+ highlighted in green.',
+    category: 'Ingredient Lab', type: 'list', tags: ['ingredients', 'efficacy', 'ranking'],
+    pageHref: '/ingredients', pageName: 'Ingredients',
+  },
+  {
+    id: 'ing-reaction-flags',
+    name: 'Reaction Flags',
+    description: 'Negative symptoms reported across consumer check-ins as a ranked bar chart — formulation watchlist.',
+    category: 'Ingredient Lab', type: 'chart', tags: ['reactions', 'symptoms', 'negative'],
+    pageHref: '/ingredients', pageName: 'Ingredients',
+  },
+  {
+    id: 'ing-formulation-gaps',
+    name: 'Formulation Gaps',
+    description: 'High-demand concerns with insufficient product coverage, with critical/low-coverage badges and demand vs coverage stats.',
+    category: 'Ingredient Lab', type: 'list', tags: ['gaps', 'formulation', 'concerns'],
+    pageHref: '/ingredients', pageName: 'Ingredients',
+  },
+  {
+    id: 'ing-product-rankings',
+    name: 'Product Performance Rankings',
+    description: 'Products ranked 1-10 by consumer acceptance rate with positive/negative reaction counts and colour-coded rate badges.',
+    category: 'Ingredient Lab', type: 'list', tags: ['products', 'ranking', 'acceptance'],
+    pageHref: '/ingredients', pageName: 'Ingredients',
+  },
+
+  // ── Retention & Churn Intelligence (new) ──────────────────────────────────
+  {
+    id: 'ret-reengagement-list',
+    name: 'Re-engagement Priority List',
+    description: 'Consumer cohorts ranked by churn risk (Critical / High / Medium) with recommended action for each tier.',
+    category: 'Retention & Churn', type: 'list', tags: ['churn', 're-engagement', 'retention'],
+    pageHref: '/predictive', pageName: 'Predictive',
+  },
+  {
+    id: 'ret-compliance-alerts',
+    name: 'Compliance Alerts Panel',
+    description: 'Live threshold alerts for compliance rate, check-in volume drops, and at-risk consumer concentration.',
+    category: 'Retention & Churn', type: 'ai', tags: ['alerts', 'compliance', 'churn'],
+    pageHref: '/predictive', pageName: 'Predictive',
+  },
+  {
+    id: 'ret-winback-timing',
+    name: 'Win-back Timing Guide',
+    description: 'Day-range re-engagement windows (Days 1–3, 4–7, 8–14, 15–30) with probability rates and recommended actions.',
+    category: 'Retention & Churn', type: 'list', tags: ['win-back', 'timing', 'retention'],
+    pageHref: '/predictive', pageName: 'Predictive',
+  },
+
+  // ── Benchmarking Extended (new) ───────────────────────────────────────────
+  {
+    id: 'bmk-market-trends',
+    name: 'Market Trends by Category',
+    description: 'Category acceptance rate vs synthetic market average (58%), with over/under-performing directional indicators.',
+    category: 'Benchmarking', type: 'chart', tags: ['benchmark', 'category', 'market'],
+    pageHref: '/benchmarking', pageName: 'Benchmarking',
+  },
+  {
+    id: 'bmk-concern-benchmarks',
+    name: 'Concern Benchmarks vs Market',
+    description: 'Dual-bar overlay comparing your consumer concern demand against estimated market penetration rates by concern.',
+    category: 'Benchmarking', type: 'chart', tags: ['benchmark', 'concerns', 'market'],
+    pageHref: '/benchmarking', pageName: 'Benchmarking',
+  },
+  {
+    id: 'bmk-demographic-gaps',
+    name: 'Demographic Gaps vs Market',
+    description: 'Skin tone and age distribution compared against market averages — highlights under-served and over-represented segments.',
+    category: 'Benchmarking', type: 'chart', tags: ['benchmark', 'demographics', 'gaps'],
+    pageHref: '/benchmarking', pageName: 'Benchmarking',
+  },
+  {
+    id: 'bmk-portfolio-fit',
+    name: 'Portfolio Fit Score',
+    description: 'Portfolio coverage % and demand alignment score with top unmet consumer needs identified and ranked.',
+    category: 'Benchmarking', type: 'metric', tags: ['benchmark', 'portfolio', 'fit'],
+    pageHref: '/benchmarking', pageName: 'Benchmarking',
+  },
+
   // ── Crystal AI ────────────────────────────────────────────────────────────
   {
     id: 'cry-conversation-list',
@@ -554,7 +696,7 @@ const WIDGETS: LibraryWidget[] = [
 const ALL_CATEGORIES: WidgetCategory[] = [
   'Overview', 'Consumer Intelligence', 'Product Performance', 'Ingredient Lab',
   'Market Signals', 'Benchmarking', 'Outcomes', 'AI Lab',
-  'Predictive Insights', 'Supply Chain', 'Identity', 'Crystal AI',
+  'Predictive Insights', 'Retention & Churn', 'Supply Chain', 'Identity', 'Crystal AI',
 ]
 
 const TYPE_CONFIG: Record<WidgetType, { label: string; icon: React.ElementType; color: string; bg: string }> = {
