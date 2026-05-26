@@ -434,7 +434,54 @@ export async function adminRoutes(server: FastifyInstance) {
         { role: 'brand_admin', adminId: admin.id, brandId: brand.id },
         { expiresIn: '24h' }
       )
+
+      // Fetch admin details for the event log
+      const adminDetails = await prisma.brandAdmin.findUnique({
+        where: { id: admin.id },
+        select: { email: true, name: true },
+      })
+      if (adminDetails) {
+        const haliteAdminJwt = request.user as { adminId: string }
+        const haliteAdmin = await prisma.haliteAdmin.findUnique({
+          where: { id: haliteAdminJwt.adminId },
+          select: { name: true, email: true },
+        })
+        prisma.loginEvent.create({
+          data: {
+            brandId: brand.id,
+            adminId: admin.id,
+            adminEmail: adminDetails.email,
+            adminName: `[Halite: ${haliteAdmin?.name ?? 'Admin'}] → ${adminDetails.name}`,
+            ip: (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? request.ip ?? null,
+            method: 'IMPERSONATE',
+          },
+        }).catch(() => {})
+      }
+
       return { token, slug: brand.slug }
+    }
+  )
+
+  // ── Login events (audit log) ────────────────────────────────────
+  server.get(
+    '/admin/brands/:brandId/login-events',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const events = await prisma.loginEvent.findMany({
+        where: { brandId },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        select: {
+          id: true,
+          adminEmail: true,
+          adminName: true,
+          ip: true,
+          method: true,
+          createdAt: true,
+        },
+      })
+      return { events }
     }
   )
 

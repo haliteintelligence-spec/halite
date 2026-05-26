@@ -69,6 +69,7 @@ model Brand {
   invoices             Invoice[]
   crystalConversations CrystalConversation[]
   agentWorkflows       AgentWorkflow[]
+  loginEvents          LoginEvent[]
 
   @@map("brands")
 }
@@ -102,7 +103,8 @@ model BrandAdmin {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand       Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  loginEvents LoginEvent[]
 
   @@map("brand_admins")
 }
@@ -110,6 +112,33 @@ model BrandAdmin {
 enum AdminRole {
   OWNER
   MEMBER
+}
+
+// ─────────────────────────────────────────────
+// LOGIN EVENTS (audit log)
+// ─────────────────────────────────────────────
+
+enum LoginMethod {
+  LOGIN
+  REGISTER
+  IMPERSONATE
+}
+
+model LoginEvent {
+  id         String      @id @default(cuid())
+  brandId    String
+  adminId    String
+  adminEmail String
+  adminName  String
+  ip         String?
+  method     LoginMethod @default(LOGIN)
+  createdAt  DateTime    @default(now())
+
+  brand Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  admin BrandAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, createdAt(sort: Desc)])
+  @@map("login_events")
 }
 
 // ─────────────────────────────────────────────

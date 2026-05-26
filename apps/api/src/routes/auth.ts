@@ -50,6 +50,19 @@ export async function authRoutes(server: FastifyInstance) {
       adminId: admin.id,
       brandId: admin.brandId,
     })
+
+    // Fire-and-forget login event
+    prisma.loginEvent.create({
+      data: {
+        brandId: admin.brandId,
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        ip: (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? request.ip ?? null,
+        method: 'LOGIN',
+      },
+    }).catch(() => {})
+
     return reply.send({
       token,
       admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role },
@@ -92,6 +105,17 @@ export async function authRoutes(server: FastifyInstance) {
       adminId: admin.id,
       brandId: brand.id,
     })
+
+    prisma.loginEvent.create({
+      data: {
+        brandId: brand.id,
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        ip: (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? request.ip ?? null,
+        method: 'REGISTER',
+      },
+    }).catch(() => {})
 
     return reply.status(201).send({
       token,
