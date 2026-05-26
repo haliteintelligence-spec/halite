@@ -910,6 +910,114 @@ Halite routes tasks to two AI providers based on what each does best. The model 
 
 ---
 
+## Phase 11 — WhatsApp Integration
+
+**Goal:** Halite runs end-to-end — quiz, routine delivery, check-ins, and progress updates — entirely through WhatsApp. Brands connect their WhatsApp Business account and catalog; consumers are onboarded and retained without ever leaving the app they already live in. This is the primary channel for markets where WhatsApp is the dominant commerce surface (West Africa, South Asia, LATAM, Middle East).
+
+### 11A — WhatsApp Business API Setup
+
+Brands connect their WhatsApp Business account via Meta's Cloud API. Halite registers as the API solution provider.
+
+- [ ] Meta Business Partner setup — Halite registered as a solution provider, enabling embedded onboarding for brands
+- [ ] `POST /brands/:brandId/channels/whatsapp/connect` — OAuth-style flow: brand authorises Halite to send/receive on their WhatsApp Business number via Meta's embedded signup
+- [ ] `brand_whatsapp_config` table — `brandId`, `wabaId` (WhatsApp Business Account ID), `phoneNumberId`, `accessToken` (encrypted), `verifyToken`, `active`, `connectedAt`
+- [ ] Webhook registration: `POST /webhooks/whatsapp/:brandId` — Meta sends all inbound messages here
+- [ ] Webhook verification handshake (GET challenge/response)
+- [ ] Message send helper: `src/lib/whatsapp.ts` — wraps Meta Cloud API for text, interactive (buttons/lists), template, and media messages
+- [ ] Brand dashboard settings page: `/[slug]/settings/whatsapp` — connect account, view number status, toggle active, preview message templates
+
+### 11B — WhatsApp Catalog Sync
+
+Brands using WhatsApp Commerce have a product catalog already published on Meta's commerce platform. Halite syncs this as the product source of truth for WhatsApp-channel consumers.
+
+- [ ] `GET /brands/:brandId/channels/whatsapp/catalog` — fetches catalog from Meta Graph API using brand's WABA credentials
+- [ ] Catalog sync pipeline: maps WhatsApp catalog fields (name, description, price, image URL, retailer ID) → Halite product schema; runs upsert into `products` table with `source: 'whatsapp_catalog'`
+- [ ] Sync webhook: Meta fires `catalog_update` events → triggers incremental sync
+- [ ] Manual sync button in brand dashboard WhatsApp settings
+- [ ] Products tagged with `whatsapp_catalog_id` for send-to-cart deep links
+- [ ] If brand has no WhatsApp catalog, Halite falls back to their existing uploaded catalog for routine generation; routine responses use product names + prices only (no WhatsApp cart links)
+
+### 11C — Conversational Quiz Flow
+
+The skin quiz runs entirely via WhatsApp message interactions — buttons, list pickers, and text replies. No app, no link, no browser redirect.
+
+**Conversation architecture:**
+- `whatsapp_sessions` table — `id`, `brandId`, `waPhoneNumber` (consumer's number), `endUserId` (nullable until quiz complete), `state` (enum: `new` / `quiz_active` / `quiz_complete` / `routine_sent` / `checkin_active`), `quizSessionId`, `currentQuestionIndex`, `createdAt`, `updatedAt`
+- State machine drives the conversation: inbound message → look up session → advance state → send next message
+
+**Quiz message design:**
+- Questions with ≤4 options → WhatsApp interactive **button message** (tap to answer)
+- Questions with 5–10 options → WhatsApp interactive **list message** (scrollable picker)
+- Multi-select questions (e.g. skin concerns) → numbered text list + "reply with numbers separated by commas"
+- Free text questions → plain text reply
+- Progress indicator in each message: `Step 3 of 6 ·`
+
+**Flow:**
+1. Consumer messages the brand's WhatsApp number (or scans a QR code on packaging/store)
+2. Welcome message sent with brand name + opt-in confirmation button
+3. Quiz begins — each question sent as interactive message
+4. On completion: `POST .../quiz/sessions/:sessionId/complete` fires → Claude generates routine
+5. Routine delivered as a structured WhatsApp message: AM/PM steps, product names, usage instructions, rationale summary
+
+- [ ] Inbound message handler: `src/lib/whatsapp-bot.ts` — parses Meta webhook payload, routes to state machine
+- [ ] `POST /webhooks/whatsapp/:brandId` handles: `messages` (text, interactive reply), `statuses` (delivered/read receipts)
+- [ ] Quiz state machine: `src/lib/whatsapp-quiz.ts` — maps quiz question config to WhatsApp message format, advances on reply
+- [ ] Routine formatter: `src/lib/whatsapp-routine-formatter.ts` — converts `Routine` DB record into ≤3 WhatsApp messages (header + AM steps + PM steps) within message length limits
+- [ ] "Add to cart" deep link appended to each product in routine if WhatsApp catalog is connected: `https://wa.me/c/<catalog_id>` or product-level cart link
+- [ ] End user created on quiz start (phone number as identifier), linked to brand via `brandId`; `endUser.whatsappNumber` field added to schema
+
+### 11D — Check-in Flow via WhatsApp
+
+Daily and weekly check-ins sent as proactive WhatsApp messages. Consumer replies without leaving the conversation.
+
+**Check-in message design:**
+- Sent at brand-configured time (default: 8pm consumer local time if timezone available, else brand's local time)
+- Message: `"How's your skin feeling today? [1–5 ⭐]"` → button message with 5 rating options
+- Follow-up (if rating ≤ 3): `"Any of these? (reply with numbers)"` + symptom list
+- Compliance question: `"Did you use your routine today?"` → Yes / Mostly / No buttons
+- Photo prompt (optional, brand-configurable): `"Send a selfie if you'd like to track progress visually 📸"` — consumer can skip by replying "skip"
+- On completion: check-in written to DB, outcome vector updated, streak incremented
+
+- [ ] Check-in scheduler: cron job queries `whatsapp_sessions` where `state = checkin_active` + `lastCheckinAt < today` → sends check-in message
+- [ ] `whatsapp_sessions.checkinSchedule` — brand-set time (e.g. `"20:00"`), timezone preference
+- [ ] Check-in state within session: `checkin_step` enum on session (`rating` / `symptoms` / `compliance` / `photo` / `complete`)
+- [ ] Photo handling: consumer sends image → Meta webhook delivers media ID → Halite fetches media from Meta CDN → uploads to S3 → saves URL on check-in record (same flow as widget photo upload)
+- [ ] Streak message: after check-in complete, send `"🔥 Day 7 streak! Your skin data is building up."` on milestone days (7, 14, 30, 60, 90)
+- [ ] Skip/pause: consumer replies "pause" → `state` set to `paused`; "resume" re-activates; "stop" opts out and soft-deletes WhatsApp session
+
+### 11E — Routine Updates + Progress Summaries
+
+When a consumer's routine is refined (reorder point, check-in pattern), the updated routine is sent via WhatsApp. Progress summaries surface to keep consumers engaged between check-ins.
+
+- [ ] Routine refinement hook: when `Routine` is updated for a consumer with an active WhatsApp session → send updated routine message with diff: `"We updated your PM routine — swapped [Old Product] for [New Product] based on your last 2 weeks of check-ins."`
+- [ ] Weekly progress summary (Claude-generated, prompt-cached on consumer's check-in history): sent every 7 days: `"Week 2 summary: avg skin rating 3.8 → 4.2 ⬆ Compliance: 85%"` + one insight sentence
+- [ ] 30/60/90-day milestone messages: AI-generated narrative summary of progress, celebrating improvement or adjusting expectations
+- [ ] Reorder reminder: when reorder point hits → WhatsApp message with product name + direct WhatsApp catalog cart link (if catalog connected) or brand website link
+- [ ] `POST /brands/:brandId/channels/whatsapp/broadcast` — Halite admin or brand admin sends a one-time WhatsApp message to all opted-in consumers (for product launches, promotions, restocks) using Meta's approved message templates
+
+### 11F — Brand Dashboard — WhatsApp Intelligence
+
+WhatsApp-channel data feeds into the existing brand analytics dashboard as a new segment.
+
+- [ ] Consumer profiles tagged with `channel: 'whatsapp'` — filterable in Consumer dashboard
+- [ ] WhatsApp channel metrics added to analytics summary: opt-in count, quiz completion rate via WhatsApp, check-in response rate via WhatsApp, avg response time
+- [ ] Message template manager in brand settings: brands create and submit Meta-approved message templates (required for outbound messages outside the 24h reply window) — name, body, variable placeholders, submit for Meta approval, track status
+- [ ] WhatsApp opt-out tracking: consumers who reply "STOP" are flagged `optedOut: true` on their WhatsApp session and never messaged again
+- [ ] Delivery receipt tracking: `read` and `delivered` statuses from Meta webhooks written to `whatsapp_message_events` table — brand dashboard shows open rates per message type
+
+### Phase 11 API surface
+```
+POST  /brands/:brandId/channels/whatsapp/connect
+GET   /brands/:brandId/channels/whatsapp/catalog
+POST  /brands/:brandId/channels/whatsapp/catalog/sync
+POST  /brands/:brandId/channels/whatsapp/broadcast
+GET   /brands/:brandId/channels/whatsapp/stats
+POST  /webhooks/whatsapp/:brandId              ← Meta inbound webhook
+GET   /webhooks/whatsapp/:brandId              ← Meta webhook verification
+```
+
+---
+
 ## Milestones
 
 | Phase | Target | Key Unlock |
@@ -924,3 +1032,4 @@ Halite routes tasks to two AI providers based on what each does best. The model 
 | 8 — Crystal Agent System | Week 19 | Crystal live for brands and Halite team; proactive feed + weekly reports |
 | 9 — Brand Agent Builder | Week 24 | Brands deploy purpose-built agents from templates or custom config |
 | 10 — Multi-Agent Orchestration | Week 30 | Agents collaborate; autonomous output generation; platform intelligence layer |
+| 11 — WhatsApp Integration | Week 34 | Full quiz → routine → check-in loop running natively in WhatsApp; WhatsApp catalog sync live |
