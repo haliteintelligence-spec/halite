@@ -19,7 +19,7 @@ export default async function ConsumersPage({ params, searchParams }: Props) {
   const activeConcerns = analytics?.consumers.concerns.filter(c => c.pct > 10).length ?? 0
 
   return (
-    <div className="px-7 py-6">
+    <div className="px-4 py-5 md:px-7 md:py-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>

@@ -786,7 +786,7 @@ export default function LibraryPage() {
   const activeFilters = (filterCategory ? 1 : 0) + (filterType ? 1 : 0)
 
   return (
-    <div className="px-7 py-6">
+    <div className="px-4 py-5 md:px-7 md:py-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>

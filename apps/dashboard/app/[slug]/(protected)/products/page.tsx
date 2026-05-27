@@ -14,7 +14,7 @@ export default async function ProductsPage({ params: _, searchParams }: Props) {
   const brandId = authInfo?.brandId ?? ''
 
   return (
-    <div className="px-7 py-6">
+    <div className="px-4 py-5 md:px-7 md:py-6">
       <div className="flex items-start justify-between mb-6">
         <div>
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>

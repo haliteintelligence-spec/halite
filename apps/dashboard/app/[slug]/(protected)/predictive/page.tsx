@@ -171,7 +171,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
 
   if (!analytics) {
     return (
-      <div className="px-7 py-6">
+      <div className="px-4 py-5 md:px-7 md:py-6">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>Predictive</p>
@@ -189,7 +189,7 @@ export default async function PredictivePage({ params, searchParams }: Props) {
   const f = deriveForecasts(analytics)
 
   return (
-    <div className="px-7 py-6">
+    <div className="px-4 py-5 md:px-7 md:py-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>

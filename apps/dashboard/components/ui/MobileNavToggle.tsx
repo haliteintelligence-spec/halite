@@ -1,16 +1,25 @@
 'use client'
 
-import { Menu } from 'lucide-react'
+import { Menu, Sparkles } from 'lucide-react'
 
 export function MobileNavToggle() {
   return (
-    <button
-      className="md:hidden fixed bottom-6 left-4 z-30 w-10 h-10 rounded-full shadow-lg flex items-center justify-center"
-      style={{ background: 'var(--ink)', color: 'white' }}
-      onClick={() => window.dispatchEvent(new Event('halite-toggle-nav'))}
-      aria-label="Toggle navigation"
+    <header
+      className="md:hidden flex-shrink-0 flex items-center gap-3 px-4 h-12 z-20"
+      style={{ background: 'var(--porcelain)', borderBottom: '1px solid var(--border)' }}
     >
-      <Menu size={16} />
-    </button>
+      <button
+        onClick={() => window.dispatchEvent(new Event('halite-toggle-nav'))}
+        className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+        style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+        aria-label="Open navigation"
+      >
+        <Menu size={15} />
+      </button>
+      <div className="flex items-center gap-2">
+        <Sparkles size={11} style={{ color: 'var(--clay)' }} />
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Halite Intelligence</span>
+      </div>
+    </header>
   )
 }

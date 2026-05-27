@@ -26,7 +26,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
     <div className="min-h-full">
       {/* Page header */}
       <div
-        className="sticky top-0 z-10 px-7 py-4 flex items-center justify-between"
+        className="sticky top-0 z-10 px-4 py-3 md:px-7 md:py-4 flex items-center justify-between gap-3"
         style={{ background: 'var(--porcelain)', borderBottom: '1px solid var(--border)' }}
       >
         <div>
@@ -43,7 +43,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
         </div>
       </div>
 
-      <div className="px-7 py-6 space-y-8">
+      <div className="px-4 py-5 md:px-7 md:py-6 space-y-8">
         {/* KPI Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <MetricTile

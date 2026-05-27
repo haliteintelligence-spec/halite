@@ -148,7 +148,7 @@ export default function ConsumerDetailPage() {
   }
 
   return (
-    <div className="px-7 py-6 max-w-4xl">
+    <div className="px-4 py-5 md:px-7 md:py-6 max-w-4xl">
       <Link
         href={`/${slug}/consumers/roster`}
         className="flex items-center gap-1 text-[12px] mb-6 hover:underline"

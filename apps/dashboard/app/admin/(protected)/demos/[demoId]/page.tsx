@@ -32,6 +32,7 @@ export default function DemoDetailPage() {
   const [demoName, setDemoName] = useState('')
   const [demoFocusAreas, setDemoFocusAreas] = useState<string[]>([])
   const [savingSettings, setSavingSettings] = useState(false)
+  const [convertOpen, setConvertOpen] = useState(false)
   const [convertForm, setConvertForm] = useState({ plan: 'STARTER', adminEmail: '', adminName: '', adminPhone: '', adminPassword: '' })
   const [converting, setConverting] = useState(false)
   const [convertError, setConvertError] = useState('')
@@ -300,15 +301,26 @@ export default function DemoDetailPage() {
         className="rounded-xl mb-4 overflow-hidden"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
       >
-        <button
-          onClick={() => setAccessOpen(o => !o)}
-          className="w-full flex items-center justify-between p-5 hover:bg-black/[0.02] transition-colors"
-        >
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-            Access Credentials
-          </h2>
-          {accessOpen ? <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} /> : <ChevronRight size={14} style={{ color: 'var(--ink-3)' }} />}
-        </button>
+        <div className="flex items-center justify-between px-5 py-4">
+          <button
+            onClick={() => setAccessOpen(o => !o)}
+            className="flex items-center gap-2 hover:opacity-70 transition-opacity"
+          >
+            <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+              Access Credentials
+            </h2>
+            {accessOpen ? <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} /> : <ChevronRight size={14} style={{ color: 'var(--ink-3)' }} />}
+          </button>
+          <button
+            onClick={enterDashboard}
+            disabled={entering || !demo.active}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-85"
+            style={{ background: 'var(--clay)' }}
+          >
+            {entering ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+            {entering ? 'Entering…' : 'Enter Dashboard'}
+          </button>
+        </div>
         {accessOpen && (
           <div className="px-5 pb-5 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
             <CredRow
@@ -320,17 +332,6 @@ export default function DemoDetailPage() {
             />
             <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />
             <CredRow label="Password" value={demo.password} onCopy={() => copyText(demo.password, 'pw')} copied={copied === 'pw'} />
-            <div className="pt-1">
-              <button
-                onClick={enterDashboard}
-                disabled={entering || !demo.active}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-85"
-                style={{ background: 'var(--clay)' }}
-              >
-                {entering ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
-                {entering ? 'Entering…' : 'Enter Dashboard'}
-              </button>
-            </div>
           </div>
         )}
       </div>
@@ -471,67 +472,80 @@ export default function DemoDetailPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-1" style={{ color: 'var(--ink-3)' }}>Convert to Paying Brand</h2>
-          <p className="text-[12px] mb-4" style={{ color: 'var(--ink-3)' }}>
-            Creates a new active brand account. The demo environment is preserved and set to inactive.
-          </p>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Admin Email *</label>
-                <input type="email" value={convertForm.adminEmail}
-                  onChange={e => setConvertForm(f => ({ ...f, adminEmail: e.target.value }))}
-                  placeholder="admin@brand.com"
-                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Admin Name *</label>
-                <input type="text" value={convertForm.adminName}
-                  onChange={e => setConvertForm(f => ({ ...f, adminName: e.target.value }))}
-                  placeholder="Jane Smith"
-                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Phone</label>
-                <input type="tel" value={convertForm.adminPhone}
-                  onChange={e => setConvertForm(f => ({ ...f, adminPhone: e.target.value }))}
-                  placeholder="+1 555 000 0000"
-                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Initial Password *</label>
-                <input type="text" value={convertForm.adminPassword} minLength={8}
-                  onChange={e => setConvertForm(f => ({ ...f, adminPassword: e.target.value }))}
-                  placeholder="Min 8 characters"
-                  className="w-full px-3 py-2 rounded-lg text-sm outline-none font-mono"
-                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
-              </div>
-            </div>
+        <div className="rounded-xl mb-4 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setConvertOpen(o => !o)}
+            className="w-full flex items-center justify-between p-5 hover:bg-black/[0.02] transition-colors"
+          >
             <div>
-              <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Plan</label>
-              <div className="flex gap-2">
-                {PLANS.map(p => (
-                  <button key={p} type="button" onClick={() => setConvertForm(f => ({ ...f, plan: p }))}
-                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
-                    style={{ background: convertForm.plan === p ? 'var(--clay)' : 'var(--sand-1)', color: convertForm.plan === p ? 'white' : 'var(--ink)', border: `1px solid ${convertForm.plan === p ? 'var(--clay)' : 'var(--border)'}` }}>
-                    {p}
-                  </button>
-                ))}
-              </div>
+              <h2 className="text-[11px] font-semibold tracking-wide uppercase text-left" style={{ color: 'var(--ink-3)' }}>Convert to Paying Brand</h2>
+              <p className="text-[11px] mt-0.5 text-left" style={{ color: 'var(--ink-3)' }}>Create a new active brand account from this demo.</p>
             </div>
-          </div>
-          {convertError && <p className="text-[12px] mt-3" style={{ color: '#e57373' }}>{convertError}</p>}
-          <button onClick={handleConvert}
-            disabled={converting || !convertForm.adminEmail || !convertForm.adminName || convertForm.adminPassword.length < 8}
-            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: 'var(--clay)' }}>
-            {converting ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
-            {converting ? 'Converting…' : 'Convert to Paying Brand'}
+            {convertOpen ? <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} /> : <ChevronRight size={14} style={{ color: 'var(--ink-3)' }} />}
           </button>
+          {convertOpen && (
+            <div className="px-5 pb-5" style={{ borderTop: '1px solid var(--border)' }}>
+              <p className="text-[12px] mt-4 mb-4" style={{ color: 'var(--ink-3)' }}>
+                Creates a new active brand account. The demo environment is preserved and set to inactive.
+              </p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Admin Email *</label>
+                    <input type="email" value={convertForm.adminEmail}
+                      onChange={e => setConvertForm(f => ({ ...f, adminEmail: e.target.value }))}
+                      placeholder="admin@brand.com"
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Admin Name *</label>
+                    <input type="text" value={convertForm.adminName}
+                      onChange={e => setConvertForm(f => ({ ...f, adminName: e.target.value }))}
+                      placeholder="Jane Smith"
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Phone</label>
+                    <input type="tel" value={convertForm.adminPhone}
+                      onChange={e => setConvertForm(f => ({ ...f, adminPhone: e.target.value }))}
+                      placeholder="+1 555 000 0000"
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Initial Password *</label>
+                    <input type="text" value={convertForm.adminPassword} minLength={8}
+                      onChange={e => setConvertForm(f => ({ ...f, adminPassword: e.target.value }))}
+                      placeholder="Min 8 characters"
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none font-mono"
+                      style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Plan</label>
+                  <div className="flex gap-2">
+                    {PLANS.map(p => (
+                      <button key={p} type="button" onClick={() => setConvertForm(f => ({ ...f, plan: p }))}
+                        className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                        style={{ background: convertForm.plan === p ? 'var(--clay)' : 'var(--sand-1)', color: convertForm.plan === p ? 'white' : 'var(--ink)', border: `1px solid ${convertForm.plan === p ? 'var(--clay)' : 'var(--border)'}` }}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {convertError && <p className="text-[12px] mt-3" style={{ color: '#e57373' }}>{convertError}</p>}
+              <button onClick={handleConvert}
+                disabled={converting || !convertForm.adminEmail || !convertForm.adminName || convertForm.adminPassword.length < 8}
+                className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: 'var(--clay)' }}>
+                {converting ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
+                {converting ? 'Converting…' : 'Convert to Paying Brand'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

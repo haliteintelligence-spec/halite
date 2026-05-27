@@ -17,7 +17,7 @@ export default async function ConsumerRosterPage({ params, searchParams }: Props
   const brandId = authInfo?.brandId ?? ''
 
   return (
-    <div className="px-7 py-6">
+    <div className="px-4 py-5 md:px-7 md:py-6">
       <Link
         href={`/${slug}/consumers`}
         className="flex items-center gap-1 text-[12px] mb-6 hover:underline"
