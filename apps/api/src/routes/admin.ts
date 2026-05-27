@@ -591,21 +591,26 @@ export async function adminRoutes(server: FastifyInstance) {
       })
       if (existing.length > 0) return { seeded: false, message: 'AI-generated uploads already exist' }
 
-      const [productCount, consumerCount, checkInCount] = await Promise.all([
+      const [productCount, consumerCount, checkInCount, routineCount] = await Promise.all([
         prisma.product.count({ where: { brandId: demoId } }),
         prisma.endUser.count({ where: { brandId: demoId } }),
         prisma.checkIn.count({ where: { endUser: { brandId: demoId } } }),
+        prisma.routine.count({ where: { endUser: { brandId: demoId }, activeTo: null } }),
       ])
+
+      // ~60% of consumers simulated as having purchase history
+      const purchaseRowCount = Math.round(routineCount * 0.6)
 
       await prisma.catalogUpload.createMany({
         data: [
           { brandId: demoId, fileName: 'Synthetic Product Catalog.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: productCount },
           { brandId: demoId, fileName: 'Synthetic Consumer Profiles.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerCount },
           { brandId: demoId, fileName: 'Synthetic Check-in History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: checkInCount },
+          { brandId: demoId, fileName: 'Synthetic Purchase History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: purchaseRowCount },
         ],
       })
 
-      return { seeded: true, productCount, consumerCount, checkInCount }
+      return { seeded: true, productCount, consumerCount, checkInCount, purchaseRowCount }
     }
   )
 

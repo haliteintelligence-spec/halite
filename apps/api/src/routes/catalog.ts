@@ -99,7 +99,46 @@ export async function catalogRoutes(server: FastifyInstance) {
       let wb: XLSX.WorkBook
       const name = upload.fileName.toLowerCase()
 
-      if (name.includes('consumer')) {
+      if (name.includes('purchase')) {
+        const users = await prisma.endUser.findMany({
+          where: { brandId },
+          include: {
+            routines: {
+              where: { activeTo: null },
+              include: { steps: { include: { product: { select: { id: true, name: true, category: true, price: true, currency: true } } } } },
+              take: 1,
+            },
+          },
+          take: 500,
+        })
+        const rows: Array<Record<string, unknown>> = []
+        for (const u of users) {
+          const routine = u.routines[0]
+          if (!routine) continue
+          const seen = new Set<string>()
+          for (const step of routine.steps) {
+            if (seen.has(step.productId)) continue
+            seen.add(step.productId)
+            // Stagger order dates across the past 6 months
+            const daysAgo = Math.floor(Math.random() * 180)
+            const orderDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
+            rows.push({
+              orderId: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+              customerId: u.id,
+              customerName: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+              customerEmail: u.email ?? '',
+              productName: step.product.name,
+              category: step.product.category,
+              quantity: Math.floor(Math.random() * 2) + 1,
+              unitPrice: step.product.price ?? '',
+              currency: step.product.currency,
+              orderDate: orderDate.toISOString().slice(0, 10),
+            })
+          }
+        }
+        wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Purchase History')
+      } else if (name.includes('consumer')) {
         const users = await prisma.endUser.findMany({
           where: { brandId },
           include: { beautyProfile: true },

@@ -271,18 +271,19 @@ export async function provisionDemoEnvironment(
   // 5. Analyse product catalog to calibrate consumer profiles
   const catalogProfile = analyzeProductCatalog(products)
 
-  // 6. Build purchase frequency if provided
-  const productFreq = purchaseMatrix ? buildProductFrequency(purchaseMatrix, products) : {}
+  // 6. Build purchase frequency — use provided matrix or generate synthetic one
+  const count = Math.min(Math.max(consumerCount, 50), 200)
+  const effectiveMatrix = purchaseMatrix ?? generateSyntheticPurchaseMatrix(products, count)
+  const productFreq = buildProductFrequency(effectiveMatrix, products)
 
   // 7. Generate synthetic consumers + quiz sessions
-  const count = Math.min(Math.max(consumerCount, 50), 200)
   const consumerIds = await generateConsumers(brand.id, count, catalogProfile, productFreq)
 
   // 8. Generate routines (batched, 10 at a time)
   const routineCount = await generateRoutines(brand.id, consumerIds, focusAreas)
 
   // 9. Generate check-ins (8 simulated weeks)
-  const checkInCount = await generateCheckIns(brand.id, consumerIds, 8, catalogProfile)
+  const checkInCount = await generateCheckIns(brand.id, consumerIds, 8, catalogProfile, productFreq)
 
   // 10. Seed consumer identity records (~65% identified, some cross-brand)
   await seedConsumerIdentities(brand.id, consumerIds)
@@ -291,11 +292,13 @@ export async function provisionDemoEnvironment(
   await seedAgentWorkflows(brand.id)
 
   // 12. Create AI-generated catalog upload records (downloadable from catalog page)
+  const purchaseRowCount = Object.keys(effectiveMatrix).length
   await prisma.catalogUpload.createMany({
     data: [
       { brandId: brand.id, fileName: 'Synthetic Product Catalog.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: products.length },
       { brandId: brand.id, fileName: 'Synthetic Consumer Profiles.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerIds.length },
       { brandId: brand.id, fileName: 'Synthetic Check-in History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: checkInCount },
+      { brandId: brand.id, fileName: 'Synthetic Purchase History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: purchaseRowCount },
     ],
   })
 
@@ -358,7 +361,6 @@ function buildProductFrequency(
   const freq: Record<string, number> = {}
   for (const purchases of Object.values(matrix)) {
     for (const [pid, qty] of Object.entries(purchases)) {
-      // Match by externalId or name
       const product = products.find(p =>
         p.externalId === pid || p.name.toLowerCase() === pid.toLowerCase()
       )
@@ -367,6 +369,46 @@ function buildProductFrequency(
     }
   }
   return freq
+}
+
+// Pareto-weighted synthetic purchase matrix: top ~20% of products get ~80% of simulated purchases
+function generateSyntheticPurchaseMatrix(
+  products: Array<{ id: string; name: string; externalId: string | null }>,
+  consumerCount: number,
+): PurchaseMatrix {
+  if (products.length === 0) return {}
+
+  // Power-law weights — first product in shuffled order gets highest weight
+  const shuffled = shuffle(products)
+  const weights = shuffled.map((_, i) => 1 / Math.pow(i + 1, 0.8))
+  const totalWeight = weights.reduce((a, b) => a + b, 0)
+  const cdf: number[] = []
+  let cumulative = 0
+  for (const w of weights) {
+    cumulative += w / totalWeight
+    cdf.push(cumulative)
+  }
+
+  function sampleProduct() {
+    const r = Math.random()
+    const idx = cdf.findIndex(c => r <= c)
+    return shuffled[Math.max(0, idx)]!
+  }
+
+  const matrix: PurchaseMatrix = {}
+  const buyerCount = Math.round(consumerCount * 0.6)
+  for (let i = 0; i < buyerCount; i++) {
+    const customerId = `buyer-${i + 1}`
+    const purchaseCount = randomInt(1, 5)
+    const purchases: Record<string, number> = {}
+    for (let j = 0; j < purchaseCount; j++) {
+      const product = sampleProduct()
+      const key = product.name
+      purchases[key] = (purchases[key] ?? 0) + randomInt(1, 3)
+    }
+    matrix[customerId] = purchases
+  }
+  return matrix
 }
 
 // ── Consumer generation ───────────────────────────────────────────────────────
@@ -523,9 +565,14 @@ async function generateCheckIns(
   consumerIds: string[],
   weeks: number,
   catalog: CatalogProfile,
+  productFreq: Record<string, number> = {},
 ): Promise<number> {
   let totalCheckIns = 0
   const now = Date.now()
+
+  // Normalise purchase freq to [0, 1] for reaction weighting
+  const freqValues = Object.values(productFreq)
+  const maxFreq = freqValues.length > 0 ? Math.max(...freqValues) : 1
 
   for (const userId of consumerIds) {
     const routine = await prisma.routine.findFirst({
@@ -561,7 +608,7 @@ async function generateCheckIns(
         symptoms.push(randomItem(POSITIVE_SYMPTOMS))
       }
 
-      // Product reactions
+      // Product reactions — high-purchase-frequency products get boosted POSITIVE probability
       const products: Array<{ productId: string; used: boolean; reaction?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' }> = []
       if (routine) {
         const seen = new Set<string>()
@@ -570,9 +617,12 @@ async function generateCheckIns(
           seen.add(step.productId)
 
           const used = compliant || Math.random() > 0.3
+          // Popular products (high purchase freq) are more likely to get positive reactions
+          const freqBoost = (productFreq[step.productId] ?? 0) / maxFreq
+          const positiveThreshold = 0.75 - freqBoost * 0.2
           const reactionRoll = Math.random()
           const reaction: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | undefined = used
-            ? reactionRoll > 0.75 ? 'POSITIVE' : reactionRoll > 0.25 ? 'NEUTRAL' : 'NEGATIVE'
+            ? reactionRoll > positiveThreshold ? 'POSITIVE' : reactionRoll > 0.25 ? 'NEUTRAL' : 'NEGATIVE'
             : undefined
 
           products.push({ productId: step.productId, used, ...(reaction !== undefined ? { reaction } : {}) })
