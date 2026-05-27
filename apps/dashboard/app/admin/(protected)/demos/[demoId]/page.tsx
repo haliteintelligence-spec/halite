@@ -189,15 +189,6 @@ export default function DemoDetailPage() {
             {togglingActive ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}
             {demo.active ? 'Active' : 'Inactive'}
           </button>
-          <button
-            onClick={enterDashboard}
-            disabled={entering || !demo.active}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-85"
-            style={{ background: 'var(--clay)' }}
-          >
-            {entering ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
-            {entering ? 'Entering…' : 'Enter Dashboard'}
-          </button>
           <StatusBadge status={demo.status} />
         </div>
       </div>
@@ -258,6 +249,17 @@ export default function DemoDetailPage() {
             />
             <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />
             <CredRow label="Password" value={demo.password} onCopy={() => copyText(demo.password, 'pw')} copied={copied === 'pw'} />
+            <div className="pt-1">
+              <button
+                onClick={enterDashboard}
+                disabled={entering || !demo.active}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-85"
+                style={{ background: 'var(--clay)' }}
+              >
+                {entering ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                {entering ? 'Entering…' : 'Enter Dashboard'}
+              </button>
+            </div>
           </div>
         )}
       </div>
