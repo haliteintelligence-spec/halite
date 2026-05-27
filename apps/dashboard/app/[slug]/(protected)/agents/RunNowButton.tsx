@@ -15,17 +15,19 @@ export function RunNowButton({ workflowId }: { workflowId: string }) {
     e.preventDefault()
     e.stopPropagation()
     if (running) return
-
-    const token = document.cookie.match(/halite_token=([^;]+)/)?.[1]
-    if (!token) return
-    const brandId = (JSON.parse(atob(token.split('.')[1])) as { brandId: string }).brandId
-
     setRunning(true)
-    await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}/run`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    router.push(`/${slug}/agents/${workflowId}`)
+    try {
+      const token = document.cookie.match(/halite_token=([^;]+)/)?.[1]
+      if (!token) return
+      const brandId = (JSON.parse(atob(token.split('.')[1])) as { brandId: string }).brandId
+      await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      router.push(`/${slug}/agents/${workflowId}`)
+    } catch {
+      setRunning(false)
+    }
   }
 
   return (

@@ -44,17 +44,22 @@ export default function AgentDetailPage() {
   const [expandedRun, setExpandedRun] = useState<string | null>(null)
 
   async function load() {
-    const { token, brandId } = getTokenAndBrandId()
-    if (!brandId) return
-    const res = await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      cache: 'no-store',
-    })
-    if (res.ok) {
-      const data = await res.json() as { workflow: WorkflowDetail }
-      setWorkflow(data.workflow)
+    try {
+      const { token, brandId } = getTokenAndBrandId()
+      if (!brandId) { setLoading(false); return }
+      const res = await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json() as { workflow: WorkflowDetail }
+        setWorkflow(data.workflow)
+      }
+    } catch {
+      // silently fail — page shows "Agent not found" or retains last state
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => { load() }, [workflowId])
@@ -69,14 +74,17 @@ export default function AgentDetailPage() {
 
   async function triggerRun() {
     setRunning(true)
-    const { token, brandId } = getTokenAndBrandId()
-    if (!brandId) return
-    await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}/run`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    await load()
-    setRunning(false)
+    try {
+      const { token, brandId } = getTokenAndBrandId()
+      if (!brandId) return
+      await fetch(`${API_URL}/brands/${brandId}/agents/workflows/${workflowId}/run`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      await load()
+    } finally {
+      setRunning(false)
+    }
   }
 
   if (loading) return (
