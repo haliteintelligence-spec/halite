@@ -290,6 +290,15 @@ export async function provisionDemoEnvironment(
   // 11. Seed pre-built agent workflows
   await seedAgentWorkflows(brand.id)
 
+  // 12. Create AI-generated catalog upload records (downloadable from catalog page)
+  await prisma.catalogUpload.createMany({
+    data: [
+      { brandId: brand.id, fileName: 'Synthetic Product Catalog.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: products.length },
+      { brandId: brand.id, fileName: 'Synthetic Consumer Profiles.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerIds.length },
+      { brandId: brand.id, fileName: 'Synthetic Check-in History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: checkInCount },
+    ],
+  })
+
   // Update brand's demoLinkExpiresAt to reflect actual expiry
   const finalExpiry = existingBrandId
     ? (await prisma.brand.findUnique({ where: { id: brand.id }, select: { demoLinkExpiresAt: true } }))?.demoLinkExpiresAt ?? expiresAt
@@ -298,7 +307,7 @@ export async function provisionDemoEnvironment(
   return {
     brandId: brand.id,
     slug,
-    loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${slug}/login`,
+    loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${slug}/login`,
     email,
     password,
     expiresAt: finalExpiry,

@@ -7,7 +7,7 @@ import type { DemoSummary } from '@/lib/admin-api'
 
 type SortKey = 'prospect' | 'created' | 'expiry' | 'consumers'
 type SortDir = 'asc' | 'desc'
-type StatusFilter = '' | 'generating' | 'active' | 'expiring_soon' | 'access_expired'
+type StatusFilter = '' | 'generating' | 'active' | 'expiring_soon' | 'access_expired' | 'converted'
 
 export default function DemosPage() {
   const [demos, setDemos] = useState<DemoSummary[]>([])
@@ -65,7 +65,7 @@ export default function DemosPage() {
   }
 
   const STATUS_LABELS: Record<string, string> = {
-    generating: 'Generating', active: 'Active', expiring_soon: 'Expiring', access_expired: 'Expired',
+    generating: 'Generating', active: 'Active', expiring_soon: 'Expiring', access_expired: 'Expired', converted: 'Converted',
   }
 
   return (
@@ -106,7 +106,7 @@ export default function DemosPage() {
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>Status</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {(['', 'generating', 'active', 'expiring_soon', 'access_expired'] as StatusFilter[]).map(s => (
+                    {(['', 'generating', 'active', 'expiring_soon', 'access_expired', 'converted'] as StatusFilter[]).map(s => (
                       <button
                         key={s || 'all'}
                         onClick={() => setFilterStatus(s)}
@@ -241,6 +241,7 @@ function StatusBadge({ status }: { status: string }) {
     active:        { label: 'Active',     bg: '#d4f4dd', color: '#1a7a3c' },
     expiring_soon: { label: 'Expiring',   bg: '#ffe4cc', color: '#9a3800' },
     access_expired:{ label: 'Expired',    bg: '#f3f4f6', color: '#6b7280' },
+    converted:     { label: 'Converted',  bg: '#ede9fe', color: '#5b21b6' },
   }
   const s = map[status] ?? map.access_expired
   return (

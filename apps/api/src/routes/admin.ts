@@ -271,7 +271,12 @@ export async function adminRoutes(server: FastifyInstance) {
       }
 
       // Create brand stub immediately so we can upload catalog to it
-      const slug = `${prospectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-demo-${Math.random().toString(36).slice(2, 6)}`
+      const baseSlug = `${prospectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-demo`
+      let slug = baseSlug
+      let slugSuffix = 2
+      while (await prisma.brand.findUnique({ where: { slug } })) {
+        slug = `${baseSlug}-${slugSuffix++}`
+      }
 
       const brand = await prisma.brand.create({
         data: {
@@ -326,7 +331,7 @@ export async function adminRoutes(server: FastifyInstance) {
     { preHandler: requireHaliteAdmin },
     async () => {
       const demos = await prisma.brand.findMany({
-        where: { isDemo: true },
+        where: { OR: [{ isDemo: true }, { isDemo: false, demoProspectName: { not: null } }] },
         include: {
           _count: { select: { products: true, endUsers: true } },
           admins: { select: { email: true }, take: 1 },
@@ -339,8 +344,10 @@ export async function adminRoutes(server: FastifyInstance) {
           id: d.id,
           slug: d.slug,
           prospectName: d.demoProspectName,
-          status: demoBrandStatus(d),
-          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${d.slug}/login`,
+          converted: !d.isDemo,
+          plan: d.plan,
+          status: d.isDemo ? demoBrandStatus(d) : ('converted' as const),
+          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${d.slug}/login`,
           email: d.admins[0]?.email ?? null,
           password: `demo-${d.slug}`,
           demoLinkExpiresAt: d.demoLinkExpiresAt,
@@ -360,7 +367,7 @@ export async function adminRoutes(server: FastifyInstance) {
     async (request) => {
       const { demoId } = request.params as { demoId: string }
       const brand = await prisma.brand.findFirst({
-        where: { id: demoId, isDemo: true },
+        where: { id: demoId, demoProspectName: { not: null } },
         include: {
           admins: { select: { email: true }, take: 1 },
           _count: { select: { products: true, endUsers: true, quizSessions: true } },
@@ -379,13 +386,15 @@ export async function adminRoutes(server: FastifyInstance) {
           id: brand.id,
           slug: brand.slug,
           prospectName: brand.demoProspectName,
-          status: demoBrandStatus(brand),
+          converted: !brand.isDemo,
+          status: brand.isDemo ? demoBrandStatus(brand) : ('converted' as const),
           active: brand.active,
-          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${brand.slug}/login`,
+          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${brand.slug}/login`,
           email: brand.admins[0]?.email ?? null,
           password: `demo-${brand.slug}`,
           demoLinkExpiresAt: brand.demoLinkExpiresAt,
           focusAreas: brand.focusAreas,
+          name: brand.name,
           createdAt: brand.createdAt,
           whiteLabelEnabled: brand.whiteLabelEnabled,
           brandWebsiteUrl: brand.brandWebsiteUrl,
@@ -399,6 +408,63 @@ export async function adminRoutes(server: FastifyInstance) {
           },
         },
       }
+    }
+  )
+
+  // ── Convert demo to paying brand ──────────────────────────────────
+  server.post(
+    '/admin/demos/:demoId/convert',
+    { preHandler: requireHaliteAdmin },
+    async (request, reply) => {
+      const { demoId } = request.params as { demoId: string }
+      const schema = z.object({
+        plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']),
+        name: z.string().min(1).optional(),
+        adminEmail: z.string().email(),
+        adminName: z.string().min(1),
+        adminPhone: z.string().optional(),
+        adminPassword: z.string().min(8),
+      })
+      const data = schema.parse(request.body)
+
+      const demo = await prisma.brand.findFirst({ where: { id: demoId, isDemo: true } })
+      if (!demo) throw new ApiError(404, 'Demo not found or already converted')
+
+      // Deactivate the demo (keep all data)
+      await prisma.brand.update({ where: { id: demoId }, data: { active: false } })
+
+      // Derive new slug by stripping -demo suffix
+      const newBaseSlug = demo.slug.replace(/-demo(-\d+)?$/, '') || demo.slug
+      let newSlug = newBaseSlug
+      let suffix = 2
+      while (await prisma.brand.findUnique({ where: { slug: newSlug } })) {
+        newSlug = `${newBaseSlug}-${suffix++}`
+      }
+
+      const hashedPassword = await bcrypt.hash(data.adminPassword, 12)
+
+      const brand = await prisma.brand.create({
+        data: {
+          name: data.name ?? demo.name,
+          slug: newSlug,
+          plan: data.plan as any,
+          focusAreas: demo.focusAreas,
+          brandWebsiteUrl: demo.brandWebsiteUrl,
+          isDemo: false,
+          active: true,
+          admins: {
+            create: {
+              email: data.adminEmail,
+              name: data.adminName,
+              ...(data.adminPhone ? { phone: data.adminPhone } : {}),
+              password: hashedPassword,
+              role: 'OWNER',
+            },
+          },
+        },
+      })
+
+      return reply.status(201).send({ brandId: brand.id, slug: newSlug })
     }
   )
 
@@ -501,7 +567,7 @@ export async function adminRoutes(server: FastifyInstance) {
       if (!brand) throw new ApiError(404, 'Demo not found')
 
       return {
-        loginUrl: `${process.env.DASHBOARD_URL ?? 'https://dashboard.haliteintelligence.com'}/${brand.slug}/login`,
+        loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${brand.slug}/login`,
         email: brand.admins[0]?.email ?? `admin@${brand.slug}.halite`,
         password: `demo-${brand.slug}`,
         demoLinkExpiresAt: brand.demoLinkExpiresAt,
@@ -570,6 +636,7 @@ export async function adminRoutes(server: FastifyInstance) {
           plan: true,
           active: true,
           createdAt: true,
+          demoProspectName: true,
           _count: { select: { endUsers: true, products: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -587,7 +654,7 @@ export async function adminRoutes(server: FastifyInstance) {
       const brand = await prisma.brand.findUnique({
         where: { id: brandId },
         include: {
-          admins: { select: { id: true, email: true, name: true, role: true, createdAt: true } },
+          admins: { select: { id: true, email: true, name: true, phone: true, role: true, createdAt: true } },
           _count: { select: { endUsers: true, products: true } },
         },
       })
@@ -623,6 +690,7 @@ export async function adminRoutes(server: FastifyInstance) {
         brandWebsiteUrl: z.string().url().optional().nullable(),
         adminEmail: z.string().email(),
         adminName: z.string().min(1),
+        adminPhone: z.string().optional(),
         adminPassword: z.string().min(8),
       })
       const data = schema.parse(request.body)
@@ -644,6 +712,7 @@ export async function adminRoutes(server: FastifyInstance) {
             create: {
               email: data.adminEmail,
               name: data.adminName,
+              ...(data.adminPhone ? { phone: data.adminPhone } : {}),
               password: hashedPassword,
               role: 'OWNER',
             },
@@ -690,14 +759,15 @@ export async function adminRoutes(server: FastifyInstance) {
       const schema = z.object({
         email: z.string().email(),
         name: z.string().min(1),
+        phone: z.string().optional(),
         password: z.string().min(8),
         role: z.enum(['OWNER', 'ADMIN', 'VIEWER']).default('ADMIN'),
       })
       const data = schema.parse(request.body)
       const hashed = await bcrypt.hash(data.password, 12)
       const admin = await prisma.brandAdmin.create({
-        data: { brandId, email: data.email, name: data.name, password: hashed, role: data.role as any },
-        select: { id: true, email: true, name: true, role: true, createdAt: true },
+        data: { brandId, email: data.email, name: data.name, ...(data.phone ? { phone: data.phone } : {}), password: hashed, role: data.role as any },
+        select: { id: true, email: true, name: true, phone: true, role: true, createdAt: true },
       })
       return reply.status(201).send({ admin })
     }

@@ -177,7 +177,9 @@ export interface UploadRecord {
   id: string
   fileName: string
   format: string
+  source: 'USER_UPLOADED' | 'AI_GENERATED'
   status: string
+  fileUrl: string
   createdAt: string
   errorLog: unknown
 }

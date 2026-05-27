@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, ChevronDown, ChevronRight } from 'lucide-react'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, ChevronDown, ChevronRight, ArrowRight } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 import { DemoDetailTabs } from './_tabs'
@@ -28,6 +28,16 @@ export default function DemoDetailPage() {
   const [brandUrl, setBrandUrl] = useState('')
   const [savingBrandUrl, setSavingBrandUrl] = useState(false)
   const [accessOpen, setAccessOpen] = useState(false)
+  const [demoName, setDemoName] = useState('')
+  const [demoFocusAreas, setDemoFocusAreas] = useState<string[]>([])
+  const [savingSettings, setSavingSettings] = useState(false)
+  const [convertForm, setConvertForm] = useState({ plan: 'STARTER', adminEmail: '', adminName: '', adminPhone: '', adminPassword: '' })
+  const [converting, setConverting] = useState(false)
+  const [convertError, setConvertError] = useState('')
+  const [convertedBrandId, setConvertedBrandId] = useState<string | null>(null)
+
+  const FOCUS_AREAS = ['SKINCARE', 'HAIR', 'BODY', 'MAKEUP', 'FRAGRANCE', 'WELLNESS']
+  const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
 
   async function load() {
     const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -42,6 +52,8 @@ export default function DemoDetailPage() {
       setWlUrl(data.demo.brandWebsiteUrl ?? '')
       setBrandUrl(data.demo.brandWebsiteUrl ?? '')
       setWlTheme(data.demo.brandThemeConfig ?? null)
+      setDemoName(data.demo.name ?? data.demo.prospectName ?? '')
+      setDemoFocusAreas(data.demo.focusAreas ?? [])
     }
     setLoading(false)
   }
@@ -122,6 +134,46 @@ export default function DemoDetailPage() {
       setWlUrl(brandUrl)
     } finally {
       setSavingBrandUrl(false)
+    }
+  }
+
+  async function handleSaveSettings() {
+    setSavingSettings(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ name: demoName, focusAreas: demoFocusAreas, brandWebsiteUrl: brandUrl || null }),
+      })
+      setWlUrl(brandUrl)
+      await load()
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  async function handleConvert() {
+    setConverting(true)
+    setConvertError('')
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(convertForm),
+      })
+      if (!res.ok) {
+        const d = await res.json() as { error?: string }
+        throw new Error(d.error ?? 'Conversion failed')
+      }
+      const data = await res.json() as { brandId: string }
+      setConvertedBrandId(data.brandId)
+      await load()
+    } catch (err) {
+      setConvertError(err instanceof Error ? err.message : 'Conversion failed')
+    } finally {
+      setConverting(false)
     }
   }
 
@@ -351,54 +403,136 @@ export default function DemoDetailPage() {
         </div>
       </div>
 
-      {demo.focusAreas?.length > 0 && (
-        <div
-          className="rounded-xl p-5 mb-4"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-        >
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--ink-3)' }}>
-            Focus Areas
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {demo.focusAreas.map(a => (
-              <span
-                key={a}
-                className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
-              >
-                {a}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Brand URL */}
+      {/* Demo Settings */}
       <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--ink-3)' }}>Brand Website URL</h2>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+        <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Demo Settings</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Prospect / Brand Name</label>
             <input
-              type="url"
-              placeholder="https://prospect-website.com"
-              value={brandUrl}
-              onChange={e => { setBrandUrl(e.target.value); setWlUrl(e.target.value) }}
-              className="w-full pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none font-mono"
+              type="text" value={demoName} onChange={e => setDemoName(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
               style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
             />
           </div>
-          <button
-            onClick={handleSaveBrandUrl}
-            disabled={savingBrandUrl}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: 'var(--clay)' }}
-          >
-            {savingBrandUrl ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-            Save
+          <div>
+            <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Brand Website URL</label>
+            <div className="relative">
+              <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+              <input
+                type="url" placeholder="https://prospect-website.com" value={brandUrl}
+                onChange={e => { setBrandUrl(e.target.value); setWlUrl(e.target.value) }}
+                className="w-full pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none font-mono"
+                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Focus Areas</label>
+            <div className="flex flex-wrap gap-2">
+              {FOCUS_AREAS.map(a => {
+                const active = demoFocusAreas.includes(a)
+                return (
+                  <button key={a} type="button"
+                    onClick={() => setDemoFocusAreas(f => active ? f.filter(x => x !== a) : [...f, a])}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                    style={{ background: active ? 'var(--clay)' : 'var(--sand-1)', color: active ? 'white' : 'var(--ink)', border: `1px solid ${active ? 'var(--clay)' : 'var(--border)'}` }}>
+                    {a}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+        <button onClick={handleSaveSettings} disabled={savingSettings}
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+          style={{ background: 'var(--clay)' }}>
+          {savingSettings ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          Save Settings
+        </button>
+      </div>
+
+      {/* Convert to Paying Brand */}
+      {demo.converted ? (
+        <div className="rounded-xl p-5 mb-4" style={{ background: '#f0fdf4', border: '1px solid #86efac' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-1" style={{ color: '#166534' }}>Converted to Paying Brand</h2>
+              <p className="text-[12px]" style={{ color: '#15803d' }}>This demo has been converted. The demo data is preserved here.</p>
+            </div>
+            {convertedBrandId && (
+              <button onClick={() => router.push(`/admin/brands/${convertedBrandId}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white"
+                style={{ background: '#16a34a' }}>
+                View Brand <ArrowRight size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-1" style={{ color: 'var(--ink-3)' }}>Convert to Paying Brand</h2>
+          <p className="text-[12px] mb-4" style={{ color: 'var(--ink-3)' }}>
+            Creates a new active brand account. The demo environment is preserved and set to inactive.
+          </p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Admin Email *</label>
+                <input type="email" value={convertForm.adminEmail}
+                  onChange={e => setConvertForm(f => ({ ...f, adminEmail: e.target.value }))}
+                  placeholder="admin@brand.com"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Admin Name *</label>
+                <input type="text" value={convertForm.adminName}
+                  onChange={e => setConvertForm(f => ({ ...f, adminName: e.target.value }))}
+                  placeholder="Jane Smith"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Phone</label>
+                <input type="tel" value={convertForm.adminPhone}
+                  onChange={e => setConvertForm(f => ({ ...f, adminPhone: e.target.value }))}
+                  placeholder="+1 555 000 0000"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Initial Password *</label>
+                <input type="text" value={convertForm.adminPassword} minLength={8}
+                  onChange={e => setConvertForm(f => ({ ...f, adminPassword: e.target.value }))}
+                  placeholder="Min 8 characters"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none font-mono"
+                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Plan</label>
+              <div className="flex gap-2">
+                {PLANS.map(p => (
+                  <button key={p} type="button" onClick={() => setConvertForm(f => ({ ...f, plan: p }))}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                    style={{ background: convertForm.plan === p ? 'var(--clay)' : 'var(--sand-1)', color: convertForm.plan === p ? 'white' : 'var(--ink)', border: `1px solid ${convertForm.plan === p ? 'var(--clay)' : 'var(--border)'}` }}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {convertError && <p className="text-[12px] mt-3" style={{ color: '#e57373' }}>{convertError}</p>}
+          <button onClick={handleConvert}
+            disabled={converting || !convertForm.adminEmail || !convertForm.adminName || convertForm.adminPassword.length < 8}
+            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+            style={{ background: 'var(--clay)' }}>
+            {converting ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
+            {converting ? 'Converting…' : 'Convert to Paying Brand'}
           </button>
         </div>
-      </div>
+      )}
 
       {/* White Label */}
       <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>

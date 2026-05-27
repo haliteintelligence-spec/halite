@@ -6,6 +6,7 @@ import { ApiError } from '../lib/errors.js'
 import { uploadToS3, getPresignedUrl } from '../lib/storage.js'
 import { processCatalogUpload } from '../lib/catalog-processor.js'
 import { embedBrandProducts } from '../lib/embeddings.js'
+import * as XLSX from 'xlsx'
 
 export async function catalogRoutes(server: FastifyInstance) {
   // ── Upload catalog file (CSV or JSON) ─────────────────────────────
@@ -76,6 +77,86 @@ export async function catalogRoutes(server: FastifyInstance) {
         take: 20,
       })
       return { uploads }
+    }
+  )
+
+  // ── Download upload file ──────────────────────────────────────────
+  server.get(
+    '/:brandId/catalog/uploads/:uploadId/download',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId, uploadId } = request.params as { brandId: string; uploadId: string }
+      const upload = await prisma.catalogUpload.findFirst({ where: { id: uploadId, brandId } })
+      if (!upload) throw new ApiError(404, 'Upload not found')
+
+      if (upload.source === 'USER_UPLOADED' && upload.fileUrl) {
+        const key = new URL(upload.fileUrl).pathname.slice(1)
+        const url = await getPresignedUrl(key, 300)
+        return reply.redirect(url)
+      }
+
+      // AI-generated: build XLSX on the fly based on file name
+      let wb: XLSX.WorkBook
+      const name = upload.fileName.toLowerCase()
+
+      if (name.includes('consumer')) {
+        const users = await prisma.endUser.findMany({
+          where: { brandId },
+          include: { beautyProfile: true },
+          take: 500,
+        })
+        const rows = users.map(u => ({
+          id: u.id,
+          firstName: u.firstName ?? '',
+          lastName: u.lastName ?? '',
+          email: u.email ?? '',
+          skinType: u.beautyProfile?.skinType ?? '',
+          skinTone: u.beautyProfile?.monkSkinTone ?? '',
+          concerns: (u.beautyProfile?.skinConcerns ?? []).join(', '),
+          climate: u.beautyProfile?.climateTag ?? '',
+          createdAt: u.createdAt.toISOString().slice(0, 10),
+        }))
+        wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Consumers')
+      } else if (name.includes('check')) {
+        const checkIns = await prisma.checkIn.findMany({
+          where: { endUser: { brandId } },
+          include: { endUser: { select: { firstName: true, lastName: true } } },
+          take: 2000,
+          orderBy: { createdAt: 'desc' },
+        })
+        const rows = checkIns.map(c => ({
+          consumerId: c.endUserId,
+          name: `${c.endUser.firstName ?? ''} ${c.endUser.lastName ?? ''}`.trim(),
+          skinRating: c.skinRating ?? '',
+          compliant: c.compliant ? 'Yes' : 'No',
+          symptoms: (c.symptoms ?? []).join(', '),
+          notes: c.notes ?? '',
+          date: c.createdAt.toISOString().slice(0, 10),
+        }))
+        wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Check-ins')
+      } else {
+        const products = await prisma.product.findMany({ where: { brandId }, take: 500 })
+        const rows = products.map(p => ({
+          name: p.name,
+          category: p.category,
+          price: p.price ?? '',
+          currency: p.currency,
+          description: p.description ?? '',
+          keyIngredients: p.keyIngredients.join(', '),
+          concerns: p.concerns.join(', '),
+          inStock: p.inStock,
+          productUrl: p.productUrl ?? '',
+        }))
+        wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Products')
+      }
+
+      const buf = Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }))
+      reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      reply.header('Content-Disposition', `attachment; filename="${upload.fileName}"`)
+      return reply.send(buf)
     }
   )
 

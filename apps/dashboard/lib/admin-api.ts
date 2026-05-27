@@ -20,7 +20,9 @@ export interface DemoSummary {
   id: string
   slug: string
   prospectName: string | null
-  status: 'generating' | 'active' | 'expiring_soon' | 'access_expired'
+  converted: boolean
+  plan: string
+  status: 'generating' | 'active' | 'expiring_soon' | 'access_expired' | 'converted'
   loginUrl: string
   email: string | null
   password: string
@@ -32,6 +34,7 @@ export interface DemoSummary {
 }
 
 export interface DemoDetail extends DemoSummary {
+  name: string
   active: boolean
   whiteLabelEnabled: boolean
   brandWebsiteUrl: string | null
@@ -73,6 +76,7 @@ export interface BrandSummary {
   plan: string
   active: boolean
   createdAt: string
+  demoProspectName?: string | null
   _count: { endUsers: number; products: number }
 }
 
@@ -99,7 +103,7 @@ export interface BrandDetail extends BrandSummary {
   whiteLabelEnabled: boolean
   brandWebsiteUrl: string | null
   brandThemeConfig: BrandThemeConfig | null
-  admins: Array<{ id: string; email: string; name: string; role: string; createdAt: string }>
+  admins: Array<{ id: string; email: string; name: string; phone?: string | null; role: string; createdAt: string }>
 }
 
 export async function getBrands(): Promise<BrandSummary[]> {

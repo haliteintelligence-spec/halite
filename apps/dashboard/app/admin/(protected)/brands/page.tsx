@@ -219,7 +219,12 @@ export default function BrandsPage() {
                         <Building2 size={12} style={{ color: 'var(--ink-3)' }} />
                       </div>
                       <div>
-                        <p className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{brand.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{brand.name}</p>
+                          {brand.demoProspectName && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#ede9fe', color: '#5b21b6' }}>From Demo</span>
+                          )}
+                        </div>
                         <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{brand.slug}</p>
                       </div>
                     </div>

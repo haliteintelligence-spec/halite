@@ -18,6 +18,7 @@ export default function NewBrandPage() {
     brandWebsiteUrl: '',
     adminEmail: '',
     adminName: '',
+    adminPhone: '',
     adminPassword: '',
   })
   const [submitting, setSubmitting] = useState(false)
@@ -178,6 +179,16 @@ export default function NewBrandPage() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Phone</label>
+            <input
+              type="tel" value={form.adminPhone}
+              onChange={e => setForm(f => ({ ...f, adminPhone: e.target.value }))}
+              placeholder="+1 555 000 0000"
+              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+              style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+            />
+          </div>
           <div>
             <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Initial Password *</label>
             <input

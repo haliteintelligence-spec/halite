@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import type { Product, ProductsResponse, UploadRecord } from '@/lib/api'
-import { Pencil, Trash2, Plus, X, Upload, CheckCircle, AlertCircle, Loader2, ChevronRight } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Upload, CheckCircle, AlertCircle, Loader2, ChevronRight, Download } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -460,30 +460,66 @@ export function CatalogClient({
             </code>
           </div>
 
-          {/* Upload history */}
-          {uploads.length > 0 && (
-            <div className={cardCls}>
-              <div className="px-5 py-3 border-b border-sand-1">
-                <h3 className="text-[12px] font-semibold text-ink-3 tracking-wide uppercase">Upload history</h3>
+          {/* Upload history — split by source */}
+          {(() => {
+            const userUploads = uploads.filter(u => u.source === 'USER_UPLOADED' || !u.source)
+            const aiUploads = uploads.filter(u => u.source === 'AI_GENERATED')
+            const UploadRow = ({ u }: { u: typeof uploads[0] }) => (
+              <div key={u.id} className="flex items-center gap-4 px-5 py-3.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-ink truncate">{u.fileName}</p>
+                  <p className="text-[11px] text-ink-3 mt-0.5">
+                    {u.format} · {new Date(u.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {u.status === 'PROCESSING' && <Loader2 size={12} className="animate-spin text-blue-500" />}
+                  <StatusBadge status={u.status} />
+                  {u.status === 'DONE' && (
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`${API_URL}/brands/${brandId}/catalog/uploads/${u.id}/download`, { headers: authHeaders })
+                        if (!res.ok) return
+                        const blob = await res.blob()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url; a.download = u.fileName; a.click()
+                        URL.revokeObjectURL(url)
+                      }}
+                      className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg transition-colors hover:opacity-80"
+                      style={{ background: 'var(--sand-1)', color: 'var(--clay)', border: '1px solid var(--border)' }}
+                    >
+                      <Download size={11} /> Download
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="divide-y divide-sand-1">
-                {uploads.map(u => (
-                  <div key={u.id} className="flex items-center gap-4 px-5 py-3.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-ink truncate">{u.fileName}</p>
-                      <p className="text-[11px] text-ink-3 mt-0.5">
-                        {u.format} · {new Date(u.createdAt).toLocaleDateString()}
-                      </p>
+            )
+            return (
+              <>
+                {userUploads.length > 0 && (
+                  <div className={cardCls}>
+                    <div className="px-5 py-3 border-b border-sand-1">
+                      <h3 className="text-[12px] font-semibold text-ink-3 tracking-wide uppercase">User Uploaded</h3>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {u.status === 'PROCESSING' && <Loader2 size={12} className="animate-spin text-blue-500" />}
-                      <StatusBadge status={u.status} />
+                    <div className="divide-y divide-sand-1">
+                      {userUploads.map(u => <UploadRow key={u.id} u={u} />)}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                )}
+                {aiUploads.length > 0 && (
+                  <div className={cardCls}>
+                    <div className="px-5 py-3 border-b border-sand-1">
+                      <h3 className="text-[12px] font-semibold text-ink-3 tracking-wide uppercase">AI Generated</h3>
+                    </div>
+                    <div className="divide-y divide-sand-1">
+                      {aiUploads.map(u => <UploadRow key={u.id} u={u} />)}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
       )}
 

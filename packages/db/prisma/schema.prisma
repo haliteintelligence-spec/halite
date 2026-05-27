@@ -51,6 +51,7 @@ model Brand {
   demoProspectName  String?
   demoCreatedBy     String?
   demoLinkExpiresAt DateTime?
+  demoConvertedAt   DateTime?
 
   // White-label
   whiteLabelEnabled Boolean @default(false)
@@ -99,6 +100,7 @@ model BrandAdmin {
   email     String    @unique
   password  String
   name      String
+  phone     String?
   role      AdminRole @default(MEMBER)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -171,6 +173,7 @@ model CatalogUpload {
   fileName    String
   fileUrl     String
   format      CatalogFormat
+  source      UploadSource  @default(USER_UPLOADED)
   status      UploadStatus  @default(PENDING)
   rowCount    Int?
   errorLog    Json?
@@ -187,6 +190,11 @@ enum CatalogFormat {
   JSON
   SHOPIFY_SYNC
   XLSX
+}
+
+enum UploadSource {
+  USER_UPLOADED
+  AI_GENERATED
 }
 
 enum UploadStatus {
