@@ -45,6 +45,7 @@ export default async function BrandLayout({ children, params }: Props) {
   if (!token) redirect(`/${slug}/login`)
 
   const profile = await getBrandProfile()
+  if (!profile || profile.slug !== slug) redirect(`/${slug}/login`)
   const isDemo = profile?.isDemo ?? false
   const demoLinkExpiresAt = profile?.demoLinkExpiresAt ?? null
   const whiteLabelEnabled = profile?.whiteLabelEnabled ?? false
