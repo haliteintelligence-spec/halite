@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, ChevronDown, ChevronRight, ArrowRight } from 'lucide-react'
+import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft, Globe, Palette, ToggleLeft, ToggleRight, Save, Power, ChevronDown, ChevronRight, ArrowRight, Zap } from 'lucide-react'
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 import { DemoDetailTabs } from './_tabs'
@@ -37,6 +37,8 @@ export default function DemoDetailPage() {
   const [converting, setConverting] = useState(false)
   const [convertError, setConvertError] = useState('')
   const [convertedBrandId, setConvertedBrandId] = useState<string | null>(null)
+  const [seedingUploads, setSeedingUploads] = useState(false)
+  const [uploadSeeded, setUploadSeeded] = useState(false)
 
   const FOCUS_AREAS = ['SKINCARE', 'HAIR', 'BODY', 'MAKEUP', 'FRAGRANCE', 'WELLNESS']
   const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
@@ -152,6 +154,20 @@ export default function DemoDetailPage() {
       await load()
     } finally {
       setSavingSettings(false)
+    }
+  }
+
+  async function handleSeedUploads() {
+    setSeedingUploads(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}/seed-uploads`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (res.ok) setUploadSeeded(true)
+    } finally {
+      setSeedingUploads(false)
     }
   }
 
@@ -453,6 +469,31 @@ export default function DemoDetailPage() {
           Save Settings
         </button>
       </div>
+
+      {/* Seed AI-generated catalog files */}
+      {!uploadSeeded && (
+        <div className="rounded-xl p-5 mb-4 flex items-center justify-between" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div>
+            <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-0.5" style={{ color: 'var(--ink-3)' }}>AI Generated Files</h2>
+            <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Seed downloadable XLSX files in the catalog upload history.</p>
+          </div>
+          <button
+            onClick={handleSeedUploads}
+            disabled={seedingUploads}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-50 flex-shrink-0"
+            style={{ background: 'var(--clay)' }}
+          >
+            {seedingUploads ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+            {seedingUploads ? 'Seeding…' : 'Seed Files'}
+          </button>
+        </div>
+      )}
+      {uploadSeeded && (
+        <div className="rounded-xl p-4 mb-4 flex items-center gap-2" style={{ background: '#f0fdf4', border: '1px solid #86efac' }}>
+          <Check size={13} style={{ color: '#16a34a' }} />
+          <p className="text-[12px] font-medium" style={{ color: '#166534' }}>AI files seeded — visit the brand's catalog page to download them.</p>
+        </div>
+      )}
 
       {/* Convert to Paying Brand */}
       {demo.converted ? (

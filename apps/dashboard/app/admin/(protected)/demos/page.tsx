@@ -153,7 +153,8 @@ export default function DemosPage() {
         </div>
       ) : (
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
@@ -229,6 +230,7 @@ export default function DemosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

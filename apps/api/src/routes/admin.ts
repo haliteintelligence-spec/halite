@@ -576,6 +576,39 @@ export async function adminRoutes(server: FastifyInstance) {
     }
   )
 
+  // Backfill AI-generated catalog upload records for a demo
+  server.post(
+    '/admin/demos/:demoId/seed-uploads',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { demoId } = request.params as { demoId: string }
+      const brand = await prisma.brand.findFirst({ where: { id: demoId, demoProspectName: { not: null } } })
+      if (!brand) throw new ApiError(404, 'Demo not found')
+
+      const existing = await prisma.catalogUpload.findMany({
+        where: { brandId: demoId, source: 'AI_GENERATED' },
+        select: { id: true },
+      })
+      if (existing.length > 0) return { seeded: false, message: 'AI-generated uploads already exist' }
+
+      const [productCount, consumerCount, checkInCount] = await Promise.all([
+        prisma.product.count({ where: { brandId: demoId } }),
+        prisma.endUser.count({ where: { brandId: demoId } }),
+        prisma.checkIn.count({ where: { endUser: { brandId: demoId } } }),
+      ])
+
+      await prisma.catalogUpload.createMany({
+        data: [
+          { brandId: demoId, fileName: 'Synthetic Product Catalog.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: productCount },
+          { brandId: demoId, fileName: 'Synthetic Consumer Profiles.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerCount },
+          { brandId: demoId, fileName: 'Synthetic Check-in History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: checkInCount },
+        ],
+      })
+
+      return { seeded: true, productCount, consumerCount, checkInCount }
+    }
+  )
+
   // Delete demo (hard delete — cascades all data)
   server.delete(
     '/admin/demos/:demoId',
