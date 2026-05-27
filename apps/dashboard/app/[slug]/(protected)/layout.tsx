@@ -49,6 +49,8 @@ export default async function BrandLayout({ children, params }: Props) {
   const demoLinkExpiresAt = profile?.demoLinkExpiresAt ?? null
   const whiteLabelEnabled = profile?.whiteLabelEnabled ?? false
   const brandThemeConfig = profile?.brandThemeConfig ?? null
+  const brandName = profile?.name ?? null
+  const brandLogoUrl = profile?.logoUrl ?? null
 
   const daysLeft = demoLinkExpiresAt
     ? Math.ceil((new Date(demoLinkExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -60,7 +62,14 @@ export default async function BrandLayout({ children, params }: Props) {
         <style dangerouslySetInnerHTML={{ __html: buildWhiteLabelCSS(brandThemeConfig) }} />
       )}
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--porcelain)' }}>
-      <SideNav slug={slug} isDemo={isDemo} demoLinkExpiresAt={demoLinkExpiresAt} />
+      <SideNav
+        slug={slug}
+        isDemo={isDemo}
+        demoLinkExpiresAt={demoLinkExpiresAt}
+        whiteLabelEnabled={whiteLabelEnabled}
+        brandName={brandName}
+        brandLogoUrl={brandLogoUrl}
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {isDemo && (

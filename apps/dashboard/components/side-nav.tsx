@@ -51,10 +51,16 @@ export function SideNav({
   slug,
   isDemo = false,
   demoLinkExpiresAt = null,
+  whiteLabelEnabled = false,
+  brandName = null,
+  brandLogoUrl = null,
 }: {
   slug: string
   isDemo?: boolean
   demoLinkExpiresAt?: string | null
+  whiteLabelEnabled?: boolean
+  brandName?: string | null
+  brandLogoUrl?: string | null
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -165,10 +171,28 @@ export function SideNav({
           collapsed ? 'md:py-4 md:flex md:justify-center px-5 pt-6 pb-5' : 'px-5 pt-6 pb-5'
         )}>
           <div className={clsx(collapsed && 'md:hidden')}>
-            <p className="text-[9px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">
-              Halite Intelligence
-            </p>
-            <p className="text-sm font-semibold text-white capitalize leading-tight">{slug}</p>
+            {whiteLabelEnabled ? (
+              brandLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={brandLogoUrl}
+                  alt={brandName ?? slug}
+                  className="h-8 w-auto max-w-[140px] object-contain mb-1"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
+              ) : (
+                <p className="text-sm font-semibold text-white leading-tight mb-1">
+                  {brandName ?? slug}
+                </p>
+              )
+            ) : (
+              <>
+                <p className="text-[9px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">
+                  Halite Intelligence
+                </p>
+                <p className="text-sm font-semibold text-white capitalize leading-tight">{slug}</p>
+              </>
+            )}
             {isDemo && (
               <div className="mt-2 flex items-center gap-1.5">
                 <span
@@ -186,10 +210,20 @@ export function SideNav({
               </div>
             )}
           </div>
-          {/* Collapsed desktop: logo icon */}
+          {/* Collapsed desktop: brand logo or sparkle icon */}
           {collapsed && (
             <div className="hidden md:flex justify-center">
-              <Sparkles size={16} className="text-white/60" />
+              {whiteLabelEnabled && brandLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={brandLogoUrl}
+                  alt={brandName ?? slug}
+                  className="h-6 w-6 object-contain rounded"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
+              ) : (
+                <Sparkles size={16} className="text-white/60" />
+              )}
             </div>
           )}
           {/* Mobile close button */}
