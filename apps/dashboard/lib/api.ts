@@ -47,11 +47,11 @@ export function decodeToken(token: string): { brandId?: string; adminId?: string
   } catch { return null }
 }
 
-async function apiFetch<T>(path: string, token: string): Promise<T | null> {
+async function apiFetch<T>(path: string, token: string, noCache = false): Promise<T | null> {
   try {
     const res = await fetch(`${API_URL}${path}`, {
       headers: { Authorization: `Bearer ${token}` },
-      next: { revalidate: 120 },
+      ...(noCache ? { cache: 'no-store' } : { next: { revalidate: 120 } }),
     })
     if (!res.ok) return null
     return res.json() as Promise<T>
@@ -108,7 +108,7 @@ export async function getBrandProfile(): Promise<BrandProfile | null> {
   if (!token) return null
   const payload = decodeToken(token)
   if (!payload?.brandId) return null
-  const data = await apiFetch<{ brand: BrandProfile }>(`/brands/${payload.brandId}/profile`, token)
+  const data = await apiFetch<{ brand: BrandProfile }>(`/brands/${payload.brandId}/profile`, token, true)
   return data?.brand ?? null
 }
 
