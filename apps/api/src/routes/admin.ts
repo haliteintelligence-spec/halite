@@ -752,7 +752,7 @@ export async function adminRoutes(server: FastifyInstance) {
         slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
         plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).default('STARTER'),
         focusAreas: z.array(z.string()).default([]),
-        brandWebsiteUrl: z.string().url().optional().nullable(),
+        brandWebsiteUrl: z.preprocess(v => v === '' ? null : v, z.string().url().optional().nullable()),
         adminEmail: z.string().email(),
         adminName: z.string().min(1),
         adminPhone: z.string().optional(),
@@ -803,6 +803,7 @@ export async function adminRoutes(server: FastifyInstance) {
         plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).optional(),
         active: z.boolean().optional(),
         focusAreas: z.array(z.string()).optional(),
+        brandWebsiteUrl: z.preprocess(v => v === '' ? null : v, z.string().url().optional().nullable()),
       })
       const data = schema.parse(request.body)
       const updateData: Record<string, unknown> = {}
@@ -810,6 +811,7 @@ export async function adminRoutes(server: FastifyInstance) {
       if (data.plan !== undefined) updateData.plan = data.plan
       if (data.active !== undefined) updateData.active = data.active
       if (data.focusAreas !== undefined) updateData.focusAreas = data.focusAreas
+      if (data.brandWebsiteUrl !== undefined) updateData.brandWebsiteUrl = data.brandWebsiteUrl
       const brand = await prisma.brand.update({ where: { id: brandId }, data: updateData as any })
       return { brand }
     }
