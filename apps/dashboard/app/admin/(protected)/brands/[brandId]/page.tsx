@@ -16,7 +16,7 @@ export default function BrandDetailPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: '', plan: '', active: true })
+  const [form, setForm] = useState({ name: '', plan: '', active: true, brandUrl: '' })
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -43,7 +43,7 @@ export default function BrandDetailPage() {
     if (res.ok) {
       const data = await res.json() as { brand: BrandDetail }
       setBrand(data.brand)
-      setForm({ name: data.brand.name, plan: data.brand.plan, active: data.brand.active })
+      setForm({ name: data.brand.name, plan: data.brand.plan, active: data.brand.active, brandUrl: data.brand.brandWebsiteUrl ?? '' })
       setWlEnabled(data.brand.whiteLabelEnabled ?? false)
       setWlUrl(data.brand.brandWebsiteUrl ?? '')
       setWlTheme(data.brand.brandThemeConfig ?? null)
@@ -60,7 +60,7 @@ export default function BrandDetailPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${brandId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
-        body: JSON.stringify({ name: form.name, plan: form.plan, active: form.active }),
+        body: JSON.stringify({ name: form.name, plan: form.plan, active: form.active, brandWebsiteUrl: form.brandUrl || null }),
       })
       if (!res.ok) throw new Error('Failed to save')
       await load()
@@ -197,6 +197,20 @@ export default function BrandDetailPage() {
             <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
               style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Brand Website URL</label>
+            <div className="relative">
+              <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+              <input
+                type="url"
+                placeholder="https://brand-website.com"
+                value={form.brandUrl}
+                onChange={e => { setForm(f => ({ ...f, brandUrl: e.target.value })); setWlUrl(e.target.value) }}
+                className="w-full pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none font-mono"
+                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+              />
+            </div>
           </div>
           <div>
             <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Plan</label>
