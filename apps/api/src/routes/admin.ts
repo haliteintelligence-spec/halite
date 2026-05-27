@@ -7,6 +7,7 @@ import { requireHaliteAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { processCatalogUpload } from '../lib/catalog-processor.js'
 import { parsePurchaseHistory } from '../lib/purchase-history-processor.js'
+import { uploadToS3 } from '../lib/storage.js'
 import { provisionDemoEnvironment } from '../lib/demo-generator.js'
 import { scrapeTheme } from '../lib/theme-scraper.js'
 
@@ -226,6 +227,7 @@ export async function adminRoutes(server: FastifyInstance) {
       let catalogFilename = 'catalog.csv'
       let purchaseBuffer: Buffer | null = null
       let purchaseMime = 'text/csv'
+      let purchaseFilename = 'purchase-history.csv'
 
       for await (const part of parts) {
         if (part.type === 'field') {
@@ -244,6 +246,7 @@ export async function adminRoutes(server: FastifyInstance) {
           } else if (part.fieldname === 'purchaseFile') {
             purchaseBuffer = buf
             purchaseMime = part.mimetype
+            purchaseFilename = (part as any).filename ?? 'purchase-history.csv'
           }
         }
       }
@@ -298,6 +301,30 @@ export async function adminRoutes(server: FastifyInstance) {
         data: { brandId: brand.id, fileName: catalogFilename, fileUrl: '', format: catalogFormat as any, status: 'PROCESSING' },
       })
       await processCatalogUpload(upload.id, brand.id, catalogBuffer, catalogFormat as any)
+
+      // Persist the original purchase file to S3 and create a USER_UPLOADED record
+      if (purchaseBuffer && purchaseMatrix) {
+        try {
+          const purchaseExt = purchaseFilename.split('.').pop()?.toLowerCase()
+          const purchaseFormat = purchaseExt === 'xlsx' || purchaseExt === 'xls' ? 'XLSX' : 'CSV'
+          const rowCount = Object.values(purchaseMatrix).reduce((sum, p) => sum + Object.keys(p).length, 0)
+          const s3Key = `catalogs/${brand.id}/${Date.now()}-${purchaseFilename}`
+          const fileUrl = await uploadToS3(s3Key, purchaseBuffer, purchaseMime)
+          await prisma.catalogUpload.create({
+            data: {
+              brandId: brand.id,
+              fileName: purchaseFilename,
+              fileUrl,
+              format: purchaseFormat as any,
+              source: 'USER_UPLOADED',
+              status: 'DONE',
+              rowCount,
+            },
+          })
+        } catch (err) {
+          console.error('Failed to persist purchase history file:', err)
+        }
+      }
 
       // Kick off the rest of provisioning async (routines take time)
       ;(async () => {
