@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 import { clsx } from 'clsx'
 
 interface Props {
@@ -9,21 +11,23 @@ interface Props {
   sparkData?: number[]
   icon?: ReactNode
   className?: string
+  href?: string
 }
 
-export function MetricTile({ label, value, sub, trend, icon, className }: Props) {
+export function MetricTile({ label, value, sub, trend, icon, className, href }: Props) {
   const up = (trend?.delta ?? 0) >= 0
 
-  return (
+  const inner = (
     <div
-      className={clsx('bg-surface rounded-xl border p-4 flex flex-col gap-3', className)}
+      className={clsx(
+        'bg-surface rounded-xl border p-4 flex flex-col gap-3',
+        href && 'hover:opacity-80 transition-opacity cursor-pointer',
+        className,
+      )}
       style={{ borderColor: 'var(--border)' }}
     >
       <div className="flex items-start justify-between">
-        <p
-          className="text-[10px] font-semibold tracking-[0.14em] uppercase"
-          style={{ color: 'var(--ink-3)' }}
-        >
+        <p className="text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'var(--ink-3)' }}>
           {label}
         </p>
         {icon && <span style={{ color: 'var(--ink-3)' }}>{icon}</span>}
@@ -54,6 +58,17 @@ export function MetricTile({ label, value, sub, trend, icon, className }: Props)
           )}
         </div>
       )}
+
+      {href && (
+        <div className="flex items-center justify-end mt-auto pt-1">
+          <span className="flex items-center gap-0.5 text-[10px] font-medium" style={{ color: 'var(--clay)' }}>
+            View <ChevronRight size={11} strokeWidth={2.5} />
+          </span>
+        </div>
+      )}
     </div>
   )
+
+  if (href) return <Link href={href}>{inner}</Link>
+  return inner
 }

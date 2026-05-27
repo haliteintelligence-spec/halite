@@ -482,7 +482,7 @@ export async function brandRoutes(server: FastifyInstance) {
       const { brandId } = request.params as { brandId: string }
       const q = request.query as {
         skinType?: string; concern?: string; search?: string
-        minCheckIns?: string; compliant?: string; page?: string; limit?: string
+        minCheckIns?: string; compliant?: string; symptom?: string; page?: string; limit?: string
       }
       const page  = Math.max(1, parseInt(q.page  ?? '1',  10) || 1)
       const limit = Math.min(100, parseInt(q.limit ?? '50', 10) || 50)
@@ -498,6 +498,7 @@ export async function brandRoutes(server: FastifyInstance) {
       }
       if (q.skinType) where.beautyProfile = { skinType: q.skinType }
       if (q.concern)  where.beautyProfile = { ...(where.beautyProfile as object ?? {}), skinConcerns: { has: q.concern } }
+      if (q.symptom)  where.checkIns = { some: { symptoms: { has: q.symptom as any } } }
 
       const [total, endUsers] = await Promise.all([
         prisma.endUser.count({ where }),
@@ -598,6 +599,120 @@ export async function brandRoutes(server: FastifyInstance) {
           stats: { totalCheckIns: endUser._count.checkIns, complianceRate, avgSkinRating },
         },
       }
+    }
+  )
+
+  // ── Brand Admin: ingredient detail ───────────────────────────────
+  server.get(
+    '/:brandId/ingredients/:ingredientName',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, ingredientName } = request.params as { brandId: string; ingredientName: string }
+      const name = decodeURIComponent(ingredientName)
+
+      const products = await prisma.product.findMany({
+        where: { brandId, keyIngredients: { has: name } },
+        select: { id: true, name: true, category: true, concerns: true, imageUrl: true },
+      })
+      if (products.length === 0) throw new ApiError(404, 'Ingredient not found in catalog')
+
+      const productIds = products.map(p => p.id)
+
+      const [routineSteps, checkInProducts] = await Promise.all([
+        prisma.routineStep.findMany({
+          where: { productId: { in: productIds } },
+          include: {
+            routine: { select: { endUserId: true, focusArea: true, activeTo: true } },
+          },
+        }),
+        prisma.checkInProduct.findMany({
+          where: { productId: { in: productIds }, used: true },
+          include: {
+            checkIn: { select: { skinRating: true, endUserId: true, symptoms: true } },
+          },
+        }),
+      ])
+
+      const activeConsumerIds = new Set(
+        routineSteps.filter(s => s.routine.activeTo === null).map(s => s.routine.endUserId)
+      )
+      const uniqueConsumerIds = new Set(checkInProducts.map(cp => cp.checkIn.endUserId))
+      const ratings = checkInProducts.map(cp => cp.checkIn.skinRating)
+      const avgRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : null
+
+      const symptomCounts: Record<string, number> = {}
+      for (const cp of checkInProducts) {
+        for (const sym of cp.checkIn.symptoms) {
+          symptomCounts[sym] = (symptomCounts[sym] ?? 0) + 1
+        }
+      }
+      const topSymptoms = Object.entries(symptomCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([symptom, count]) => ({ symptom, count }))
+
+      return {
+        name,
+        products,
+        stats: {
+          productCount: products.length,
+          activeConsumerCount: activeConsumerIds.size,
+          totalConsumerCount: uniqueConsumerIds.size,
+          checkInCount: checkInProducts.length,
+          avgRating,
+        },
+        topSymptoms,
+      }
+    }
+  )
+
+  // ── Brand Admin: consumer identity intelligence ───────────────────
+  server.get(
+    '/:brandId/intelligence',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+
+      const [allUsers, checkInCounts] = await Promise.all([
+        prisma.endUser.findMany({
+          where: { brandId },
+          select: { id: true, email: true, createdAt: true },
+        }),
+        prisma.checkIn.groupBy({
+          by: ['endUserId'],
+          where: { endUser: { brandId } },
+          _count: { id: true },
+        }),
+      ])
+
+      const total = allUsers.length
+      const identified = allUsers.filter(u => !!u.email).length
+      const anonymous = total - identified
+      const retained = checkInCounts.filter(c => c._count.id >= 3).length
+      const identificationRate = total > 0 ? Math.round((identified / total) * 100) : 0
+      const retentionRate = total > 0 ? Math.round((retained / total) * 100) : 0
+
+      // Cross-brand: find emails from this brand that also appear on other brands
+      const brandEmails = allUsers.map(u => u.email).filter((e): e is string => !!e)
+      const crossBrand = brandEmails.length > 0
+        ? await prisma.endUser.count({
+            where: { brandId: { not: brandId }, email: { in: brandEmails } },
+          })
+        : 0
+      const crossBrandRate = identified > 0 ? Math.round((crossBrand / identified) * 100) : 0
+
+      // 8-week cumulative trend
+      const now = new Date()
+      const weekMs = 7 * 24 * 60 * 60 * 1000
+      const trend = Array.from({ length: 8 }, (_, i) => {
+        const cutoff = new Date(now.getTime() - (7 - i) * weekMs)
+        const usersToDate = allUsers.filter(u => u.createdAt <= cutoff)
+        const t = usersToDate.length
+        const id = usersToDate.filter(u => !!u.email).length
+        return { week: i, total: t, identified: id, rate: t > 0 ? Math.round((id / t) * 100) : null }
+      })
+
+      return { total, identified, anonymous, crossBrand, retained, identificationRate, crossBrandRate, retentionRate, trend }
     }
   )
 

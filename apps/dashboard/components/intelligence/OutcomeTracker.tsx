@@ -1,5 +1,7 @@
 'use client'
 
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightButton } from '@/components/ui/InsightButton'
@@ -47,6 +49,7 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub?: st
 }
 
 export function OutcomeTracker({ checkIns, outcomes, summary, brandId }: Props) {
+  const { slug } = useParams<{ slug: string }>()
   const ratingData = checkIns.ratingTrend.map((v, i) => ({ week: weekLabel(i), rating: v }))
   const complianceData = checkIns.complianceTrend.map((v, i) => ({ week: weekLabel(i), pct: v }))
 
@@ -220,7 +223,11 @@ export function OutcomeTracker({ checkIns, outcomes, summary, brandId }: Props) 
               const max = checkIns.symptoms[0]!.count
               const pct = Math.round((s.count / max) * 100)
               return (
-                <div key={s.symptom} className="flex items-center gap-3">
+                <Link
+                  key={s.symptom}
+                  href={`/${slug}/consumers/roster?symptom=${s.symptom}`}
+                  className="flex items-center gap-3 hover:opacity-70 transition-opacity"
+                >
                   <p className="text-[12px] w-44 flex-shrink-0" style={{ color: 'var(--ink)' }}>
                     {SYMPTOM_LABELS[s.symptom] ?? s.symptom}
                   </p>
@@ -233,7 +240,7 @@ export function OutcomeTracker({ checkIns, outcomes, summary, brandId }: Props) 
                   <p className="text-[11px] w-6 text-right flex-shrink-0" style={{ color: 'var(--ink-3)' }}>
                     {s.count}
                   </p>
-                </div>
+                </Link>
               )
             })}
           </div>

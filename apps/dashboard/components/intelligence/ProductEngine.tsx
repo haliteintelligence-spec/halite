@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter, useParams } from 'next/navigation'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightButton } from '@/components/ui/InsightButton'
@@ -28,6 +29,8 @@ const radarData = [
 ]
 
 export function ProductEngine({ products, usageRate, brandId }: Props) {
+  const router = useRouter()
+  const { slug } = useParams<{ slug: string }>()
   const totalUsed = products.topProducts.reduce((s, p) => s + p.used, 0)
   const totalRecs = products.totalRecommended
 
@@ -165,9 +168,10 @@ export function ProductEngine({ products, usageRate, brandId }: Props) {
         >
           <div className="space-y-2">
             {products.topProducts.map((p, i) => (
-              <div
+              <button
                 key={p.id}
-                className="flex items-center gap-3 py-2 border-b last:border-0"
+                onClick={() => router.push(`/${slug}/products/${p.id}`)}
+                className="w-full flex items-center gap-3 py-2 border-b last:border-0 text-left hover:opacity-70 transition-opacity"
                 style={{ borderColor: 'var(--border-sub)' }}
               >
                 <span
@@ -193,7 +197,7 @@ export function ProductEngine({ products, usageRate, brandId }: Props) {
                 >
                   {p.rate}%
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </InsightCard>

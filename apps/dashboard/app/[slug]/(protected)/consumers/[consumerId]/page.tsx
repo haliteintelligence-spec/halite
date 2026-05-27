@@ -150,11 +150,11 @@ export default function ConsumerDetailPage() {
   return (
     <div className="px-7 py-6 max-w-4xl">
       <Link
-        href={`/${slug}/consumers`}
+        href={`/${slug}/consumers/roster`}
         className="flex items-center gap-1 text-[12px] mb-6 hover:underline"
         style={{ color: 'var(--ink-3)' }}
       >
-        <ArrowLeft size={12} /> Consumers
+        <ArrowLeft size={12} /> Consumer Roster
       </Link>
 
       {/* Header */}

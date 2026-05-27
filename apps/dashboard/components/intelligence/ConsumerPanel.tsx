@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightButton } from '@/components/ui/InsightButton'
@@ -37,6 +39,7 @@ const SKIN_TYPE_LABELS: Record<string, string> = {
 const TONE_KEYS = ['i', 'ii', 'iii', 'iv', 'v', 'vi'] as const
 
 export function ConsumerPanel({ consumers, checkIns, totalConsumers, brandId }: Props) {
+  const { slug } = useParams<{ slug: string }>()
   const skinTypeBar = consumers.skinTypes.map((st, i) => ({
     label: SKIN_TYPE_LABELS[st.type] ?? st.type,
     value: Math.max(st.pct, 1),
@@ -149,7 +152,7 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers, brandId }: 
         >
           <div className="space-y-2.5">
             {consumers.concerns.slice(0, 6).map(c => (
-              <div key={c.concern} className="space-y-1">
+              <Link key={c.concern} href={`/${slug}/consumers/roster?concern=${c.concern}`} className="block space-y-1 hover:opacity-70 transition-opacity">
                 <div className="flex justify-between text-[12px]">
                   <span style={{ color: 'var(--ink-2)' }}>
                     {CONCERN_LABELS[c.concern] ?? c.concern}
@@ -164,7 +167,7 @@ export function ConsumerPanel({ consumers, checkIns, totalConsumers, brandId }: 
                     style={{ width: `${c.pct}%`, background: c.pct > 50 ? 'var(--clay)' : 'var(--border)' }}
                   />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </InsightCard>

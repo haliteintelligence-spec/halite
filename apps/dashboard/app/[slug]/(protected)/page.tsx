@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { MetricTile } from '@/components/ui/MetricTile'
 import { ConsumerPanel } from '@/components/intelligence/ConsumerPanel'
 import { ProductEngine } from '@/components/intelligence/ProductEngine'
@@ -47,27 +46,29 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
       <div className="px-7 py-6 space-y-8">
         {/* KPI Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Link href={`/${slug}/consumers`} className="block hover:opacity-90 transition-opacity">
-            <MetricTile
-              label="Active Consumers"
-              value={s ? s.totalConsumers.toLocaleString() : '—'}
-              icon={<Users size={14} />}
-            />
-          </Link>
+          <MetricTile
+            label="Active Consumers"
+            value={s ? s.totalConsumers.toLocaleString() : '—'}
+            icon={<Users size={14} />}
+            href={`/${slug}/consumers`}
+          />
           <MetricTile
             label="Routine Adoption"
             value={s?.usageRate != null ? `${s.usageRate}%` : '—'}
             icon={<Package size={14} />}
+            href={`/${slug}/products`}
           />
           <MetricTile
             label="Avg Satisfaction"
             value={s?.avgRating != null ? `${s.avgRating}/5` : '—'}
             icon={<FlaskConical size={14} />}
+            href={`/${slug}/outcomes`}
           />
           <MetricTile
             label="Routine Compliance"
             value={s?.complianceRate != null ? `${s.complianceRate}%` : '—'}
             icon={<TrendingUp size={14} />}
+            href={`/${slug}/outcomes`}
           />
         </div>
 

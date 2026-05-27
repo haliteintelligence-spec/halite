@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter, useParams } from 'next/navigation'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightButton } from '@/components/ui/InsightButton'
@@ -27,6 +28,8 @@ const CONCERN_LABELS: Record<string, string> = {
 }
 
 export function IngredientLab({ products, brandId }: Props) {
+  const router = useRouter()
+  const { slug } = useParams<{ slug: string }>()
   const { topIngredients, concernCoverage } = products
 
   const gaps = concernCoverage.filter(c => c.userPct >= 40 && c.coverage < 50)
@@ -50,7 +53,11 @@ export function IngredientLab({ products, brandId }: Props) {
         >
           <div className="space-y-2.5">
             {topIngredients.map(ing => (
-              <div key={ing.name} className="flex items-center gap-3">
+              <button
+                key={ing.name}
+                onClick={() => router.push(`/${slug}/ingredients/${encodeURIComponent(ing.name)}`)}
+                className="w-full flex items-center gap-3 text-left hover:opacity-70 transition-opacity"
+              >
                 <div className="w-36 flex-shrink-0">
                   <p className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
                     {ing.name}
@@ -75,7 +82,7 @@ export function IngredientLab({ products, brandId }: Props) {
                 >
                   {ing.count}×
                 </span>
-              </div>
+              </button>
             ))}
           </div>
           <p className="text-[10px] mt-3" style={{ color: 'var(--ink-3)' }}>

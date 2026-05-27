@@ -160,24 +160,28 @@ export default async function SupplyChainPage({ params, searchParams }: Props) {
           value={sc.activeIngredients}
           sub="in consumer routines"
           icon={<FlaskConical size={14} />}
+          href={`/${slug}/ingredients`}
         />
         <MetricTile
           label="High-Demand Products"
           value={sc.highDemandProducts}
           sub="above avg adoption"
           icon={<Package size={14} />}
+          href={`/${slug}/products`}
         />
         <MetricTile
           label="Coverage Gaps"
           value={sc.coverageGaps}
           sub="new product lines needed"
           icon={<AlertTriangle size={14} />}
+          href={`/${slug}/ingredients`}
         />
         <MetricTile
           label="Projected Units (30d)"
           value={sc.totalProjected30d.toLocaleString()}
           sub="across all active products"
           icon={<Layers size={14} />}
+          href={`/${slug}/products`}
         />
       </div>
 

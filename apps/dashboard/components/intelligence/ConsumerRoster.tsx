@@ -62,18 +62,27 @@ function displayName(c: Consumer) {
   return n || c.email || 'Anonymous'
 }
 
-export function ConsumerRoster({ brandId }: { brandId: string }) {
+const SYMPTOM_LABELS: Record<string, string> = {
+  BREAKOUT: 'Breakouts', DRYNESS: 'Dryness', REDNESS: 'Redness',
+  IRRITATION: 'Irritation', PURGING: 'Purging', OILINESS: 'Oiliness',
+  DULLNESS: 'Dullness', HYPERPIGMENTATION_FADING: 'Pigmentation fading',
+  IMPROVEMENT: 'Improving', GLOW: 'Glowing', HYDRATED: 'Hydrated',
+  TEXTURE_SMOOTH: 'Smooth texture',
+}
+
+export function ConsumerRoster({ brandId, initialSymptom, initialConcern }: { brandId: string; initialSymptom?: string; initialConcern?: string }) {
   const router = useRouter()
   const { slug } = useParams<{ slug: string }>()
 
   const [consumers, setConsumers] = useState<Consumer[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(!!(initialSymptom ?? initialConcern))
 
   const [search, setSearch] = useState('')
   const [skinType, setSkinType] = useState('')
-  const [concern, setConcern] = useState('')
+  const [concern, setConcern] = useState(initialConcern ?? '')
+  const [symptom, setSymptom] = useState(initialSymptom ?? '')
   const [minCheckIns, setMinCheckIns] = useState('0')
   const [page, setPage] = useState(1)
 
@@ -88,6 +97,7 @@ export function ConsumerRoster({ brandId }: { brandId: string }) {
       if (search) params.set('search', search)
       if (skinType) params.set('skinType', skinType)
       if (concern) params.set('concern', concern)
+      if (symptom) params.set('symptom', symptom)
       if (minCheckIns !== '0') params.set('minCheckIns', minCheckIns)
 
       const res = await fetch(`${API_URL}/brands/${brandId}/consumers?${params}`, {
@@ -102,14 +112,14 @@ export function ConsumerRoster({ brandId }: { brandId: string }) {
     } finally {
       setLoading(false)
     }
-  }, [brandId, search, skinType, concern, minCheckIns, page])
+  }, [brandId, search, skinType, concern, symptom, minCheckIns, page])
 
   useEffect(() => { fetchConsumers() }, [fetchConsumers])
 
   // Reset page when filters change
-  useEffect(() => { setPage(1) }, [search, skinType, concern, minCheckIns])
+  useEffect(() => { setPage(1) }, [search, skinType, concern, symptom, minCheckIns])
 
-  const activeFilterCount = [skinType, concern, minCheckIns !== '0'].filter(Boolean).length
+  const activeFilterCount = [skinType, concern, symptom, minCheckIns !== '0'].filter(Boolean).length
   const totalPages = Math.ceil(total / limit)
 
   return (
@@ -191,6 +201,22 @@ export function ConsumerRoster({ brandId }: { brandId: string }) {
             </select>
           </div>
 
+          {/* Symptom */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Symptom</span>
+            <select
+              value={symptom}
+              onChange={e => setSymptom(e.target.value)}
+              className="px-2 py-1 rounded-lg text-[11px] outline-none"
+              style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+            >
+              <option value="">All</option>
+              {Object.entries(SYMPTOM_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Min check-ins */}
           <div className="flex items-center gap-1.5">
             <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Check-ins</span>
@@ -215,7 +241,7 @@ export function ConsumerRoster({ brandId }: { brandId: string }) {
           {/* Clear */}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setSkinType(''); setConcern(''); setMinCheckIns('0') }}
+              onClick={() => { setSkinType(''); setConcern(''); setSymptom(''); setMinCheckIns('0') }}
               className="flex items-center gap-1 text-[11px] transition-opacity hover:opacity-70 ml-auto"
               style={{ color: 'var(--ink-3)' }}
             >

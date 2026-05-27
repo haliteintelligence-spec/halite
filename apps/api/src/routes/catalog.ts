@@ -157,6 +157,62 @@ export async function catalogRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Get product detail with usage stats ──────────────────────────
+  server.get(
+    '/:brandId/products/:productId',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, productId } = request.params as { brandId: string; productId: string }
+
+      const product = await prisma.product.findFirst({ where: { id: productId, brandId } })
+      if (!product) throw new ApiError(404, 'Product not found')
+
+      const [checkInProducts, routineCount] = await Promise.all([
+        prisma.checkInProduct.findMany({
+          where: { productId },
+          include: {
+            checkIn: {
+              select: {
+                skinRating: true,
+                endUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+              },
+            },
+          },
+        }),
+        prisma.routineStep.count({ where: { productId } }),
+      ])
+
+      const used = checkInProducts.filter(cp => cp.used).length
+      const positive = checkInProducts.filter(cp => cp.reaction === 'POSITIVE').length
+      const neutral = checkInProducts.filter(cp => cp.reaction === 'NEUTRAL').length
+      const negative = checkInProducts.filter(cp => cp.reaction === 'NEGATIVE').length
+
+      const consumerMap = new Map<string, { id: string; firstName: string | null; lastName: string | null; email: string | null; checkIns: number; totalRating: number }>()
+      for (const cp of checkInProducts) {
+        const u = cp.checkIn.endUser
+        const existing = consumerMap.get(u.id)
+        if (existing) { existing.checkIns++; existing.totalRating += cp.checkIn.skinRating }
+        else { consumerMap.set(u.id, { id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, checkIns: 1, totalRating: cp.checkIn.skinRating }) }
+      }
+      const topConsumers = Array.from(consumerMap.values())
+        .sort((a, b) => b.checkIns - a.checkIns)
+        .slice(0, 10)
+        .map(c => ({ ...c, avgRating: Math.round((c.totalRating / c.checkIns) * 10) / 10 }))
+
+      return {
+        product,
+        stats: {
+          routineCount,
+          checkInTotal: checkInProducts.length,
+          checkInUsed: used,
+          usageRate: checkInProducts.length > 0 ? Math.round((used / checkInProducts.length) * 100) : null,
+          reactions: { positive, neutral, negative },
+        },
+        topConsumers,
+      }
+    }
+  )
+
   // ── Update product ────────────────────────────────────────────────
   server.patch(
     '/:brandId/products/:productId',

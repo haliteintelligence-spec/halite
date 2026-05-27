@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import type { Product, ProductsResponse, UploadRecord } from '@/lib/api'
-import { Pencil, Trash2, Plus, X, Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Upload, CheckCircle, AlertCircle, Loader2, ChevronRight } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -86,6 +87,8 @@ export function CatalogClient({
   initialProducts: ProductsResponse | null
   initialUploads: UploadRecord[]
 }) {
+  const router = useRouter()
+  const { slug } = useParams<{ slug: string }>()
   const [tab, setTab] = useState<'products' | 'uploads'>('products')
   const [products, setProducts] = useState<Product[]>(initialProducts?.products ?? [])
   const [total, setTotal] = useState(initialProducts?.total ?? 0)
@@ -324,7 +327,8 @@ export function CatalogClient({
                     {filtered.map((p, i) => (
                       <tr
                         key={p.id}
-                        className="border-b border-sand-1 last:border-0 hover:bg-sand-1/50 transition-colors"
+                        className="border-b border-sand-1 last:border-0 hover:bg-sand-1/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/${slug}/products/${p.id}`)}
                       >
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
@@ -358,14 +362,14 @@ export function CatalogClient({
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2 justify-end">
                             <button
-                              onClick={() => openEdit(p)}
+                              onClick={(e) => { e.stopPropagation(); openEdit(p) }}
                               className="p-1.5 rounded-lg transition-colors hover:bg-sand-2"
                               style={{ color: 'var(--ink-3)' }}
                             >
                               <Pencil size={13} />
                             </button>
                             <button
-                              onClick={() => deleteProduct(p.id)}
+                              onClick={(e) => { e.stopPropagation(); deleteProduct(p.id) }}
                               disabled={deleting === p.id}
                               className="p-1.5 rounded-lg transition-colors hover:bg-red-50 disabled:opacity-50"
                               style={{ color: deleting === p.id ? 'var(--ink-3)' : '#dc2626' }}

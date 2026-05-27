@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter, useParams } from 'next/navigation'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightButton } from '@/components/ui/InsightButton'
@@ -74,8 +75,11 @@ const emerging = [
 interface Props { analytics: AnalyticsData; brandId: string }
 
 export function MarketFeed({ analytics, brandId }: Props) {
+  const router = useRouter()
+  const { slug } = useParams<{ slug: string }>()
   const { products, summary } = analytics
   const brandIngredients = products.topIngredients.map(i => i.name.toLowerCase())
+  const topIngredientNames = products.topIngredients.map(i => i.name)
 
   // Check which trends the brand's ingredients align with
   function isAligned(keywords: string[]): boolean {
@@ -222,10 +226,13 @@ export function MarketFeed({ analytics, brandId }: Props) {
         }
       >
         <div className="space-y-2">
-          {emergingWithAlignment.map(e => (
+          {emergingWithAlignment.map(e => {
+            const catalogIngredient = topIngredientNames.find(n => n.toLowerCase().includes(e.ingredient.toLowerCase().split(' ')[0]!))
+            return (
             <div
               key={e.ingredient}
-              className="flex items-center justify-between gap-2 py-2.5 border-b last:border-0"
+              onClick={catalogIngredient ? () => router.push(`/${slug}/ingredients/${encodeURIComponent(catalogIngredient)}`) : undefined}
+              className={`flex items-center justify-between gap-2 py-2.5 border-b last:border-0 ${catalogIngredient ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}
               style={{ borderColor: 'var(--border-sub)' }}
             >
               <div>
@@ -254,7 +261,8 @@ export function MarketFeed({ analytics, brandId }: Props) {
                 </span>
               </div>
             </div>
-          ))}
+          )
+          })}
         </div>
       </InsightCard>
     </div>

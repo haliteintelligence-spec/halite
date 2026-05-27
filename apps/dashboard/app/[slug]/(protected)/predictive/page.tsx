@@ -212,12 +212,14 @@ export default async function PredictivePage({ params, searchParams }: Props) {
           sub="projected check-ins"
           trend={{ delta: f.demandDelta, label: 'vs last 30d' }}
           icon={<Telescope size={14} />}
+          href={`/${slug}/predictive/supply-chain`}
         />
         <MetricTile
           label="At-Risk Consumers"
           value={f.atRiskConsumers.toLocaleString()}
           sub={`~${f.highRiskPct}% of base`}
           icon={<AlertTriangle size={14} />}
+          href={`/${slug}/consumers/roster`}
         />
         <MetricTile
           label="Week-over-Week Trend"
@@ -225,12 +227,14 @@ export default async function PredictivePage({ params, searchParams }: Props) {
           sub={`${analytics.checkIns.thisWeek} check-ins this week`}
           trend={{ delta: f.wowDelta }}
           icon={<TrendingUp size={14} />}
+          href={`/${slug}/outcomes`}
         />
         <MetricTile
           label="Forecast Confidence"
           value={f.confidence}
           sub={`Score ${f.confidenceScore}/100`}
           icon={<Telescope size={14} />}
+          href={`/${slug}/predictive/supply-chain`}
         />
       </div>
 
