@@ -474,6 +474,133 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Brand Admin: list consumers ──────────────────────────────────
+  server.get(
+    '/:brandId/consumers',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const q = request.query as {
+        skinType?: string; concern?: string; search?: string
+        minCheckIns?: string; compliant?: string; page?: string; limit?: string
+      }
+      const page  = Math.max(1, parseInt(q.page  ?? '1',  10) || 1)
+      const limit = Math.min(100, parseInt(q.limit ?? '50', 10) || 50)
+      const skip  = (page - 1) * limit
+
+      const where: Record<string, unknown> = { brandId }
+      if (q.search) {
+        where.OR = [
+          { firstName: { contains: q.search, mode: 'insensitive' } },
+          { lastName:  { contains: q.search, mode: 'insensitive' } },
+          { email:     { contains: q.search, mode: 'insensitive' } },
+        ]
+      }
+      if (q.skinType) where.beautyProfile = { skinType: q.skinType }
+      if (q.concern)  where.beautyProfile = { ...(where.beautyProfile as object ?? {}), skinConcerns: { has: q.concern } }
+
+      const [total, endUsers] = await Promise.all([
+        prisma.endUser.count({ where }),
+        prisma.endUser.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true, firstName: true, lastName: true, email: true, createdAt: true,
+            beautyProfile: { select: { skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true } },
+            _count: { select: { checkIns: true } },
+            checkIns: {
+              orderBy: { date: 'desc' },
+              take: 1,
+              select: { date: true, skinRating: true, compliant: true },
+            },
+          },
+        }),
+      ])
+
+      const consumers = endUsers.map(u => {
+        const checkins = u.checkIns
+        return {
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          createdAt: u.createdAt,
+          skinType: u.beautyProfile?.skinType ?? null,
+          skinConcerns: u.beautyProfile?.skinConcerns ?? [],
+          ageRange: u.beautyProfile?.ageRange ?? null,
+          monkSkinTone: u.beautyProfile?.monkSkinTone ?? null,
+          checkInCount: u._count.checkIns,
+          lastCheckInDate: checkins[0]?.date ?? null,
+          lastSkinRating: checkins[0]?.skinRating ?? null,
+        }
+      })
+
+      // Filter by min check-ins post-query (count not filterable in Prisma without subquery)
+      const minCI = parseInt(q.minCheckIns ?? '0', 10) || 0
+      const filtered = minCI > 0 ? consumers.filter(c => c.checkInCount >= minCI) : consumers
+
+      return { consumers: filtered, total }
+    }
+  )
+
+  // ── Brand Admin: consumer detail ──────────────────────────────────
+  server.get(
+    '/:brandId/consumers/:consumerId',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, consumerId } = request.params as { brandId: string; consumerId: string }
+
+      const endUser = await prisma.endUser.findFirst({
+        where: { id: consumerId, brandId },
+        include: {
+          beautyProfile: true,
+          checkIns: {
+            orderBy: { date: 'desc' },
+            take: 20,
+            include: {
+              products: {
+                include: { product: { select: { id: true, name: true, category: true } } },
+              },
+            },
+          },
+          routines: {
+            where: { activeTo: null },
+            take: 1,
+            include: {
+              steps: {
+                orderBy: [{ timeOfDay: 'asc' }, { step: 'asc' }],
+                include: { product: { select: { id: true, name: true, category: true, keyIngredients: true } } },
+              },
+            },
+          },
+          _count: { select: { checkIns: true } },
+        },
+      })
+
+      if (!endUser) throw new ApiError(404, 'Consumer not found')
+
+      const allCheckIns = await prisma.checkIn.findMany({
+        where: { endUserId: consumerId },
+        select: { compliant: true, skinRating: true },
+      })
+      const complianceRate = allCheckIns.length > 0
+        ? Math.round((allCheckIns.filter(c => c.compliant).length / allCheckIns.length) * 100)
+        : null
+      const avgSkinRating = allCheckIns.length > 0
+        ? Math.round((allCheckIns.reduce((s, c) => s + c.skinRating, 0) / allCheckIns.length) * 10) / 10
+        : null
+
+      return {
+        consumer: {
+          ...endUser,
+          stats: { totalCheckIns: endUser._count.checkIns, complianceRate, avgSkinRating },
+        },
+      }
+    }
+  )
+
   // ── Brand Admin: find similar products ────────────────────────────
   server.get(
     '/:brandId/products/:productId/similar',

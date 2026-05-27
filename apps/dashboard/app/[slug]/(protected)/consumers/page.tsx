@@ -1,5 +1,6 @@
 import { ConsumerPanel } from '@/components/intelligence/ConsumerPanel'
 import { ConsumerTrends } from '@/components/intelligence/ConsumerTrends'
+import { ConsumerRoster } from '@/components/intelligence/ConsumerRoster'
 import { MetricTile } from '@/components/ui/MetricTile'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { Users, Activity, Star, AlertCircle, BarChart2 } from 'lucide-react'
@@ -86,6 +87,8 @@ export default async function ConsumersPage({ params: _, searchParams }: Props) 
       ) : (
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load consumer data.</p>
       )}
+
+      <ConsumerRoster brandId={brandId} />
     </div>
   )
 }
