@@ -307,7 +307,7 @@ export async function provisionDemoEnvironment(
   return {
     brandId: brand.id,
     slug,
-    loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${slug}/login`,
+    loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${slug}/login`,
     email,
     password,
     expiresAt: finalExpiry,

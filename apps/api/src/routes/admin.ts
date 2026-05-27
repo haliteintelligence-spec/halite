@@ -347,7 +347,7 @@ export async function adminRoutes(server: FastifyInstance) {
           converted: !d.isDemo,
           plan: d.plan,
           status: d.isDemo ? demoBrandStatus(d) : ('converted' as const),
-          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${d.slug}/login`,
+          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${d.slug}/login`,
           email: d.admins[0]?.email ?? null,
           password: `demo-${d.slug}`,
           demoLinkExpiresAt: d.demoLinkExpiresAt,
@@ -389,7 +389,7 @@ export async function adminRoutes(server: FastifyInstance) {
           converted: !brand.isDemo,
           status: brand.isDemo ? demoBrandStatus(brand) : ('converted' as const),
           active: brand.active,
-          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${brand.slug}/login`,
+          loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${brand.slug}/login`,
           email: brand.admins[0]?.email ?? null,
           password: `demo-${brand.slug}`,
           demoLinkExpiresAt: brand.demoLinkExpiresAt,
@@ -567,7 +567,7 @@ export async function adminRoutes(server: FastifyInstance) {
       if (!brand) throw new ApiError(404, 'Demo not found')
 
       return {
-        loginUrl: `${process.env.DASHBOARD_URL ?? 'https://haliteadmin-production.up.railway.app'}/${brand.slug}/login`,
+        loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${brand.slug}/login`,
         email: brand.admins[0]?.email ?? `admin@${brand.slug}.halite`,
         password: `demo-${brand.slug}`,
         demoLinkExpiresAt: brand.demoLinkExpiresAt,
