@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Globe } from 'lucide-react'
 import type { BrandProfile } from '@/lib/api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -27,6 +28,7 @@ const PLAN_LABELS: Record<string, string> = {
 export function SettingsProfileClient({ profile, token }: { profile: BrandProfile; token: string }) {
   const [name, setName] = useState(profile.name)
   const [logoUrl, setLogoUrl] = useState(profile.logoUrl ?? '')
+  const [brandWebsiteUrl, setBrandWebsiteUrl] = useState(profile.brandWebsiteUrl ?? '')
   const [primaryColor, setPrimaryColor] = useState(profile.primaryColor ?? '#000000')
   const [focusAreas, setFocusAreas] = useState<string[]>(profile.focusAreas)
   const [saving, setSaving] = useState(false)
@@ -50,6 +52,7 @@ export function SettingsProfileClient({ profile, token }: { profile: BrandProfil
         body: JSON.stringify({
           name: name.trim() || undefined,
           logoUrl: logoUrl.trim() || null,
+          brandWebsiteUrl: brandWebsiteUrl.trim() || null,
           primaryColor,
           focusAreas,
         }),
@@ -105,6 +108,20 @@ export function SettingsProfileClient({ profile, token }: { profile: BrandProfil
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
             )}
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Brand Website URL</label>
+          <div className="relative">
+            <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+            <input
+              type="url"
+              value={brandWebsiteUrl}
+              onChange={e => setBrandWebsiteUrl(e.target.value)}
+              className={`${inputCls} pl-8 font-mono`}
+              placeholder="https://yourbrand.com"
+            />
           </div>
         </div>
 

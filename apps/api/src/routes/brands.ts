@@ -177,6 +177,7 @@ export async function brandRoutes(server: FastifyInstance) {
         logoUrl: z.string().url().optional().nullable(),
         primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
         focusAreas: z.array(z.enum(['SKINCARE', 'BODY', 'HAIR', 'MAKEUP', 'FRAGRANCE', 'NAILS', 'WELLNESS', 'SUN_CARE', 'LIP_CARE', 'EYE_CARE'])).optional(),
+        brandWebsiteUrl: z.preprocess(v => v === '' ? null : v, z.string().url().optional().nullable()),
       })
       const parsed = schema.parse(request.body)
       const data = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined))

@@ -81,6 +81,7 @@ export interface BrandProfile {
   active: boolean
   logoUrl: string | null
   primaryColor: string | null
+  brandWebsiteUrl: string | null
   focusAreas: string[]
   shopifyShop: string | null
   createdAt: string
