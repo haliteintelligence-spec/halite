@@ -30,6 +30,7 @@ export default function BrandDetailPage() {
   const [entering, setEntering] = useState(false)
   const [accessOpen, setAccessOpen] = useState(false)
   const [shopifyOpen, setShopifyOpen] = useState(false)
+  const [wlOpen, setWlOpen] = useState(false)
 
   function token() {
     return document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -372,84 +373,101 @@ export default function BrandDetailPage() {
       })()}
 
       {/* White Label */}
-      <div className="rounded-xl p-5 mt-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-xl mt-4 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <button
+          onClick={() => setWlOpen(o => !o)}
+          className="w-full flex items-center justify-between p-5 hover:bg-black/[0.02] transition-colors"
+        >
           <div>
-            <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>White Label</h2>
-            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>Apply the brand's own visual identity to the Halite platform.</p>
+            <h2 className="text-[11px] font-semibold tracking-wide uppercase text-left" style={{ color: 'var(--ink-3)' }}>White Label</h2>
+            <p className="text-[11px] mt-0.5 text-left" style={{ color: 'var(--ink-3)' }}>Apply the brand's own visual identity to the Halite platform.</p>
           </div>
-          <button
-            onClick={() => { setWlEnabled(e => !e) }}
-            className="flex items-center gap-1.5 text-[12px] font-semibold"
-            style={{ color: wlEnabled ? 'var(--clay)' : 'var(--ink-3)' }}
-          >
-            {wlEnabled ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
-            {wlEnabled ? 'On' : 'Off'}
-          </button>
-        </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-[11px] font-semibold" style={{ color: wlEnabled ? 'var(--clay)' : 'var(--ink-3)' }}>
+              {wlEnabled ? 'On' : 'Off'}
+            </span>
+            {wlOpen ? <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} /> : <ChevronRight size={14} style={{ color: 'var(--ink-3)' }} />}
+          </div>
+        </button>
 
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
-              <input
-                type="url"
-                placeholder="https://brand-website.com"
-                value={wlUrl}
-                onChange={e => setWlUrl(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 rounded-lg text-[12px] outline-none font-mono"
-                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
-              />
+        {wlOpen && (
+          <div className="px-5 pb-5" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between mt-4 mb-4">
+              <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Enable white-label theming for this brand</p>
+              <button
+                onClick={() => setWlEnabled(e => !e)}
+                className="flex items-center gap-1.5 text-[12px] font-semibold"
+                style={{ color: wlEnabled ? 'var(--clay)' : 'var(--ink-3)' }}
+              >
+                {wlEnabled ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                {wlEnabled ? 'On' : 'Off'}
+              </button>
             </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+                  <input
+                    type="url"
+                    placeholder="https://brand-website.com"
+                    value={wlUrl}
+                    onChange={e => setWlUrl(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 rounded-lg text-[12px] outline-none font-mono"
+                    style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+                  />
+                </div>
+                <button
+                  onClick={handleScrapeTheme}
+                  disabled={!wlUrl || scraping}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold disabled:opacity-40"
+                  style={{ background: 'var(--clay)', color: 'white' }}
+                >
+                  {scraping ? <Loader2 size={12} className="animate-spin" /> : <Palette size={12} />}
+                  {scraping ? 'Scraping…' : 'Extract Theme'}
+                </button>
+              </div>
+
+              {wlTheme && (
+                <div className="rounded-lg p-3 space-y-3" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Extracted Theme Preview</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ['Primary', wlTheme.primary],
+                      ['Primary Light', wlTheme.primaryLight],
+                      ['Accent', wlTheme.accent],
+                      ['Background', wlTheme.background],
+                      ['Text', wlTheme.text],
+                      ['Border', wlTheme.border],
+                    ] as [string, string][]).map(([label, color]) => (
+                      <div key={label} className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full border" style={{ background: color, borderColor: 'var(--border)' }} />
+                        <div>
+                          <p className="text-[9px] uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>{label}</p>
+                          <p className="text-[10px] font-mono" style={{ color: 'var(--ink)' }}>{color}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-4 text-[11px]" style={{ color: 'var(--ink-2)' }}>
+                    <span>Sans: <strong>{wlTheme.fontSans}</strong></span>
+                    <span>Display: <strong>{wlTheme.fontDisplay}</strong></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
-              onClick={handleScrapeTheme}
-              disabled={!wlUrl || scraping}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold disabled:opacity-40"
-              style={{ background: 'var(--clay)', color: 'white' }}
+              onClick={handleSaveWhiteLabel}
+              disabled={savingWl}
+              className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: 'var(--clay)' }}
             >
-              {scraping ? <Loader2 size={12} className="animate-spin" /> : <Palette size={12} />}
-              {scraping ? 'Scraping…' : 'Extract Theme'}
+              {savingWl ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+              Save White Label
             </button>
           </div>
-
-          {wlTheme && (
-            <div className="rounded-lg p-3 space-y-3" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Extracted Theme Preview</p>
-              <div className="flex flex-wrap gap-2">
-                {([
-                  ['Primary', wlTheme.primary],
-                  ['Primary Light', wlTheme.primaryLight],
-                  ['Accent', wlTheme.accent],
-                  ['Background', wlTheme.background],
-                  ['Text', wlTheme.text],
-                  ['Border', wlTheme.border],
-                ] as [string, string][]).map(([label, color]) => (
-                  <div key={label} className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full border" style={{ background: color, borderColor: 'var(--border)' }} />
-                    <div>
-                      <p className="text-[9px] uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>{label}</p>
-                      <p className="text-[10px] font-mono" style={{ color: 'var(--ink)' }}>{color}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-4 text-[11px]" style={{ color: 'var(--ink-2)' }}>
-                <span>Sans: <strong>{wlTheme.fontSans}</strong></span>
-                <span>Display: <strong>{wlTheme.fontDisplay}</strong></span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={handleSaveWhiteLabel}
-          disabled={savingWl}
-          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-          style={{ background: 'var(--clay)' }}
-        >
-          {savingWl ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-          Save White Label
-        </button>
+        )}
       </div>
 
       {/* Danger zone */}
