@@ -220,6 +220,7 @@ export async function adminRoutes(server: FastifyInstance) {
       let prospectName = ''
       let focusAreas: string[] = []
       let consumerCount = 100
+      let brandWebsiteUrl = ''
       let catalogBuffer: Buffer | null = null
       let catalogMime = 'text/csv'
       let catalogFilename = 'catalog.csv'
@@ -229,6 +230,7 @@ export async function adminRoutes(server: FastifyInstance) {
       for await (const part of parts) {
         if (part.type === 'field') {
           if (part.fieldname === 'prospectName') prospectName = String(part.value)
+          if (part.fieldname === 'brandWebsiteUrl') brandWebsiteUrl = String(part.value)
           if (part.fieldname === 'focusAreas') {
             try { focusAreas = JSON.parse(String(part.value)) } catch { focusAreas = [String(part.value)] }
           }
@@ -282,6 +284,7 @@ export async function adminRoutes(server: FastifyInstance) {
           focusAreas: brandFocusAreas as any,
           primaryColor: '#C17A47',
           active: true,
+          ...(brandWebsiteUrl ? { brandWebsiteUrl } : {}),
         },
       })
 
@@ -617,6 +620,7 @@ export async function adminRoutes(server: FastifyInstance) {
         slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
         plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).default('STARTER'),
         focusAreas: z.array(z.string()).default([]),
+        brandWebsiteUrl: z.string().url().optional().nullable(),
         adminEmail: z.string().email(),
         adminName: z.string().min(1),
         adminPassword: z.string().min(8),
@@ -635,6 +639,7 @@ export async function adminRoutes(server: FastifyInstance) {
           plan: data.plan as any,
           focusAreas: data.focusAreas as any,
           active: true,
+          ...(data.brandWebsiteUrl ? { brandWebsiteUrl: data.brandWebsiteUrl } : {}),
           admins: {
             create: {
               email: data.adminEmail,

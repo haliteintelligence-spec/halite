@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Upload, X, CheckCircle2, Loader2 } from 'lucide-react'
+import { ChevronRight, Upload, X, CheckCircle2, Loader2, Globe } from 'lucide-react'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 
 const FOCUS_AREAS: { label: string; value: string }[] = [
@@ -17,6 +17,7 @@ type Step = 1 | 2 | 3
 
 interface FormState {
   prospectName: string
+  brandWebsiteUrl: string
   focusAreas: string[]
   consumerCount: number
   catalogFile: File | null
@@ -28,6 +29,7 @@ export default function NewDemoPage() {
   const [step, setStep] = useState<Step>(1)
   const [form, setForm] = useState<FormState>({
     prospectName: '',
+    brandWebsiteUrl: '',
     focusAreas: [],
     consumerCount: 100,
     catalogFile: null,
@@ -57,6 +59,7 @@ export default function NewDemoPage() {
       fd.append('prospectName', form.prospectName)
       fd.append('consumerCount', String(form.consumerCount))
       fd.append('focusAreas', JSON.stringify(form.focusAreas))
+      if (form.brandWebsiteUrl) fd.append('brandWebsiteUrl', form.brandWebsiteUrl)
       fd.append('catalogFile', form.catalogFile)
       if (form.purchaseFile) fd.append('purchaseFile', form.purchaseFile)
 
@@ -122,6 +125,23 @@ export default function NewDemoPage() {
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
                 style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
               />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold tracking-wide uppercase mb-2" style={{ color: 'var(--ink-3)' }}>
+                Brand Website URL
+              </label>
+              <div className="relative">
+                <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+                <input
+                  type="url"
+                  value={form.brandWebsiteUrl}
+                  onChange={e => setForm(f => ({ ...f, brandWebsiteUrl: e.target.value }))}
+                  placeholder="https://prospect-website.com"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none font-mono"
+                  style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+                />
+              </div>
             </div>
 
             <div>

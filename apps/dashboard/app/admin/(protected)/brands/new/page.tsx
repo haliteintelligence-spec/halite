@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Globe } from 'lucide-react'
 import Link from 'next/link'
 
 const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
@@ -15,6 +15,7 @@ export default function NewBrandPage() {
     slug: '',
     plan: 'STARTER',
     focusAreas: [] as string[],
+    brandWebsiteUrl: '',
     adminEmail: '',
     adminName: '',
     adminPassword: '',
@@ -93,6 +94,21 @@ export default function NewBrandPage() {
                 onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
                 placeholder="e.g. glowlab"
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none font-mono"
+                style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>Brand Website URL</label>
+            <div className="relative">
+              <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+              <input
+                type="url"
+                value={form.brandWebsiteUrl}
+                onChange={e => setForm(f => ({ ...f, brandWebsiteUrl: e.target.value }))}
+                placeholder="https://brand-website.com"
+                className="w-full pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none font-mono"
                 style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
               />
             </div>

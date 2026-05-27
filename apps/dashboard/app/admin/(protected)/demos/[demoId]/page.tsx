@@ -25,6 +25,8 @@ export default function DemoDetailPage() {
   const [wlTheme, setWlTheme] = useState<BrandThemeConfig | null>(null)
   const [scraping, setScraping] = useState(false)
   const [savingWl, setSavingWl] = useState(false)
+  const [brandUrl, setBrandUrl] = useState('')
+  const [savingBrandUrl, setSavingBrandUrl] = useState(false)
   const [accessOpen, setAccessOpen] = useState(false)
 
   async function load() {
@@ -38,6 +40,7 @@ export default function DemoDetailPage() {
       setDemo(data.demo)
       setWlEnabled(data.demo.whiteLabelEnabled ?? false)
       setWlUrl(data.demo.brandWebsiteUrl ?? '')
+      setBrandUrl(data.demo.brandWebsiteUrl ?? '')
       setWlTheme(data.demo.brandThemeConfig ?? null)
     }
     setLoading(false)
@@ -105,6 +108,21 @@ export default function DemoDetailPage() {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     router.push('/admin/demos')
+  }
+
+  async function handleSaveBrandUrl() {
+    setSavingBrandUrl(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ brandWebsiteUrl: brandUrl || null }),
+      })
+      setWlUrl(brandUrl)
+    } finally {
+      setSavingBrandUrl(false)
+    }
   }
 
   function copyText(text: string, key: string) {
@@ -354,6 +372,33 @@ export default function DemoDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Brand URL */}
+      <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--ink-3)' }}>Brand Website URL</h2>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
+            <input
+              type="url"
+              placeholder="https://prospect-website.com"
+              value={brandUrl}
+              onChange={e => { setBrandUrl(e.target.value); setWlUrl(e.target.value) }}
+              className="w-full pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none font-mono"
+              style={{ background: 'var(--sand-1)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+            />
+          </div>
+          <button
+            onClick={handleSaveBrandUrl}
+            disabled={savingBrandUrl}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+            style={{ background: 'var(--clay)' }}
+          >
+            {savingBrandUrl ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            Save
+          </button>
+        </div>
+      </div>
 
       {/* White Label */}
       <div className="rounded-xl p-5 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
