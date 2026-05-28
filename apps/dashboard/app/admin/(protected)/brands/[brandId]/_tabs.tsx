@@ -7,13 +7,17 @@ export function BrandDetailTabs({ brandId }: { brandId: string }) {
   const pathname = usePathname()
   const tabs = [
     { label: 'Overview', href: `/admin/brands/${brandId}` },
+    { label: 'Consumers', href: `/admin/brands/${brandId}/consumers` },
+    { label: 'Brands', href: `/admin/brands/${brandId}/brands` },
     { label: 'Team', href: `/admin/brands/${brandId}/team` },
     { label: 'Activity', href: `/admin/brands/${brandId}/activity` },
   ]
   return (
     <div className="flex mb-6" style={{ borderBottom: '1px solid var(--border)' }}>
       {tabs.map(tab => {
-        const active = pathname === tab.href
+        const active = tab.href === `/admin/brands/${brandId}`
+          ? pathname === tab.href
+          : pathname.startsWith(tab.href)
         return (
           <Link
             key={tab.href}

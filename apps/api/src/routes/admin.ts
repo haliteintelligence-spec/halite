@@ -210,7 +210,7 @@ export async function adminRoutes(server: FastifyInstance) {
 
   // ── Demo environments ─────────────────────────────────────────────
 
-  // Create a new demo — multipart: catalogFile (required), purchaseFile (optional)
+  // Create a new demo — multipart: all files optional, AI generates any not provided
   server.post(
     '/admin/demos',
     { preHandler: requireHaliteAdmin },
@@ -220,7 +220,9 @@ export async function adminRoutes(server: FastifyInstance) {
       const parts = request.parts()
       let prospectName = ''
       let focusAreas: string[] = []
-      let consumerCount = 100
+      let consumerCount = 200
+      let productCount = 20
+      let historyMonths = 12
       let brandWebsiteUrl = ''
       let catalogBuffer: Buffer | null = null
       let catalogMime = 'text/csv'
@@ -228,6 +230,12 @@ export async function adminRoutes(server: FastifyInstance) {
       let purchaseBuffer: Buffer | null = null
       let purchaseMime = 'text/csv'
       let purchaseFilename = 'purchase-history.csv'
+      let customerProfileBuffer: Buffer | null = null
+      let customerProfileMime = 'text/csv'
+      let customerProfileFilename = 'customer-profiles.xlsx'
+      let quizBuffer: Buffer | null = null
+      let quizMime = 'text/csv'
+      let quizFilename = 'quiz-results.xlsx'
 
       for await (const part of parts) {
         if (part.type === 'field') {
@@ -236,7 +244,9 @@ export async function adminRoutes(server: FastifyInstance) {
           if (part.fieldname === 'focusAreas') {
             try { focusAreas = JSON.parse(String(part.value)) } catch { focusAreas = [String(part.value)] }
           }
-          if (part.fieldname === 'consumerCount') consumerCount = Math.min(200, Math.max(50, parseInt(String(part.value)) || 100))
+          if (part.fieldname === 'consumerCount') consumerCount = Math.min(1000, Math.max(50, parseInt(String(part.value)) || 200))
+          if (part.fieldname === 'productCount') productCount = Math.min(100, Math.max(1, parseInt(String(part.value)) || 20))
+          if (part.fieldname === 'historyMonths') historyMonths = Math.min(60, Math.max(0, parseInt(String(part.value)) || 12))
         } else {
           const buf = await part.toBuffer()
           if (part.fieldname === 'catalogFile') {
@@ -247,24 +257,25 @@ export async function adminRoutes(server: FastifyInstance) {
             purchaseBuffer = buf
             purchaseMime = part.mimetype
             purchaseFilename = (part as any).filename ?? 'purchase-history.csv'
+          } else if (part.fieldname === 'customerProfileFile') {
+            customerProfileBuffer = buf
+            customerProfileMime = part.mimetype
+            customerProfileFilename = (part as any).filename ?? 'customer-profiles.xlsx'
+          } else if (part.fieldname === 'quizFile') {
+            quizBuffer = buf
+            quizMime = part.mimetype
+            quizFilename = (part as any).filename ?? 'quiz-results.xlsx'
           }
         }
       }
 
       if (!prospectName) throw new ApiError(400, 'prospectName is required')
-      if (!catalogBuffer) throw new ApiError(400, 'catalogFile is required')
 
       // focusAreas from the form are analytical labels ('Routine Outcomes' etc.)
       // Brand.focusAreas is a BeautyArea enum — filter to valid values only
       const VALID_BEAUTY_AREAS = ['SKINCARE','BODY','HAIR','MAKEUP','FRAGRANCE','NAILS','WELLNESS','SUN_CARE','LIP_CARE','EYE_CARE']
       const brandFocusAreas = focusAreas.filter(a => VALID_BEAUTY_AREAS.includes(a))
       if (brandFocusAreas.length === 0) brandFocusAreas.push('SKINCARE')
-
-      // Determine catalog format
-      const ext = catalogFilename.split('.').pop()?.toLowerCase()
-      const catalogFormat =
-        ext === 'xlsx' || ext === 'xls' ? 'XLSX' :
-        ext === 'json' ? 'JSON' : 'CSV'
 
       // Parse purchase history if provided
       let purchaseMatrix
@@ -273,7 +284,7 @@ export async function adminRoutes(server: FastifyInstance) {
         catch { /* non-blocking — proceed without purchase data */ }
       }
 
-      // Create brand stub immediately so we can upload catalog to it
+      // Create brand stub immediately
       const baseSlug = `${prospectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-demo`
       let slug = baseSlug
       let slugSuffix = 2
@@ -296,11 +307,15 @@ export async function adminRoutes(server: FastifyInstance) {
         },
       })
 
-      // Ingest catalog synchronously (it's fast — just DB writes)
-      const upload = await prisma.catalogUpload.create({
-        data: { brandId: brand.id, fileName: catalogFilename, fileUrl: '', format: catalogFormat as any, status: 'PROCESSING' },
-      })
-      await processCatalogUpload(upload.id, brand.id, catalogBuffer, catalogFormat as any)
+      // Ingest catalog synchronously if provided (fast — just DB writes)
+      if (catalogBuffer) {
+        const ext = catalogFilename.split('.').pop()?.toLowerCase()
+        const catalogFormat: 'XLSX' | 'JSON' | 'CSV' = ext === 'xlsx' || ext === 'xls' ? 'XLSX' : ext === 'json' ? 'JSON' : 'CSV'
+        const upload = await prisma.catalogUpload.create({
+          data: { brandId: brand.id, fileName: catalogFilename, fileUrl: '', format: catalogFormat, status: 'PROCESSING' },
+        })
+        await processCatalogUpload(upload.id, brand.id, catalogBuffer, catalogFormat)
+      }
 
       // Persist the original purchase file to S3 and create a USER_UPLOADED record
       if (purchaseBuffer && purchaseMatrix) {
@@ -326,6 +341,36 @@ export async function adminRoutes(server: FastifyInstance) {
         }
       }
 
+      // Persist customer profile file to S3 if provided
+      if (customerProfileBuffer) {
+        try {
+          const ext = customerProfileFilename.split('.').pop()?.toLowerCase()
+          const fmt = ext === 'xlsx' || ext === 'xls' ? 'XLSX' : 'CSV'
+          const s3Key = `catalogs/${brand.id}/${Date.now()}-${customerProfileFilename}`
+          const fileUrl = await uploadToS3(s3Key, customerProfileBuffer, customerProfileMime)
+          await prisma.catalogUpload.create({
+            data: { brandId: brand.id, fileName: customerProfileFilename, fileUrl, format: fmt as any, source: 'USER_UPLOADED', status: 'DONE', rowCount: null },
+          })
+        } catch (err) {
+          console.error('Failed to persist customer profile file:', err)
+        }
+      }
+
+      // Persist quiz results file to S3 if provided
+      if (quizBuffer) {
+        try {
+          const ext = quizFilename.split('.').pop()?.toLowerCase()
+          const fmt = ext === 'xlsx' || ext === 'xls' ? 'XLSX' : 'CSV'
+          const s3Key = `catalogs/${brand.id}/${Date.now()}-${quizFilename}`
+          const fileUrl = await uploadToS3(s3Key, quizBuffer, quizMime)
+          await prisma.catalogUpload.create({
+            data: { brandId: brand.id, fileName: quizFilename, fileUrl, format: fmt as any, source: 'USER_UPLOADED', status: 'DONE', rowCount: null },
+          })
+        } catch (err) {
+          console.error('Failed to persist quiz results file:', err)
+        }
+      }
+
       // Kick off the rest of provisioning async (routines take time)
       ;(async () => {
         try {
@@ -334,7 +379,12 @@ export async function adminRoutes(server: FastifyInstance) {
             createdByAdminId: adminId,
             focusAreas: brandFocusAreas,
             consumerCount,
+            productCount,
+            historyMonths,
             purchaseMatrix,
+            hasCatalog: !!catalogBuffer,
+            hasCustomerProfiles: !!customerProfileBuffer,
+            hasQuizResults: !!quizBuffer,
             existingBrandId: brand.id,
           })
           await prisma.brand.update({ where: { id: brand.id }, data: { active: true } })
@@ -625,19 +675,20 @@ export async function adminRoutes(server: FastifyInstance) {
         prisma.routine.count({ where: { endUser: { brandId: demoId }, activeTo: null } }),
       ])
 
-      // ~60% of consumers simulated as having purchase history
       const purchaseRowCount = Math.round(routineCount * 0.6)
 
       await prisma.catalogUpload.createMany({
         data: [
           { brandId: demoId, fileName: 'Synthetic Product Catalog.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: productCount },
-          { brandId: demoId, fileName: 'Synthetic Consumer Profiles.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerCount },
+          { brandId: demoId, fileName: 'Synthetic Customer Profiles.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerCount },
+          { brandId: demoId, fileName: 'Synthetic Quiz Results.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: consumerCount },
           { brandId: demoId, fileName: 'Synthetic Check-in History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: checkInCount },
-          { brandId: demoId, fileName: 'Synthetic Purchase History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: purchaseRowCount },
-        ],
+          { brandId: demoId, fileName: 'Synthetic Purchase History.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: purchaseRowCount, errorLog: { historyMonths: 6 } },
+          { brandId: demoId, fileName: 'Synthetic Routine Assignments.xlsx', fileUrl: '', format: 'XLSX', source: 'AI_GENERATED', status: 'DONE', rowCount: routineCount },
+        ] as any,
       })
 
-      return { seeded: true, productCount, consumerCount, checkInCount, purchaseRowCount }
+      return { seeded: true, productCount, consumerCount, checkInCount, purchaseRowCount, routineCount }
     }
   )
 
@@ -660,7 +711,7 @@ export async function adminRoutes(server: FastifyInstance) {
     { preHandler: requireHaliteAdmin },
     async (request, reply) => {
       const { demoId } = request.params as { demoId: string }
-      const body = z.object({ consumerCount: z.number().min(50).max(200).default(100) }).parse(request.body ?? {})
+      const body = z.object({ consumerCount: z.number().min(50).max(1000).default(200) }).parse(request.body ?? {})
       const brand = await prisma.brand.findFirst({
         where: { id: demoId, isDemo: true },
         select: { id: true, demoProspectName: true, demoCreatedBy: true, focusAreas: true },
@@ -879,6 +930,164 @@ export async function adminRoutes(server: FastifyInstance) {
         select: { whiteLabelEnabled: true, brandWebsiteUrl: true, brandThemeConfig: true },
       })
       return { ok: true, ...updated }
+    }
+  )
+
+  // ── Consumer list for a brand (admin) ────────────────────────────
+  server.get(
+    '/admin/brands/:brandId/consumers',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const schema = z.object({
+        page: z.coerce.number().min(1).default(1),
+        limit: z.coerce.number().min(1).max(100).default(50),
+        search: z.string().optional(),
+        skinType: z.string().optional(),
+        city: z.string().optional(),
+      })
+      const { page, limit, search, skinType, city } = schema.parse(request.query)
+
+      const where: Record<string, unknown> = { brandId }
+      if (search) {
+        where['OR'] = [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ]
+      }
+      if (skinType) where['beautyProfile'] = { skinType }
+      if (city) where['beautyProfile'] = { ...(where['beautyProfile'] as object ?? {}), city: { contains: city, mode: 'insensitive' } }
+
+      const [consumers, total] = await Promise.all([
+        prisma.endUser.findMany({
+          where: where as any,
+          include: {
+            beautyProfile: {
+              select: {
+                skinType: true, ageRange: true, city: true, country: true,
+                monkSkinTone: true, skinConcerns: true, hairProfile: true,
+              },
+            },
+            consumer: {
+              select: {
+                id: true,
+                _count: { select: { endUsers: true } },
+              },
+            },
+            _count: { select: { checkIns: true, routines: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.endUser.count({ where: where as any }),
+      ])
+
+      return { consumers, total, page, pages: Math.ceil(total / limit) }
+    }
+  )
+
+  // ── Consumer detail for a brand (admin) ───────────────────────────
+  server.get(
+    '/admin/brands/:brandId/consumers/:userId',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId, userId } = request.params as { brandId: string; userId: string }
+
+      const endUser = await prisma.endUser.findFirst({
+        where: { id: userId, brandId },
+        include: {
+          beautyProfile: true,
+          consumer: {
+            include: {
+              endUsers: {
+                select: {
+                  id: true,
+                  brandId: true,
+                  brand: { select: { name: true, slug: true, demoLinkExpiresAt: true } },
+                },
+              },
+            },
+          },
+          routines: {
+            where: { activeTo: null },
+            include: {
+              steps: {
+                include: { product: { select: { name: true, category: true } } },
+                orderBy: { step: 'asc' },
+              },
+            },
+            take: 5,
+          },
+          checkIns: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: {
+              id: true, skinRating: true, compliant: true,
+              symptoms: true, notes: true, createdAt: true,
+            },
+          },
+        },
+      })
+
+      if (!endUser) throw new ApiError(404, 'Consumer not found')
+
+      const quizSession = await prisma.quizSession.findFirst({
+        where: { endUserId: userId, brandId, completed: true },
+        orderBy: { completedAt: 'desc' },
+      })
+
+      return { consumer: endUser, quizSession: quizSession ?? null }
+    }
+  )
+
+  // ── Brand overlaps (cross-brand consumer sharing, admin) ──────────
+  server.get(
+    '/admin/brands/:brandId/brand-overlaps',
+    { preHandler: requireHaliteAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+
+      const linked = await prisma.endUser.findMany({
+        where: { brandId, consumerId: { not: null } },
+        select: { consumerId: true },
+      })
+      const consumerIds = [...new Set(linked.map(u => u.consumerId!))]
+
+      if (consumerIds.length === 0) return { overlaps: [], totalLinked: 0 }
+
+      const rows = await prisma.endUser.groupBy({
+        by: ['brandId'],
+        where: {
+          consumerId: { in: consumerIds },
+          brandId: { not: brandId },
+        },
+        _count: { consumerId: true },
+        orderBy: { _count: { consumerId: 'desc' } },
+      })
+
+      const otherBrandIds = rows.map(r => r.brandId)
+      const brands = await prisma.brand.findMany({
+        where: { id: { in: otherBrandIds } },
+        select: { id: true, name: true, slug: true, demoLinkExpiresAt: true },
+      })
+
+      const brandMap = new Map(brands.map(b => [b.id, b]))
+
+      const overlaps = rows.map(r => {
+        const b = brandMap.get(r.brandId)
+        return {
+          brandId: r.brandId,
+          brandName: b?.name ?? 'Unknown',
+          slug: b?.slug ?? '',
+          isDemo: !!b?.demoLinkExpiresAt,
+          overlapCount: r._count.consumerId,
+          overlapPct: Math.round((r._count.consumerId / consumerIds.length) * 100),
+        }
+      })
+
+      return { overlaps, totalLinked: consumerIds.length }
     }
   )
 

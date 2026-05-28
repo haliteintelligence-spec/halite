@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import type { Product, ProductsResponse, UploadRecord } from '@/lib/api'
-import { Pencil, Trash2, Plus, X, Upload, CheckCircle, AlertCircle, Loader2, ChevronRight, Download } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Upload, CheckCircle, AlertCircle, Loader2, ChevronRight, Download, Eye, ChevronLeft } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -107,6 +107,12 @@ export function CatalogClient({
   const [uploading, setUploading] = useState(false)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  const [previewUpload, setPreviewUpload] = useState<UploadRecord | null>(null)
+  const [previewData, setPreviewData] = useState<{ columns: string[]; rows: Record<string, unknown>[]; total: number } | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewPage, setPreviewPage] = useState(1)
+  const PREVIEW_PAGE_SIZE = 25
+
   const authHeaders = { Authorization: `Bearer ${token}` }
 
   async function fetchProducts(p: number) {
@@ -169,6 +175,29 @@ export function CatalogClient({
       setTab('uploads')
     }
     setUploading(false)
+  }
+
+  async function openPreview(u: UploadRecord) {
+    setPreviewUpload(u)
+    setPreviewData(null)
+    setPreviewPage(1)
+    setPreviewLoading(true)
+    const res = await fetch(`${API_URL}/brands/${brandId}/catalog/uploads/${u.id}/preview`, { headers: authHeaders })
+    if (res.ok) {
+      const data = await res.json()
+      setPreviewData(data)
+    }
+    setPreviewLoading(false)
+  }
+
+  async function downloadUpload(u: UploadRecord) {
+    const res = await fetch(`${API_URL}/brands/${brandId}/catalog/uploads/${u.id}/download`, { headers: authHeaders })
+    if (!res.ok) return
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = u.fileName; a.click()
+    URL.revokeObjectURL(url)
   }
 
   function openCreate() {
@@ -476,21 +505,22 @@ export function CatalogClient({
                   {u.status === 'PROCESSING' && <Loader2 size={12} className="animate-spin text-blue-500" />}
                   <StatusBadge status={u.status} />
                   {u.status === 'DONE' && (
-                    <button
-                      onClick={async () => {
-                        const res = await fetch(`${API_URL}/brands/${brandId}/catalog/uploads/${u.id}/download`, { headers: authHeaders })
-                        if (!res.ok) return
-                        const blob = await res.blob()
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url; a.download = u.fileName; a.click()
-                        URL.revokeObjectURL(url)
-                      }}
-                      className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg transition-colors hover:opacity-80"
-                      style={{ background: 'var(--sand-1)', color: 'var(--clay)', border: '1px solid var(--border)' }}
-                    >
-                      <Download size={11} /> Download
-                    </button>
+                    <>
+                      <button
+                        onClick={() => openPreview(u)}
+                        className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg transition-colors hover:opacity-80"
+                        style={{ background: 'var(--sand-1)', color: 'var(--ink-3)', border: '1px solid var(--sand-2)' }}
+                      >
+                        <Eye size={11} /> Preview
+                      </button>
+                      <button
+                        onClick={() => downloadUpload(u)}
+                        className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg transition-colors hover:opacity-80"
+                        style={{ background: 'var(--sand-1)', color: 'var(--clay)', border: '1px solid var(--border)' }}
+                      >
+                        <Download size={11} /> Download
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -521,6 +551,124 @@ export function CatalogClient({
             )
           })()}
         </div>
+      )}
+
+      {/* Upload preview modal */}
+      {previewUpload && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40"
+            onClick={() => { setPreviewUpload(null); setPreviewData(null) }}
+          />
+          <div
+            className="fixed inset-4 md:inset-8 z-50 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{ border: '1px solid var(--sand-2)' }}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-sand-2 flex-shrink-0">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold tracking-[0.16em] uppercase" style={{ color: 'var(--ink-3)' }}>
+                  {previewUpload.source === 'AI_GENERATED' ? 'AI Generated' : 'User Uploaded'}
+                </p>
+                <h2 className="text-[15px] font-semibold truncate" style={{ color: 'var(--ink)' }}>
+                  {previewUpload.fileName}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 ml-4">
+                <button
+                  onClick={() => downloadUpload(previewUpload)}
+                  className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                  style={{ background: 'var(--clay)', color: 'white' }}
+                >
+                  <Download size={12} /> Download
+                </button>
+                <button
+                  onClick={() => { setPreviewUpload(null); setPreviewData(null) }}
+                  className="p-1.5 rounded-lg hover:bg-sand-1 transition-colors"
+                >
+                  <X size={16} style={{ color: 'var(--ink-3)' }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal body */}
+            <div className="flex-1 overflow-auto">
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 size={22} className="animate-spin" style={{ color: 'var(--ink-3)' }} />
+                </div>
+              ) : !previewData || previewData.rows.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm" style={{ color: 'var(--ink-3)' }}>No data to preview.</p>
+                </div>
+              ) : (
+                <table className="w-full text-[12px] border-collapse">
+                  <thead className="sticky top-0" style={{ background: 'var(--sand-1)', zIndex: 1 }}>
+                    <tr>
+                      {previewData.columns.map(col => (
+                        <th
+                          key={col}
+                          className="px-4 py-2.5 text-left text-[10px] font-semibold tracking-wide uppercase whitespace-nowrap border-b border-sand-2"
+                          style={{ color: 'var(--ink-3)' }}
+                        >
+                          {col.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewData.rows
+                      .slice((previewPage - 1) * PREVIEW_PAGE_SIZE, previewPage * PREVIEW_PAGE_SIZE)
+                      .map((row, i) => (
+                        <tr
+                          key={i}
+                          className="border-b border-sand-1 hover:bg-sand-1/40 transition-colors"
+                        >
+                          {previewData.columns.map(col => (
+                            <td
+                              key={col}
+                              className="px-4 py-2.5 whitespace-nowrap max-w-[240px] truncate"
+                              style={{ color: 'var(--ink)' }}
+                              title={String(row[col] ?? '')}
+                            >
+                              {String(row[col] ?? '')}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal footer — pagination */}
+            {previewData && previewData.rows.length > PREVIEW_PAGE_SIZE && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-sand-2 flex-shrink-0">
+                <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                  Showing {(previewPage - 1) * PREVIEW_PAGE_SIZE + 1}–{Math.min(previewPage * PREVIEW_PAGE_SIZE, previewData.rows.length)} of {previewData.total > previewData.rows.length ? `${previewData.rows.length}+ (download for all)` : previewData.rows.length} rows
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
+                    disabled={previewPage === 1}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-sand-2 disabled:opacity-40 hover:bg-sand-1 transition-colors"
+                    style={{ color: 'var(--ink-3)' }}
+                  >
+                    <ChevronLeft size={12} /> Prev
+                  </button>
+                  <button
+                    onClick={() => setPreviewPage(p => p + 1)}
+                    disabled={previewPage * PREVIEW_PAGE_SIZE >= previewData.rows.length}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-sand-2 disabled:opacity-40 hover:bg-sand-1 transition-colors"
+                    style={{ color: 'var(--ink-3)' }}
+                  >
+                    Next <ChevronRight size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Product panel */}

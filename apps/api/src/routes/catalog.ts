@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { prisma, CatalogFormat, ProductCategory, SkinConcern, SkinType } from '@halite/db'
 import { requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
-import { uploadToS3, getPresignedUrl } from '../lib/storage.js'
+import { uploadToS3, getPresignedUrl, getS3Buffer } from '../lib/storage.js'
 import { processCatalogUpload } from '../lib/catalog-processor.js'
 import { embedBrandProducts } from '../lib/embeddings.js'
 import * as XLSX from 'xlsx'
@@ -99,7 +99,38 @@ export async function catalogRoutes(server: FastifyInstance) {
       let wb: XLSX.WorkBook
       const name = upload.fileName.toLowerCase()
 
+      // Deterministic demo data helpers (no DB storage needed)
+      function deterministicPhone(id: string): string {
+        let h = 5381
+        for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) ^ id.charCodeAt(i)) >>> 0
+        const n = (h % 9000000000) + 1000000000
+        const s = String(n)
+        return `(${s.slice(0, 3)}) ${s.slice(3, 6)}-${s.slice(6, 10)}`
+      }
+
+      function ageFromRange(ageRange: string | null, id: string): number {
+        const ranges: Record<string, [number, number]> = {
+          under_18: [14, 17], '18_24': [18, 24], '25_34': [25, 34],
+          '35_44': [35, 44], '45_54': [45, 54], '55_64': [55, 64], '65_plus': [65, 75],
+        }
+        const [min, max] = ranges[ageRange ?? '25_34'] ?? [25, 34]
+        let h = 5381
+        for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) ^ id.charCodeAt(i)) >>> 0
+        return min + (h % (max - min + 1))
+      }
+
+      function birthdayFromAge(age: number, id: string): string {
+        let h = 5381
+        for (let i = 0; i < id.length; i++) h = (Math.imul(h, 33) ^ id.charCodeAt(i)) >>> 0
+        const year = new Date().getFullYear() - age
+        const month = (h % 12) + 1
+        const day = ((h >> 4) % 28) + 1
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      }
+
       if (name.includes('purchase')) {
+        const historyMonths: number = (upload.errorLog as any)?.historyMonths ?? 6
+        const lookbackDays = Math.max(historyMonths * 30, 30)
         const users = await prisma.endUser.findMany({
           where: { brandId },
           include: {
@@ -109,7 +140,7 @@ export async function catalogRoutes(server: FastifyInstance) {
               take: 1,
             },
           },
-          take: 500,
+          take: 1000,
         })
         const rows: Array<Record<string, unknown>> = []
         for (const u of users) {
@@ -119,8 +150,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           for (const step of routine.steps) {
             if (seen.has(step.productId)) continue
             seen.add(step.productId)
-            // Stagger order dates across the past 6 months
-            const daysAgo = Math.floor(Math.random() * 180)
+            const daysAgo = Math.floor(Math.random() * lookbackDays)
             const orderDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
             rows.push({
               orderId: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
@@ -130,7 +160,7 @@ export async function catalogRoutes(server: FastifyInstance) {
               productName: step.product.name,
               category: step.product.category,
               quantity: Math.floor(Math.random() * 2) + 1,
-              unitPrice: step.product.price ?? '',
+              unitPrice: step.product.price?.toFixed(2) ?? '',
               currency: step.product.currency,
               orderDate: orderDate.toISOString().slice(0, 10),
             })
@@ -138,25 +168,109 @@ export async function catalogRoutes(server: FastifyInstance) {
         }
         wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Purchase History')
-      } else if (name.includes('consumer')) {
+      } else if (name.includes('customer') || name.includes('consumer')) {
         const users = await prisma.endUser.findMany({
           where: { brandId },
           include: { beautyProfile: true },
-          take: 500,
+          take: 1000,
         })
-        const rows = users.map(u => ({
-          id: u.id,
-          firstName: u.firstName ?? '',
-          lastName: u.lastName ?? '',
-          email: u.email ?? '',
-          skinType: u.beautyProfile?.skinType ?? '',
-          skinTone: u.beautyProfile?.monkSkinTone ?? '',
-          concerns: (u.beautyProfile?.skinConcerns ?? []).join(', '),
-          climate: u.beautyProfile?.climateTag ?? '',
-          createdAt: u.createdAt.toISOString().slice(0, 10),
-        }))
+        const rows = users.map(u => {
+          const age = ageFromRange(u.beautyProfile?.ageRange ?? null, u.id)
+          return {
+            customerId: u.id,
+            firstName: u.firstName ?? '',
+            lastName: u.lastName ?? '',
+            name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+            email: u.email ?? '',
+            phone: deterministicPhone(u.id),
+            age,
+            birthday: birthdayFromAge(age, u.id),
+            city: u.beautyProfile?.city ?? '',
+            country: u.beautyProfile?.country ?? 'United States',
+            skinType: u.beautyProfile?.skinType ?? '',
+            skinTone: u.beautyProfile?.monkSkinTone ?? '',
+            skinConcerns: (u.beautyProfile?.skinConcerns ?? []).join(', '),
+            ageRange: u.beautyProfile?.ageRange ?? '',
+            climate: u.beautyProfile?.climateTag ?? '',
+            joinedAt: u.createdAt.toISOString().slice(0, 10),
+          }
+        })
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Consumers')
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Customer Profiles')
+      } else if (name.includes('quiz')) {
+        const sessions = await prisma.quizSession.findMany({
+          where: { brandId, completed: true },
+          include: { endUser: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          take: 1000,
+          orderBy: { completedAt: 'desc' },
+        })
+        const skinTypeLabel: Record<string, string> = {
+          oily_all: 'Oily', oily_tzone: 'Oily T-zone', normal: 'Normal', dry: 'Dry', very_dry: 'Very Dry',
+          DRY: 'Dry', OILY: 'Oily', COMBINATION: 'Combination', NORMAL: 'Normal', SENSITIVE: 'Sensitive',
+          combination: 'Combination', sensitive: 'Sensitive',
+        }
+        const ageRangeLabel: Record<string, string> = {
+          under_18: 'Under 18', '18_24': '18–24', '25_34': '25–34',
+          '35_44': '35–44', '45_54': '45–54', '55_64': '55–64', '65_plus': '65+',
+        }
+        const rows = sessions.map(s => {
+          const a = s.answers as Record<string, unknown>
+          const concerns = Array.isArray(a['S4']) ? (a['S4'] as string[]).join(', ') : String(a['S4'] ?? '')
+          const hairConcerns = Array.isArray(a['H2']) ? (a['H2'] as string[]).join(', ') : String(a['H2'] ?? '')
+          const areas = Array.isArray(s.selectedAreas) ? s.selectedAreas.join(', ') : ''
+          return {
+            customerId: s.endUserId ?? '',
+            customerName: s.endUser ? `${s.endUser.firstName ?? ''} ${s.endUser.lastName ?? ''}`.trim() : '',
+            customerEmail: s.endUser?.email ?? '',
+            quizAreas: areas,
+            completedAt: s.completedAt?.toISOString().slice(0, 10) ?? '',
+            ageRange: ageRangeLabel[String(a['SH0'] ?? '')] ?? String(a['SH0'] ?? ''),
+            skinType: skinTypeLabel[String(a['S1'] ?? '')] ?? String(a['S1'] ?? ''),
+            skinConcerns: concerns,
+            monkSkinTone: String(a['S5'] ?? ''),
+            breakoutFrequency: String(a['S2'] ?? ''),
+            sensitivity: String(a['S3'] ?? ''),
+            hairType: String(a['H1'] ?? ''),
+            hairConcerns,
+            scalpType: String(a['H3'] ?? ''),
+            hairPorosity: String(a['H4'] ?? ''),
+            routinePreference: String(a['SH1'] ?? ''),
+            waterIntake: String(a['SH2'] ?? ''),
+            sleepHours: String(a['SH3'] ?? ''),
+            stressLevel: String(a['SH4'] ?? ''),
+          }
+        })
+        wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Quiz Results')
+      } else if (name.includes('routine')) {
+        const routines = await prisma.routine.findMany({
+          where: { endUser: { brandId }, activeTo: null },
+          include: {
+            endUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+            steps: {
+              include: { product: { select: { name: true, category: true } } },
+              orderBy: { step: 'asc' },
+            },
+          },
+          take: 1000,
+        })
+        const rows = routines.map(r => {
+          const amProducts = r.steps.filter(s => s.timeOfDay === 'AM' || s.timeOfDay === 'BOTH').map(s => s.product.name).join(', ')
+          const pmProducts = r.steps.filter(s => s.timeOfDay === 'PM' || s.timeOfDay === 'BOTH').map(s => s.product.name).join(', ')
+          const allProducts = r.steps.map(s => `${s.product.name} (${s.timeOfDay})`).join('; ')
+          return {
+            customerId: r.endUserId,
+            customerName: `${r.endUser.firstName ?? ''} ${r.endUser.lastName ?? ''}`.trim(),
+            customerEmail: r.endUser.email ?? '',
+            focusArea: r.focusArea,
+            amProducts: amProducts || '—',
+            pmProducts: pmProducts || '—',
+            allProducts,
+            assignedAt: r.createdAt.toISOString().slice(0, 10),
+          }
+        })
+        wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Routine Assignments')
       } else if (name.includes('check')) {
         const checkIns = await prisma.checkIn.findMany({
           where: { endUser: { brandId } },
@@ -196,6 +310,225 @@ export async function catalogRoutes(server: FastifyInstance) {
       reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       reply.header('Content-Disposition', `attachment; filename="${upload.fileName}"`)
       return reply.send(buf)
+    }
+  )
+
+  // ── Preview upload (returns JSON rows for in-browser table) ──────
+  server.get(
+    '/:brandId/catalog/uploads/:uploadId/preview',
+    { preHandler: requireBrandAdmin },
+    async (request, reply) => {
+      const { brandId, uploadId } = request.params as { brandId: string; uploadId: string }
+      const upload = await prisma.catalogUpload.findFirst({ where: { id: uploadId, brandId } })
+      if (!upload) throw new ApiError(404, 'Upload not found')
+
+      const PREVIEW_LIMIT = 200
+      let rows: Record<string, unknown>[] = []
+      let total = 0
+
+      if (upload.source === 'USER_UPLOADED' && upload.fileUrl) {
+        const key = new URL(upload.fileUrl).pathname.slice(1)
+        const buf = await getS3Buffer(key)
+        const wb = XLSX.read(buf, { type: 'buffer' })
+        const sheetName = wb.SheetNames[0] ?? ''
+        const sheet = wb.Sheets[sheetName]
+        const allRows = sheet ? XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet) : []
+        total = allRows.length
+        rows = allRows.slice(0, PREVIEW_LIMIT)
+      } else {
+        // AI-generated — build rows on the fly (same logic as download)
+        const name = upload.fileName.toLowerCase()
+
+        function deterministicPhone(id: string): string {
+          let h = 5381
+          for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) ^ id.charCodeAt(i)) >>> 0
+          const n = (h % 9000000000) + 1000000000
+          const s = String(n)
+          return `(${s.slice(0, 3)}) ${s.slice(3, 6)}-${s.slice(6, 10)}`
+        }
+        function ageFromRange(ageRange: string | null, id: string): number {
+          const ranges: Record<string, [number, number]> = {
+            under_18: [14, 17], '18_24': [18, 24], '25_34': [25, 34],
+            '35_44': [35, 44], '45_54': [45, 54], '55_64': [55, 64], '65_plus': [65, 75],
+          }
+          const [min, max] = ranges[ageRange ?? '25_34'] ?? [25, 34]
+          let h = 5381
+          for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) ^ id.charCodeAt(i)) >>> 0
+          return min + (h % (max - min + 1))
+        }
+        function birthdayFromAge(age: number, id: string): string {
+          let h = 5381
+          for (let i = 0; i < id.length; i++) h = (Math.imul(h, 33) ^ id.charCodeAt(i)) >>> 0
+          const year = new Date().getFullYear() - age
+          const month = (h % 12) + 1
+          const day = ((h >> 4) % 28) + 1
+          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        }
+
+        if (name.includes('purchase')) {
+          const historyMonths: number = (upload.errorLog as any)?.historyMonths ?? 6
+          const lookbackDays = Math.max(historyMonths * 30, 30)
+          const users = await prisma.endUser.findMany({
+            where: { brandId },
+            include: {
+              routines: {
+                where: { activeTo: null },
+                include: { steps: { include: { product: { select: { id: true, name: true, category: true, price: true, currency: true } } } } },
+                take: 1,
+              },
+            },
+            take: 1000,
+          })
+          for (const u of users) {
+            const routine = u.routines[0]
+            if (!routine) continue
+            const seen = new Set<string>()
+            for (const step of routine.steps) {
+              if (seen.has(step.productId)) continue
+              seen.add(step.productId)
+              const daysAgo = Math.floor(Math.random() * lookbackDays)
+              const orderDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
+              rows.push({
+                orderId: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+                customerId: u.id,
+                customerName: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+                customerEmail: u.email ?? '',
+                productName: step.product.name,
+                category: step.product.category,
+                quantity: Math.floor(Math.random() * 2) + 1,
+                unitPrice: step.product.price?.toFixed(2) ?? '',
+                currency: step.product.currency,
+                orderDate: orderDate.toISOString().slice(0, 10),
+              })
+            }
+          }
+        } else if (name.includes('customer') || name.includes('consumer')) {
+          const users = await prisma.endUser.findMany({
+            where: { brandId },
+            include: { beautyProfile: true },
+            take: 1000,
+          })
+          rows = users.map(u => {
+            const age = ageFromRange(u.beautyProfile?.ageRange ?? null, u.id)
+            return {
+              customerId: u.id,
+              firstName: u.firstName ?? '',
+              lastName: u.lastName ?? '',
+              name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+              email: u.email ?? '',
+              phone: deterministicPhone(u.id),
+              age,
+              birthday: birthdayFromAge(age, u.id),
+              city: u.beautyProfile?.city ?? '',
+              country: u.beautyProfile?.country ?? 'United States',
+              skinType: u.beautyProfile?.skinType ?? '',
+              skinTone: u.beautyProfile?.monkSkinTone ?? '',
+              skinConcerns: (u.beautyProfile?.skinConcerns ?? []).join(', '),
+              ageRange: u.beautyProfile?.ageRange ?? '',
+              climate: u.beautyProfile?.climateTag ?? '',
+              joinedAt: u.createdAt.toISOString().slice(0, 10),
+            }
+          })
+        } else if (name.includes('quiz')) {
+          const sessions = await prisma.quizSession.findMany({
+            where: { brandId, completed: true },
+            include: { endUser: { select: { id: true, firstName: true, lastName: true, email: true } } },
+            take: 1000,
+            orderBy: { completedAt: 'desc' },
+          })
+          const skinTypeLabel: Record<string, string> = {
+            oily_all: 'Oily', oily_tzone: 'Oily T-zone', normal: 'Normal', dry: 'Dry', very_dry: 'Very Dry',
+            DRY: 'Dry', OILY: 'Oily', COMBINATION: 'Combination', NORMAL: 'Normal', SENSITIVE: 'Sensitive',
+            combination: 'Combination', sensitive: 'Sensitive',
+          }
+          const ageRangeLabel: Record<string, string> = {
+            under_18: 'Under 18', '18_24': '18–24', '25_34': '25–34',
+            '35_44': '35–44', '45_54': '45–54', '55_64': '55–64', '65_plus': '65+',
+          }
+          rows = sessions.map(s => {
+            const a = s.answers as Record<string, unknown>
+            return {
+              customerId: s.endUserId ?? '',
+              customerName: s.endUser ? `${s.endUser.firstName ?? ''} ${s.endUser.lastName ?? ''}`.trim() : '',
+              customerEmail: s.endUser?.email ?? '',
+              quizAreas: Array.isArray(s.selectedAreas) ? s.selectedAreas.join(', ') : '',
+              completedAt: s.completedAt?.toISOString().slice(0, 10) ?? '',
+              ageRange: ageRangeLabel[String(a['SH0'] ?? '')] ?? String(a['SH0'] ?? ''),
+              skinType: skinTypeLabel[String(a['S1'] ?? '')] ?? String(a['S1'] ?? ''),
+              skinConcerns: Array.isArray(a['S4']) ? (a['S4'] as string[]).join(', ') : String(a['S4'] ?? ''),
+              monkSkinTone: String(a['S5'] ?? ''),
+              breakoutFrequency: String(a['S2'] ?? ''),
+              sensitivity: String(a['S3'] ?? ''),
+              hairType: String(a['H1'] ?? ''),
+              hairConcerns: Array.isArray(a['H2']) ? (a['H2'] as string[]).join(', ') : String(a['H2'] ?? ''),
+              scalpType: String(a['H3'] ?? ''),
+              hairPorosity: String(a['H4'] ?? ''),
+              routinePreference: String(a['SH1'] ?? ''),
+              waterIntake: String(a['SH2'] ?? ''),
+              sleepHours: String(a['SH3'] ?? ''),
+              stressLevel: String(a['SH4'] ?? ''),
+            }
+          })
+        } else if (name.includes('routine')) {
+          const routines = await prisma.routine.findMany({
+            where: { endUser: { brandId }, activeTo: null },
+            include: {
+              endUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+              steps: {
+                include: { product: { select: { name: true, category: true } } },
+                orderBy: { step: 'asc' },
+              },
+            },
+            take: 1000,
+          })
+          rows = routines.map(r => ({
+            customerId: r.endUserId,
+            customerName: `${r.endUser.firstName ?? ''} ${r.endUser.lastName ?? ''}`.trim(),
+            customerEmail: r.endUser.email ?? '',
+            focusArea: r.focusArea,
+            amProducts: r.steps.filter(s => s.timeOfDay === 'AM' || s.timeOfDay === 'BOTH').map(s => s.product.name).join(', ') || '—',
+            pmProducts: r.steps.filter(s => s.timeOfDay === 'PM' || s.timeOfDay === 'BOTH').map(s => s.product.name).join(', ') || '—',
+            allProducts: r.steps.map(s => `${s.product.name} (${s.timeOfDay})`).join('; '),
+            assignedAt: r.createdAt.toISOString().slice(0, 10),
+          }))
+        } else if (name.includes('check')) {
+          const checkIns = await prisma.checkIn.findMany({
+            where: { endUser: { brandId } },
+            include: { endUser: { select: { firstName: true, lastName: true } } },
+            take: 2000,
+            orderBy: { createdAt: 'desc' },
+          })
+          rows = checkIns.map(c => ({
+            consumerId: c.endUserId,
+            name: `${c.endUser.firstName ?? ''} ${c.endUser.lastName ?? ''}`.trim(),
+            skinRating: c.skinRating ?? '',
+            compliant: c.compliant ? 'Yes' : 'No',
+            symptoms: (c.symptoms ?? []).join(', '),
+            notes: c.notes ?? '',
+            date: c.createdAt.toISOString().slice(0, 10),
+          }))
+        } else {
+          const products = await prisma.product.findMany({ where: { brandId }, take: 500 })
+          rows = products.map(p => ({
+            name: p.name,
+            category: p.category,
+            price: p.price ?? '',
+            currency: p.currency,
+            description: p.description ?? '',
+            keyIngredients: p.keyIngredients.join(', '),
+            concerns: p.concerns.join(', '),
+            inStock: p.inStock,
+            productUrl: p.productUrl ?? '',
+          }))
+        }
+
+        total = rows.length
+        rows = rows.slice(0, PREVIEW_LIMIT)
+      }
+
+      const firstRow = rows[0]
+      const columns = firstRow ? Object.keys(firstRow) : []
+      return { columns, rows, total }
     }
   )
 

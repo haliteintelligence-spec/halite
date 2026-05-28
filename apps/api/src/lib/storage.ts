@@ -20,3 +20,13 @@ export async function getPresignedUrl(key: string, expiresIn = 300): Promise<str
   const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key })
   return getSignedUrl(s3, cmd, { expiresIn })
 }
+
+export async function getS3Buffer(key: string): Promise<Buffer> {
+  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key })
+  const res = await s3.send(cmd)
+  const chunks: Buffer[] = []
+  for await (const chunk of res.Body as AsyncIterable<Uint8Array>) {
+    chunks.push(Buffer.from(chunk))
+  }
+  return Buffer.concat(chunks)
+}

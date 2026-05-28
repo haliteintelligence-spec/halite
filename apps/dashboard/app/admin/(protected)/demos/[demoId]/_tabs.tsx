@@ -7,12 +7,16 @@ export function DemoDetailTabs({ demoId }: { demoId: string }) {
   const pathname = usePathname()
   const tabs = [
     { label: 'Overview', href: `/admin/demos/${demoId}` },
+    { label: 'Consumers', href: `/admin/demos/${demoId}/consumers` },
+    { label: 'Brands', href: `/admin/demos/${demoId}/brands` },
     { label: 'Activity', href: `/admin/demos/${demoId}/activity` },
   ]
   return (
     <div className="flex mb-6" style={{ borderBottom: '1px solid var(--border)' }}>
       {tabs.map(tab => {
-        const active = pathname === tab.href
+        const active = tab.href === `/admin/demos/${demoId}`
+          ? pathname === tab.href
+          : pathname.startsWith(tab.href)
         return (
           <Link
             key={tab.href}
