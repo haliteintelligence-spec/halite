@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 const nav = [
   { href: '/admin',        label: 'Overview',  icon: LayoutGrid },
   { href: '/admin/demos',  label: 'Demos',     icon: Play },
-  { href: '/admin/brands', label: 'Brands',    icon: Building2 },
+  { href: '/admin/brands', label: 'Onboarded', icon: Building2 },
 ]
 
 export function AdminNav() {

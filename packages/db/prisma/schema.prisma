@@ -46,8 +46,11 @@ model Brand {
   logoUrl      String?
   primaryColor String? @default("#000000")
 
-  // Demo environment
+  // Brand type
+  type              BrandType @default(ONBOARDED)
   isDemo            Boolean   @default(false)
+
+  // Demo environment
   demoProspectName  String?
   demoCreatedBy     String?
   demoLinkExpiresAt DateTime?
@@ -73,6 +76,11 @@ model Brand {
   loginEvents          LoginEvent[]
 
   @@map("brands")
+}
+
+enum BrandType {
+  DEMO
+  ONBOARDED
 }
 
 enum BrandPlan {

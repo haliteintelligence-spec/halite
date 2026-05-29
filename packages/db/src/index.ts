@@ -13,6 +13,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 export {
   PrismaClient,
   Prisma,
+  BrandType,
   BrandPlan,
   BeautyArea,
   AdminRole,

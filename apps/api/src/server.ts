@@ -18,6 +18,7 @@ import { consumerRoutes } from './routes/consumers.js'
 import { agentRoutes } from './routes/agents.js'
 import { insightsRoutes } from './routes/insights.js'
 import { errorHandler } from './lib/errors.js'
+import { prisma } from '@halite/db'
 
 const server = Fastify({
   logger: {
@@ -80,6 +81,11 @@ async function bootstrap() {
 
   server.get('/', async () => ({ name: 'Halite Intelligence API', version: '1.0.0', status: 'ok' }))
   server.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }))
+
+  // Backfill BrandType for rows created before the enum column existed
+  await prisma.$executeRawUnsafe(
+    `UPDATE brands SET type = 'DEMO' WHERE is_demo = true AND type = 'ONBOARDED'`
+  )
 
   const port = Number(process.env.PORT ?? 3001)
   await server.listen({ port, host: '0.0.0.0' })
