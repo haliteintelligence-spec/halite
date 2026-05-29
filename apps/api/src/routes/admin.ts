@@ -13,6 +13,7 @@ import { scrapeTheme } from '../lib/theme-scraper.js'
 
 // CheckInProduct.productId and RoutineStep.productId have no onDelete: Cascade,
 // so we must clear them manually before deleting a brand or its products.
+// After deletion, orphaned Consumer records (no remaining EndUsers) are also pruned.
 async function deleteBrandSafe(brandId: string) {
   const productIds = (await prisma.product.findMany({ where: { brandId }, select: { id: true } })).map(p => p.id)
   await prisma.$transaction(async (tx) => {
@@ -21,6 +22,8 @@ async function deleteBrandSafe(brandId: string) {
       await tx.routineStep.deleteMany({ where: { productId: { in: productIds } } })
     }
     await tx.brand.delete({ where: { id: brandId } })
+    // Remove Consumer records that now have no EndUsers at any brand
+    await tx.consumer.deleteMany({ where: { endUsers: { none: {} } } })
   })
 }
 
