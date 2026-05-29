@@ -596,16 +596,29 @@ function generateSyntheticPurchaseMatrix(
 }
 
 // ── Cross-brand consumer import ───────────────────────────────────────────────
-// Imports a random subset of identified consumers from other demo brands so the
-// identity intelligence page shows real cross-brand signals.
+// Imports a random subset of consumers from other demo brands so the identity
+// intelligence page shows real cross-brand signals. Two-pass approach:
+//   Pass 1 — Consumers already linked via consumerId (recent demos)
+//   Pass 2 — Raw EndUsers at older demos with no Consumer record yet (retroactively links them)
+
+const BP_SELECT = {
+  city: true, country: true, countryCode: true,
+  ageRange: true, skinType: true, skinConcerns: true, monkSkinTone: true,
+  sleepHours: true, stressLevel: true, waterIntakeMl: true,
+  hairProfile: true, completedAreas: true,
+} as const
 
 async function importSharedConsumers(
   brandId: string,
   targetCount: number,
   focusAreas: string[],
 ): Promise<string[]> {
-  // Find Consumers that have full profiles in other demo brands but NOT yet at this brand
-  const pool = await prisma.consumer.findMany({
+  const targetImport = Math.round(targetCount * (0.25 + Math.random() * 0.2)) // 25–45%
+  const hasHair = focusAreas.includes('HAIR')
+  const ids: string[] = []
+
+  // ── Pass 1: Consumers already linked across brands ──────────────────────────
+  const consumerPool = await prisma.consumer.findMany({
     where: {
       endUsers: {
         some: {
@@ -614,27 +627,12 @@ async function importSharedConsumers(
           firstName: { not: null },
         },
       },
-      NOT: {
-        endUsers: { some: { brandId } },
-      },
+      NOT: { endUsers: { some: { brandId } } },
     },
     include: {
       endUsers: {
-        where: {
-          brand: { isDemo: true },
-          beautyProfile: { isNot: null },
-          firstName: { not: null },
-        },
-        include: {
-          beautyProfile: {
-            select: {
-              city: true, country: true, countryCode: true,
-              ageRange: true, skinType: true, skinConcerns: true, monkSkinTone: true,
-              sleepHours: true, stressLevel: true, waterIntakeMl: true,
-              hairProfile: true, completedAreas: true,
-            },
-          },
-        },
+        where: { brand: { isDemo: true }, beautyProfile: { isNot: null }, firstName: { not: null } },
+        include: { beautyProfile: { select: BP_SELECT } },
         orderBy: { createdAt: 'asc' },
         take: 1,
       },
@@ -642,61 +640,84 @@ async function importSharedConsumers(
     take: 2000,
   })
 
-  if (pool.length === 0) return []
-
-  // Pick a random fraction: 20–50% of this demo's consumer count
-  const importFraction = 0.2 + Math.random() * 0.3
-  const importCount = Math.min(Math.round(targetCount * importFraction), pool.length)
-  const selected = shuffle(pool).slice(0, importCount)
-
-  const hasHair = focusAreas.includes('HAIR')
-  const ids: string[] = []
-
-  for (const consumer of selected) {
+  for (const consumer of shuffle(consumerPool).slice(0, Math.min(targetImport, consumerPool.length))) {
     const source = consumer.endUsers[0]
     if (!source?.beautyProfile) continue
     const bp = source.beautyProfile
-
     try {
-      // Create a full EndUser at this brand, linked to the same Consumer identity
       const endUser = await prisma.endUser.create({
-        data: {
-          brandId,
-          consumerId: consumer.id,
-          email: source.email,
-          firstName: source.firstName,
-          lastName: source.lastName,
-        },
+        data: { brandId, consumerId: consumer.id, email: source.email, firstName: source.firstName, lastName: source.lastName },
       })
-
-      const inheritedAreas = (bp.completedAreas ?? []) as string[]
       const completedAreas = [...new Set([
-        ...inheritedAreas,
+        ...((bp.completedAreas ?? []) as string[]),
         ...(bp.skinType ? ['SKINCARE'] : []),
         ...(bp.hairProfile && hasHair ? ['HAIR'] : []),
       ])]
-
       await prisma.userBeautyProfile.create({
         data: {
-          endUserId: endUser.id,
-          ageRange: bp.ageRange,
-          skinType: bp.skinType as any,
-          skinConcerns: (bp.skinConcerns ?? []) as any,
+          endUserId: endUser.id, ageRange: bp.ageRange,
+          skinType: bp.skinType as any, skinConcerns: (bp.skinConcerns ?? []) as any,
           monkSkinTone: bp.monkSkinTone ?? randomInt(1, 10),
           completedAreas: completedAreas as any,
-          city: bp.city ?? null,
-          country: bp.country ?? 'United States',
-          countryCode: bp.countryCode ?? 'US',
+          city: bp.city ?? null, country: bp.country ?? 'United States', countryCode: bp.countryCode ?? 'US',
           sleepHours: bp.sleepHours ?? randomItem([6, 6.5, 7, 7.5, 8]),
           stressLevel: bp.stressLevel ?? randomInt(1, 5),
           waterIntakeMl: bp.waterIntakeMl ?? randomInt(1000, 3000),
           ...(hasHair && bp.hairProfile ? { hairProfile: bp.hairProfile as any } : {}),
         },
       })
-
       ids.push(endUser.id)
-    } catch {
-      // Skip on any constraint violation
+    } catch { /* skip on constraint violation */ }
+  }
+
+  // ── Pass 2: legacy EndUsers with no Consumer record (retroactively link them) ─
+  const remaining = Math.max(0, targetImport - ids.length)
+  if (remaining > 0) {
+    const rawPool = await prisma.endUser.findMany({
+      where: {
+        brand: { isDemo: true, id: { not: brandId }, active: true },
+        consumerId: null,
+        beautyProfile: { isNot: null },
+        firstName: { not: null },
+        email: { not: null },
+      },
+      select: { id: true, email: true, firstName: true, lastName: true, beautyProfile: { select: BP_SELECT } },
+      take: 2000,
+    })
+
+    for (const sourceUser of shuffle(rawPool).slice(0, Math.min(remaining, rawPool.length))) {
+      const bp = sourceUser.beautyProfile
+      if (!bp || !sourceUser.email) continue
+      try {
+        const consumer = await prisma.consumer.create({
+          data: { email: sourceUser.email, prefillAnswers: {} as any },
+          select: { id: true },
+        })
+        // Retroactively link the source EndUser so it becomes cross-brand
+        await prisma.endUser.update({ where: { id: sourceUser.id }, data: { consumerId: consumer.id } }).catch(() => {})
+        const endUser = await prisma.endUser.create({
+          data: { brandId, consumerId: consumer.id, email: sourceUser.email, firstName: sourceUser.firstName, lastName: sourceUser.lastName },
+        })
+        const completedAreas = [...new Set([
+          ...((bp.completedAreas ?? []) as string[]),
+          ...(bp.skinType ? ['SKINCARE'] : []),
+          ...(bp.hairProfile && hasHair ? ['HAIR'] : []),
+        ])]
+        await prisma.userBeautyProfile.create({
+          data: {
+            endUserId: endUser.id, ageRange: bp.ageRange,
+            skinType: bp.skinType as any, skinConcerns: (bp.skinConcerns ?? []) as any,
+            monkSkinTone: bp.monkSkinTone ?? randomInt(1, 10),
+            completedAreas: completedAreas as any,
+            city: bp.city ?? null, country: bp.country ?? 'United States', countryCode: bp.countryCode ?? 'US',
+            sleepHours: bp.sleepHours ?? randomItem([6, 6.5, 7, 7.5, 8]),
+            stressLevel: bp.stressLevel ?? randomInt(1, 5),
+            waterIntakeMl: bp.waterIntakeMl ?? randomInt(1000, 3000),
+            ...(hasHair && bp.hairProfile ? { hairProfile: bp.hairProfile as any } : {}),
+          },
+        })
+        ids.push(endUser.id)
+      } catch { /* skip */ }
     }
   }
 
@@ -961,11 +982,12 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
   const otherDemoBrands = await prisma.brand.findMany({
     where: { isDemo: true, active: true, id: { not: brandId } },
     select: { id: true },
-    take: 3,
+    take: 5,
   })
 
-  const crossBrandCount = otherDemoBrands.length > 0 ? Math.round(identifiedCount * 0.12) : 0
-  const crossBrandSet = new Set(identifiedIds.slice(0, crossBrandCount))
+  // Guarantee at least 25–35% of identified consumers appear at other demo brands
+  const crossBrandCount = otherDemoBrands.length > 0 ? Math.round(identifiedCount * 0.30) : 0
+  const crossBrandSet = new Set(shuffle(identifiedIds).slice(0, crossBrandCount))
 
   const profiles = await prisma.userBeautyProfile.findMany({
     where: { endUserId: { in: identifiedIds } },
@@ -1010,14 +1032,13 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
     })
 
     if (crossBrandSet.has(endUserId)) {
-      const otherBrand = randomItem(otherDemoBrands)
-      await prisma.endUser.create({
-        data: {
-          brandId: otherBrand.id,
-          consumerId: consumer.id,
-          email: email ?? null,
-        },
-      }).catch(() => {})
+      // Seed to 1–3 other demo brands for richer cross-brand signals
+      const brandsToSeed = shuffle(otherDemoBrands).slice(0, randomInt(1, Math.min(3, otherDemoBrands.length)))
+      for (const otherBrand of brandsToSeed) {
+        await prisma.endUser.create({
+          data: { brandId: otherBrand.id, consumerId: consumer.id, email: email ?? null },
+        }).catch(() => {})
+      }
     }
   }
 }

@@ -674,7 +674,7 @@ export async function brandRoutes(server: FastifyInstance) {
     async (request) => {
       const { brandId } = request.params as { brandId: string }
 
-      const [allUsers, checkInCounts] = await Promise.all([
+      const [allUsers, checkInCounts, crossBrand] = await Promise.all([
         prisma.endUser.findMany({
           where: { brandId },
           select: { id: true, email: true, createdAt: true },
@@ -684,6 +684,14 @@ export async function brandRoutes(server: FastifyInstance) {
           where: { endUser: { brandId } },
           _count: { id: true },
         }),
+        // Cross-brand: consumers at this brand with a Halite identity that appears at ≥1 other brand
+        prisma.endUser.count({
+          where: {
+            brandId,
+            consumerId: { not: null },
+            consumer: { endUsers: { some: { brandId: { not: brandId } } } },
+          },
+        }),
       ])
 
       const total = allUsers.length
@@ -692,14 +700,6 @@ export async function brandRoutes(server: FastifyInstance) {
       const retained = checkInCounts.filter(c => c._count.id >= 3).length
       const identificationRate = total > 0 ? Math.round((identified / total) * 100) : 0
       const retentionRate = total > 0 ? Math.round((retained / total) * 100) : 0
-
-      // Cross-brand: find emails from this brand that also appear on other brands
-      const brandEmails = allUsers.map(u => u.email).filter((e): e is string => !!e)
-      const crossBrand = brandEmails.length > 0
-        ? await prisma.endUser.count({
-            where: { brandId: { not: brandId }, email: { in: brandEmails } },
-          })
-        : 0
       const crossBrandRate = identified > 0 ? Math.round((crossBrand / identified) * 100) : 0
 
       // 8-week cumulative trend
