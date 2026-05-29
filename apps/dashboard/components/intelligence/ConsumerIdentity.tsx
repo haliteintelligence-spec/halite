@@ -8,7 +8,7 @@ import {
   AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { ChevronDown, ChevronUp, Sparkles, FlaskConical } from 'lucide-react'
+import { ChevronDown, ChevronUp, FlaskConical, Share2 } from 'lucide-react'
 import type { IdentityData, IngredientSignalsData, IngredientSignal } from '@/lib/api'
 
 type Props = { data: IdentityData; signals: IngredientSignalsData | null; brandId: string }
@@ -49,6 +49,14 @@ function fmt(s: string) {
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
+const POSITIVE_SYMPTOMS = new Set(['IMPROVEMENT', 'GLOW', 'HYDRATED', 'TEXTURE_SMOOTH', 'HYPERPIGMENTATION_FADING'])
+
+function symptomColor(sym: string) {
+  return POSITIVE_SYMPTOMS.has(sym)
+    ? { background: '#ecfdf5', color: '#059669' }
+    : { background: '#fef2f2', color: '#dc2626' }
+}
+
 function RatingBar({ positive, label }: { positive: number; label: string }) {
   const neutral = Math.max(0, Math.min(100 - positive, 40))
   const negative = Math.max(0, 100 - positive - neutral)
@@ -72,6 +80,13 @@ function RatingBar({ positive, label }: { positive: number; label: string }) {
 function IngredientCard({ signal }: { signal: IngredientSignal }) {
   const [expanded, setExpanded] = useState(false)
 
+  // Top product by consumer count — used to construct the lead narrative sentence
+  const topProduct = signal.ourProducts[0] ?? null
+
+  const leadNarrative = topProduct
+    ? `${topProduct.count} consumer${topProduct.count !== 1 ? 's' : ''} using your ${topProduct.name} also use ${signal.ingredient} at a partner brand`
+    : `${signal.consumerCount} cross-brand consumer${signal.consumerCount !== 1 ? 's' : ''} use ${signal.ingredient} at a partner brand and are also active on your brand`
+
   return (
     <div
       className="rounded-xl overflow-hidden"
@@ -93,24 +108,31 @@ function IngredientCard({ signal }: { signal: IngredientSignal }) {
               {signal.partnerBrandCount} partner brand{signal.partnerBrandCount !== 1 ? 's' : ''}
             </span>
           </div>
-          <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
-            <span className="font-semibold" style={{ color: 'var(--ink)' }}>{signal.consumerCount}</span>
-            {' '}cross-brand consumer{signal.consumerCount !== 1 ? 's' : ''} using this ingredient externally
-            also use your products — and have logged{' '}
-            <span className="font-semibold" style={{ color: 'var(--ink)' }}>{signal.outcomes.checkInCount}</span>
-            {' '}check-ins at your brand.
+
+          {/* Lead narrative: product → ingredient → outcome */}
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--ink-3)' }}>
+            {leadNarrative}
+            {signal.outcomes.checkInCount > 0 && (
+              <> — and have logged{' '}
+                <span className="font-semibold" style={{ color: 'var(--ink)' }}>{signal.outcomes.checkInCount}</span>
+                {' '}check-in{signal.outcomes.checkInCount !== 1 ? 's' : ''} at your brand.
+              </>
+            )}
           </p>
+
+          {/* Top reported outcomes — colour-coded positive vs negative */}
           {signal.outcomes.topSymptoms.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {signal.outcomes.topSymptoms.map(s => (
                 <span key={s} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: 'var(--sand-1)', color: 'var(--ink-3)', border: '1px solid var(--border)' }}>
+                  style={symptomColor(s)}>
                   {fmt(s)}
                 </span>
               ))}
             </div>
           )}
         </div>
+
         <div className="flex-shrink-0 flex flex-col items-end gap-2">
           {signal.outcomes.avgRating !== null && (
             <div className="text-right">
@@ -126,19 +148,20 @@ function IngredientCard({ signal }: { signal: IngredientSignal }) {
         </div>
       </button>
 
-      {/* Collapsed summary bar */}
+      {/* Collapsed: aggregate sentiment bar */}
       {!expanded && signal.outcomes.checkInCount > 0 && (
         <div className="px-5 pb-4">
-          <RatingBar positive={signal.outcomes.positiveRate} label="Check-in sentiment across these consumers" />
+          <RatingBar positive={signal.outcomes.positiveRate} label="Check-in sentiment — consumers using this ingredient pairing" />
         </div>
       )}
 
-      {/* Expanded detail: per-product breakdown */}
+      {/* Expanded: per-product breakdown */}
       {expanded && (
         <div className="border-t px-5 py-4 space-y-4" style={{ borderColor: 'var(--border)', background: 'var(--sand-1)' }}>
           <p className="text-[10px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-            Your Products Used by These Consumers
+            Your Products Paired with {signal.ingredient}
           </p>
+
           {signal.ourProducts.length === 0 ? (
             <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>No active routines found for these consumers.</p>
           ) : (
@@ -149,11 +172,18 @@ function IngredientCard({ signal }: { signal: IngredientSignal }) {
                   className="rounded-xl p-4"
                   style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
                 >
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between mb-1.5">
                     <div>
                       <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{p.name}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
-                        {fmt(p.category)} · {p.count} consumer{p.count !== 1 ? 's' : ''}
+                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                        {fmt(p.category)}
+                        {' · '}
+                        <span className="font-medium" style={{ color: 'var(--ink-2)' }}>
+                          {p.count} consumer{p.count !== 1 ? 's' : ''}
+                        </span>
+                        {' '}also using{' '}
+                        <span className="font-medium" style={{ color: 'var(--clay)' }}>{signal.ingredient}</span>
+                        {' '}externally
                       </p>
                     </div>
                     {p.avgRating !== null && (
@@ -162,15 +192,17 @@ function IngredientCard({ signal }: { signal: IngredientSignal }) {
                       </span>
                     )}
                   </div>
+
                   {p.positiveRate !== null && (
                     <RatingBar positive={p.positiveRate} label={`Check-in sentiment · ${signal.ingredient} pairing`} />
                   )}
+
                   {p.topSymptoms.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                       <span className="text-[10px]" style={{ color: 'var(--ink-3)' }}>Reported:</span>
                       {p.topSymptoms.map(s => (
                         <span key={s} className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                          style={{ background: '#ecfdf5', color: '#059669' }}>
+                          style={symptomColor(s)}>
                           {fmt(s)}
                         </span>
                       ))}
@@ -181,12 +213,11 @@ function IngredientCard({ signal }: { signal: IngredientSignal }) {
             </div>
           )}
 
-          <div className="pt-1">
-            <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-              These {signal.consumerCount} consumers use <strong>{signal.ingredient}</strong> in routines at other Halite brands.
-              No private data from those brands is shared — only anonymised cross-brand signals.
-            </p>
-          </div>
+          <p className="text-[11px] pt-1" style={{ color: 'var(--ink-3)' }}>
+            These {signal.consumerCount} consumer{signal.consumerCount !== 1 ? 's' : ''} use{' '}
+            <strong>{signal.ingredient}</strong> in routines at other Halite brands.
+            No private data from those brands is shared — only anonymised cross-brand signals.
+          </p>
         </div>
       )}
     </div>
@@ -212,6 +243,8 @@ export function ConsumerIdentity({ data, signals, brandId }: Props) {
           ? `${data.retentionRate}% of consumers have 3+ check-ins, showing strong routine adherence.`
           : '',
       ].filter(Boolean).join(' ')
+
+  const hasSignals = signals && signals.signals.length > 0
 
   return (
     <div className="space-y-6">
@@ -339,6 +372,52 @@ export function ConsumerIdentity({ data, signals, brandId }: Props) {
             )}
           </div>
         </InsightCard>
+      </div>
+
+      {/* ── Partner Ingredient Signals ─────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <Share2 size={15} style={{ color: 'var(--clay)', flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <h3 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
+                Partner Ingredient Signals
+              </h3>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                Ingredients your cross-brand consumers actively use at partner brands — and how they perform on yours
+              </p>
+            </div>
+          </div>
+          {hasSignals && (
+            <span
+              className="flex-shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: 'var(--clay)', color: '#fff' }}
+            >
+              {signals.crossBrandConsumerCount} consumer{signals.crossBrandConsumerCount !== 1 ? 's' : ''} · {signals.signals.length} signal{signals.signals.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {!hasSignals ? (
+          <div
+            className="rounded-xl px-6 py-10 text-center"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+          >
+            <FlaskConical size={20} className="mx-auto mb-3" style={{ color: 'var(--ink-3)' }} />
+            <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--ink)' }}>
+              No ingredient signals yet
+            </p>
+            <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
+              Signals appear once cross-brand consumers have active routines at partner brands.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {signals.signals.map(signal => (
+              <IngredientCard key={signal.ingredient} signal={signal} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
