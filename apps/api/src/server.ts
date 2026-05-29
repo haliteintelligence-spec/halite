@@ -82,9 +82,11 @@ async function bootstrap() {
   server.get('/', async () => ({ name: 'Halite Intelligence API', version: '1.0.0', status: 'ok' }))
   server.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }))
 
-  // Backfill BrandType for rows created before the enum column existed
+  // Backfill BrandType for rows created before the enum column existed.
+  // Prisma preserves camelCase field names as-is in Postgres, so the column
+  // is "isDemo" (quoted) not is_demo.
   await prisma.$executeRawUnsafe(
-    `UPDATE brands SET type = 'DEMO' WHERE is_demo = true AND type = 'ONBOARDED'`
+    `UPDATE brands SET type = 'DEMO' WHERE "isDemo" = true AND type = 'ONBOARDED'`
   )
 
   const port = Number(process.env.PORT ?? 3001)
