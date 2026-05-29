@@ -674,7 +674,7 @@ export async function brandRoutes(server: FastifyInstance) {
     async (request) => {
       const { brandId } = request.params as { brandId: string }
 
-      const [allUsers, checkInCounts, crossBrand] = await Promise.all([
+      const [allUsers, checkInCounts] = await Promise.all([
         prisma.endUser.findMany({
           where: { brandId },
           select: { id: true, email: true, createdAt: true },
@@ -684,15 +684,22 @@ export async function brandRoutes(server: FastifyInstance) {
           where: { endUser: { brandId } },
           _count: { id: true },
         }),
-        // Cross-brand: consumers at this brand with a Halite identity that appears at ≥1 other brand
-        prisma.endUser.count({
-          where: {
-            brandId,
-            consumerId: { not: null },
-            consumer: { endUsers: { some: { brandId: { not: brandId } } } },
-          },
-        }),
       ])
+
+      // Cross-brand: two-step — find consumerIds at this brand, then count which appear elsewhere
+      const usersWithConsumerId = await prisma.endUser.findMany({
+        where: { brandId, consumerId: { not: null } },
+        select: { consumerId: true },
+      })
+      const cids = [...new Set(usersWithConsumerId.map(u => u.consumerId as string))]
+      const crossBrandCids = cids.length > 0
+        ? (await prisma.endUser.findMany({
+            where: { brandId: { not: brandId }, consumerId: { in: cids } },
+            select: { consumerId: true },
+            distinct: ['consumerId'],
+          })).map(u => u.consumerId as string)
+        : []
+      const crossBrand = crossBrandCids.length
 
       const total = allUsers.length
       const identified = allUsers.filter(u => !!u.email).length
