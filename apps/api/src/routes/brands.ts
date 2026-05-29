@@ -35,37 +35,220 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Public: look up existing consumer by email or phone ───────────
+  // Returns minimal info only — no raw cross-brand data.
+  // If found, issues a short-lived prefill token the client can redeem.
+  server.get(
+    '/slug/:slug/quiz/lookup',
+    async (request, reply) => {
+      const { slug } = request.params as { slug: string }
+      const { email, phone } = z.object({
+        email: z.string().email().optional(),
+        phone: z.string().min(7).optional(),
+      }).parse(request.query)
+
+      if (!email && !phone) return reply.send({ found: false })
+
+      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true } })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+
+      const orClauses: any[] = []
+      if (email) orClauses.push({ email })
+      if (phone) orClauses.push({ phone })
+
+      // 1. Check the Consumer (cross-brand identity) table first
+      const consumer = await prisma.consumer.findFirst({
+        where: { OR: orClauses },
+        include: {
+          endUsers: {
+            where: { brandId: { not: brand.id } },
+            select: { firstName: true, lastName: true, beautyProfile: { select: { completedAreas: true } } },
+          },
+        },
+      })
+
+      if (consumer) {
+        const allAreas = new Set<string>()
+        for (const eu of consumer.endUsers) {
+          for (const a of (eu.beautyProfile?.completedAreas as string[] ?? [])) allAreas.add(a)
+        }
+        const firstName = consumer.endUsers.find(eu => eu.firstName)?.firstName ?? null
+        const prefillToken = (server as any).jwt.sign(
+          { role: 'consumer_prefill', consumerId: consumer.id },
+          { expiresIn: '30m' }
+        )
+        return reply.send({
+          found: true,
+          firstName,
+          completedAreas: [...allAreas],
+          brandCount: consumer.endUsers.length,
+          prefillToken,
+        })
+      }
+
+      // 2. Fall back to EndUser by email at any other brand
+      const endUser = email ? await prisma.endUser.findFirst({
+        where: { email, brandId: { not: brand.id }, beautyProfile: { isNot: null } },
+        select: { id: true, firstName: true, lastName: true, beautyProfile: { select: { completedAreas: true } } },
+      }) : null
+
+      if (endUser) {
+        const completedAreas = (endUser.beautyProfile?.completedAreas as string[]) ?? []
+        const prefillToken = (server as any).jwt.sign(
+          { role: 'consumer_prefill', endUserId: endUser.id },
+          { expiresIn: '30m' }
+        )
+        return reply.send({
+          found: true,
+          firstName: endUser.firstName ?? null,
+          completedAreas,
+          brandCount: 1,
+          prefillToken,
+        })
+      }
+
+      return reply.send({ found: false })
+    }
+  )
+
+  // ── Public: redeem a prefill token → return saved answers ──────────
+  server.post(
+    '/slug/:slug/quiz/prefill',
+    async (request, reply) => {
+      const { slug } = request.params as { slug: string }
+      const { prefillToken } = z.object({ prefillToken: z.string() }).parse(request.body)
+
+      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true } })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+
+      let prefillAnswers: Record<string, unknown> = {}
+      let completedAreas: string[] = []
+      let firstName: string | null = null
+      let lastName: string | null = null
+
+      try {
+        const payload = (server as any).jwt.verify(prefillToken) as any
+
+        if (payload.role === 'consumer_prefill' && payload.consumerId) {
+          const consumer = await prisma.consumer.findUnique({
+            where: { id: payload.consumerId },
+            include: {
+              endUsers: {
+                where: { brandId: { not: brand.id } },
+                include: {
+                  beautyProfile: { select: { completedAreas: true } },
+                  quizSessions: { where: { completed: true }, orderBy: { completedAt: 'desc' }, take: 1 },
+                },
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          })
+          if (consumer) {
+            prefillAnswers = (consumer.prefillAnswers as Record<string, unknown>) ?? {}
+            const allAreas = new Set<string>()
+            let bestFirst: string | null = null
+            let bestLast: string | null = null
+            for (const eu of consumer.endUsers) {
+              for (const a of (eu.beautyProfile?.completedAreas as string[] ?? [])) allAreas.add(a)
+              // Supplement prefill with any area answers from latest session if Consumer.prefillAnswers is sparse
+              const sessionAnswers = (eu.quizSessions[0]?.answers as Record<string, unknown>) ?? {}
+              prefillAnswers = { ...sessionAnswers, ...prefillAnswers } // Consumer.prefillAnswers wins
+              if (!bestFirst && eu.firstName) bestFirst = eu.firstName
+              if (!bestLast && eu.lastName) bestLast = eu.lastName
+            }
+            completedAreas = [...allAreas]
+            firstName = bestFirst
+            lastName = bestLast
+          }
+        } else if (payload.role === 'consumer_prefill' && payload.endUserId) {
+          const endUser = await prisma.endUser.findUnique({
+            where: { id: payload.endUserId },
+            include: {
+              beautyProfile: { select: { completedAreas: true } },
+              quizSessions: { where: { completed: true }, orderBy: { completedAt: 'desc' }, take: 1 },
+            },
+          })
+          if (endUser) {
+            prefillAnswers = (endUser.quizSessions[0]?.answers as Record<string, unknown>) ?? {}
+            completedAreas = (endUser.beautyProfile?.completedAreas as string[]) ?? []
+            firstName = endUser.firstName
+            lastName = endUser.lastName
+          }
+        } else {
+          throw new ApiError(401, 'Invalid prefill token')
+        }
+      } catch (e) {
+        if (e instanceof ApiError) throw e
+        throw new ApiError(401, 'Invalid or expired prefill token')
+      }
+
+      return reply.send({ prefillAnswers, completedAreas, firstName, lastName })
+    }
+  )
+
   // ── Public: issue anonymous end-user token (hosted quiz page) ─────
   server.post(
     '/slug/:slug/quiz/token',
     async (request, reply) => {
       const { slug } = request.params as { slug: string }
-      const { externalId, email, consumerId } = z.object({
+      const { externalId, email, phone, firstName, lastName, consumerId } = z.object({
         externalId: z.string().optional(),
         email: z.string().email().optional(),
+        phone: z.string().optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
         consumerId: z.string().optional(),
       }).parse(request.body)
 
       const brand = await prisma.brand.findUnique({ where: { slug } })
       if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
 
-      // If consumerId provided, find an existing EndUser for this consumer+brand
-      // so returning consumers get their history linked automatically
+      // Resolve or create the cross-brand Consumer record if email/phone given
+      let resolvedConsumerId = consumerId ?? null
+      if (!resolvedConsumerId && (email || phone)) {
+        const orClauses: any[] = []
+        if (email) orClauses.push({ email })
+        if (phone) orClauses.push({ phone })
+        const existing = await prisma.consumer.findFirst({ where: { OR: orClauses }, select: { id: true } })
+        if (existing) {
+          resolvedConsumerId = existing.id
+          // Fill in any missing contact info on the Consumer record
+          await prisma.consumer.update({
+            where: { id: existing.id },
+            data: {
+              ...(email && !existing ? { email } : {}),
+              ...(phone && !existing ? { phone } : {}),
+            },
+          }).catch(() => {})
+        } else if (email) {
+          // Create a new Consumer record for this person
+          const created = await prisma.consumer.create({
+            data: { email, ...(phone ? { phone } : {}), prefillAnswers: {} as any },
+            select: { id: true },
+          }).catch(() => null)
+          if (created) resolvedConsumerId = created.id
+        }
+      }
+
       let uid = externalId
-      if (!uid && consumerId) uid = `consumer-${consumerId}`
+      if (!uid && resolvedConsumerId) uid = `consumer-${resolvedConsumerId}`
       if (!uid) uid = `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
       const endUser = await prisma.endUser.upsert({
         where: { brandId_externalId: { brandId: brand.id, externalId: uid } },
         update: {
           ...(email ? { email } : {}),
-          ...(consumerId ? { consumerId } : {}),
+          ...(firstName ? { firstName } : {}),
+          ...(lastName ? { lastName } : {}),
+          ...(resolvedConsumerId ? { consumerId: resolvedConsumerId } : {}),
         },
         create: {
           brandId: brand.id,
           externalId: uid,
           email: email ?? null,
-          consumerId: consumerId ?? null,
+          firstName: firstName ?? null,
+          lastName: lastName ?? null,
+          consumerId: resolvedConsumerId,
         },
       })
 

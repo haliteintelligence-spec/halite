@@ -309,6 +309,46 @@ export async function quizRoutes(server: FastifyInstance) {
         data: { completed: true, completedAt: new Date() },
       })
 
+      // Sync completed answers back to Consumer.prefillAnswers and sibling EndUsers
+      const endUserRecord = await prisma.endUser.findUnique({
+        where: { id: userId },
+        select: { consumerId: true, firstName: true, lastName: true, email: true },
+      })
+      if (endUserRecord?.consumerId) {
+        const consumer = await prisma.consumer.findUnique({
+          where: { id: endUserRecord.consumerId },
+          select: { prefillAnswers: true },
+        })
+        if (consumer) {
+          // Brand-agnostic answers: everything except brand-specific preferences (SH2, SH3 budget/category)
+          const BRAND_SPECIFIC = new Set(['SH2A', 'SH2B', 'SH3'])
+          const merged: Record<string, unknown> = { ...(consumer.prefillAnswers as Record<string, unknown> ?? {}) }
+          for (const [key, val] of Object.entries(answers)) {
+            if (!BRAND_SPECIFIC.has(key) && val !== undefined) merged[key] = val
+          }
+          await prisma.consumer.update({
+            where: { id: endUserRecord.consumerId },
+            data: { prefillAnswers: merged as Prisma.InputJsonValue },
+          }).catch(() => {})
+
+          // Push name and email to any sibling EndUsers that are missing them
+          if (endUserRecord.firstName || endUserRecord.email) {
+            await prisma.endUser.updateMany({
+              where: {
+                consumerId: endUserRecord.consumerId,
+                id: { not: userId },
+                firstName: null,
+              },
+              data: {
+                ...(endUserRecord.firstName ? { firstName: endUserRecord.firstName } : {}),
+                ...(endUserRecord.lastName ? { lastName: endUserRecord.lastName } : {}),
+                ...(endUserRecord.email ? { email: endUserRecord.email } : {}),
+              },
+            }).catch(() => {})
+          }
+        }
+      }
+
       // Generate a routine per selected area (async, non-blocking)
       const areasToGenerate = selectedAreas.length > 0
         ? selectedAreas

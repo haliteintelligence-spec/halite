@@ -34,6 +34,43 @@ export async function endUserRoutes(server: FastifyInstance) {
     }
   )
 
+  // End user: update own profile (name, email, phone)
+  server.patch(
+    '/:brandId/me',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+      const { firstName, lastName, email, phone } = z.object({
+        firstName: z.string().min(1).max(100).optional(),
+        lastName: z.string().max(100).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+      }).parse(request.body)
+
+      await prisma.endUser.update({
+        where: { id: userId },
+        data: {
+          ...(firstName !== undefined ? { firstName } : {}),
+          ...(lastName !== undefined ? { lastName } : {}),
+          ...(email !== undefined ? { email } : {}),
+        },
+      })
+
+      // Also update Consumer record with phone if provided
+      if (phone) {
+        const endUser = await prisma.endUser.findUnique({ where: { id: userId }, select: { consumerId: true } })
+        if (endUser?.consumerId) {
+          await prisma.consumer.update({
+            where: { id: endUser.consumerId },
+            data: { phone },
+          }).catch(() => {}) // ignore unique constraint if phone taken
+        }
+      }
+
+      return { ok: true }
+    }
+  )
+
   // End user: get own profile
   server.get(
     '/:brandId/me',
