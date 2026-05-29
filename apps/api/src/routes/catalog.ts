@@ -704,7 +704,12 @@ export async function catalogRoutes(server: FastifyInstance) {
       const { brandId, productId } = request.params as { brandId: string; productId: string }
       const existing = await prisma.product.findFirst({ where: { id: productId, brandId } })
       if (!existing) throw new ApiError(404, 'Product not found')
-      await prisma.product.delete({ where: { id: productId } })
+      // CheckInProduct and RoutineStep reference Product without cascade — clear them first
+      await prisma.$transaction([
+        prisma.checkInProduct.deleteMany({ where: { productId } }),
+        prisma.routineStep.deleteMany({ where: { productId } }),
+        prisma.product.delete({ where: { id: productId } }),
+      ])
       return reply.status(204).send()
     }
   )

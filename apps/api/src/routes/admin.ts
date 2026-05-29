@@ -11,6 +11,19 @@ import { uploadToS3 } from '../lib/storage.js'
 import { provisionDemoEnvironment } from '../lib/demo-generator.js'
 import { scrapeTheme } from '../lib/theme-scraper.js'
 
+// CheckInProduct.productId and RoutineStep.productId have no onDelete: Cascade,
+// so we must clear them manually before deleting a brand or its products.
+async function deleteBrandSafe(brandId: string) {
+  const productIds = (await prisma.product.findMany({ where: { brandId }, select: { id: true } })).map(p => p.id)
+  await prisma.$transaction(async (tx) => {
+    if (productIds.length > 0) {
+      await tx.checkInProduct.deleteMany({ where: { productId: { in: productIds } } })
+      await tx.routineStep.deleteMany({ where: { productId: { in: productIds } } })
+    }
+    await tx.brand.delete({ where: { id: brandId } })
+  })
+}
+
 export async function adminRoutes(server: FastifyInstance) {
   // ── Platform-wide stats ───────────────────────────────────────────
   server.get(
@@ -700,7 +713,7 @@ export async function adminRoutes(server: FastifyInstance) {
       const { demoId } = request.params as { demoId: string }
       const brand = await prisma.brand.findFirst({ where: { id: demoId, isDemo: true } })
       if (!brand) throw new ApiError(404, 'Demo not found')
-      await prisma.brand.delete({ where: { id: demoId } })
+      await deleteBrandSafe(demoId)
       return reply.status(204).send()
     }
   )
@@ -788,7 +801,7 @@ export async function adminRoutes(server: FastifyInstance) {
       const { brandId } = request.params as { brandId: string }
       const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { id: true } })
       if (!brand) throw new ApiError(404, 'Brand not found')
-      await prisma.brand.delete({ where: { id: brandId } })
+      await deleteBrandSafe(brandId)
       return reply.status(204).send()
     }
   )
