@@ -315,7 +315,8 @@ export async function adminRoutes(server: FastifyInstance) {
           isDemo: true,
           demoProspectName: prospectName,
           demoCreatedBy: adminId,
-          demoLinkExpiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+          // demoLinkExpiresAt intentionally left null — set after provisioning completes
+          // so the demo shows as "generating" until data is ready
           focusAreas: brandFocusAreas as any,
           primaryColor: '#C17A47',
           active: true,
@@ -403,7 +404,12 @@ export async function adminRoutes(server: FastifyInstance) {
             hasQuizResults: !!quizBuffer,
             existingBrandId: brand.id,
           })
-          await prisma.brand.update({ where: { id: brand.id }, data: { active: true } })
+          // Set demoLinkExpiresAt now that provisioning is complete — this is what
+          // flips the demo status from "generating" to "active" in the admin UI
+          await prisma.brand.update({
+            where: { id: brand.id },
+            data: { active: true, demoLinkExpiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) },
+          })
         } catch (err) {
           console.error('Demo provisioning failed:', err)
         }

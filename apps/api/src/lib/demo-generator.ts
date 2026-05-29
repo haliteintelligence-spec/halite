@@ -811,30 +811,32 @@ async function generateRoutines(
   const routineConsumers = consumerIds.slice(0, 200)
 
   for (const userId of routineConsumers) {
-    const profile = await prisma.userBeautyProfile.findUnique({
-      where: { endUserId: userId },
-      select: { skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true },
-    })
+    try {
+      const profile = await prisma.userBeautyProfile.findUnique({
+        where: { endUserId: userId },
+        select: { skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true },
+      })
 
-    const answers: Record<string, unknown> = {
-      __area_select: focusAreas,
-      SH0: profile?.ageRange ?? '25_34',
-      S1: profile?.skinType?.toLowerCase() ?? 'combination',
-      S4: profile?.skinConcerns ?? [],
-      S5: String(profile?.monkSkinTone ?? 5),
-    }
+      const answers: Record<string, unknown> = {
+        __area_select: focusAreas,
+        SH0: profile?.ageRange ?? '25_34',
+        S1: profile?.skinType?.toLowerCase() ?? 'combination',
+        S4: profile?.skinConcerns ?? [],
+        S5: String(profile?.monkSkinTone ?? 5),
+      }
 
-    const session = await prisma.quizSession.create({
-      data: {
-        brandId,
-        endUserId: userId,
-        selectedAreas: focusAreas as any,
-        answers: answers as any,
-        completed: true,
-        completedAt: new Date(Date.now() - randomInt(7, 60) * 24 * 60 * 60 * 1000),
-      },
-    })
-    sessionMap[userId] = session.id
+      const session = await prisma.quizSession.create({
+        data: {
+          brandId,
+          endUserId: userId,
+          selectedAreas: focusAreas as any,
+          answers: answers as any,
+          completed: true,
+          completedAt: new Date(Date.now() - randomInt(7, 60) * 24 * 60 * 60 * 1000),
+        },
+      })
+      sessionMap[userId] = session.id
+    } catch { /* skip user if session creation fails — they will get check-ins but no routine */ }
   }
 
   let routineCount = 0
@@ -844,7 +846,8 @@ async function generateRoutines(
     const batch = routineConsumers.slice(i, i + BATCH_SIZE)
     await Promise.allSettled(
       batch.map(async userId => {
-        const sessionId = sessionMap[userId]!
+        const sessionId = sessionMap[userId]
+        if (!sessionId) return
         const profile = await prisma.userBeautyProfile.findUnique({
           where: { endUserId: userId },
           select: { skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true },
@@ -890,72 +893,76 @@ async function generateCheckIns(
   const maxFreq = freqValues.length > 0 ? Math.max(...freqValues) : 1
 
   for (const userId of consumerIds) {
-    const routine = await prisma.routine.findFirst({
-      where: { endUserId: userId, activeTo: null },
-      include: { steps: { include: { product: true } } },
-    })
-
-    const dropOffWeek = Math.random() < 0.15 ? randomInt(3, 5) : weeks + 1
-
-    for (let w = 0; w < weeks; w++) {
-      if (w >= dropOffWeek) continue
-
-      const checkInDate = new Date(now - (weeks - w) * 7 * 24 * 60 * 60 * 1000)
-      checkInDate.setDate(checkInDate.getDate() + randomInt(-2, 2))
-
-      const baseRating = 2.5 + (w / weeks) * 1.5
-      const skinRating = Math.min(5, Math.max(1, Math.round(baseRating + (Math.random() - 0.5))))
-
-      const complianceProbability = w < 3 ? 0.9 : w < 5 ? 0.75 : 0.85
-      const compliant = Math.random() < complianceProbability
-
-      const negativeWeight = Math.max(0, 0.6 - (w / weeks) * 0.5)
-      const symptoms: string[] = []
-      if (Math.random() < negativeWeight && catalog.dominantConcerns.length > 0) {
-        const neg = catalog.dominantConcerns.find(c => NEGATIVE_SYMPTOMS.includes(c))
-        if (neg) symptoms.push(neg)
-      }
-      if (Math.random() < 0.3 + (w / weeks) * 0.4) {
-        symptoms.push(randomItem(POSITIVE_SYMPTOMS))
-      }
-
-      const checkInProducts: Array<{ productId: string; used: boolean; reaction?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' }> = []
-      if (routine) {
-        const seen = new Set<string>()
-        for (const step of routine.steps) {
-          if (seen.has(step.productId)) continue
-          seen.add(step.productId)
-
-          const used = compliant || Math.random() > 0.3
-          const freqBoost = (productFreq[step.productId] ?? 0) / maxFreq
-          const positiveThreshold = 0.75 - freqBoost * 0.2
-          const reactionRoll = Math.random()
-          const reaction: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | undefined = used
-            ? reactionRoll > positiveThreshold ? 'POSITIVE' : reactionRoll > 0.25 ? 'NEUTRAL' : 'NEGATIVE'
-            : undefined
-
-          checkInProducts.push({ productId: step.productId, used, ...(reaction !== undefined ? { reaction } : {}) })
-        }
-      }
-
-      await prisma.checkIn.create({
-        data: {
-          endUserId: userId,
-          date: checkInDate,
-          skinRating,
-          symptoms: symptoms.filter(Boolean) as any,
-          compliant,
-          products: {
-            create: checkInProducts.map(p => ({
-              product: { connect: { id: p.productId } },
-              used: p.used,
-              ...(p.reaction !== undefined ? { reaction: p.reaction } : {}),
-            })),
-          },
-        },
+    try {
+      const routine = await prisma.routine.findFirst({
+        where: { endUserId: userId, activeTo: null },
+        include: { steps: { include: { product: true } } },
       })
-      totalCheckIns++
-    }
+
+      const dropOffWeek = Math.random() < 0.15 ? randomInt(3, 5) : weeks + 1
+
+      for (let w = 0; w < weeks; w++) {
+        if (w >= dropOffWeek) continue
+
+        const checkInDate = new Date(now - (weeks - w) * 7 * 24 * 60 * 60 * 1000)
+        checkInDate.setDate(checkInDate.getDate() + randomInt(-2, 2))
+
+        const baseRating = 2.5 + (w / weeks) * 1.5
+        const skinRating = Math.min(5, Math.max(1, Math.round(baseRating + (Math.random() - 0.5))))
+
+        const complianceProbability = w < 3 ? 0.9 : w < 5 ? 0.75 : 0.85
+        const compliant = Math.random() < complianceProbability
+
+        const negativeWeight = Math.max(0, 0.6 - (w / weeks) * 0.5)
+        const symptoms: string[] = []
+        if (Math.random() < negativeWeight && catalog.dominantConcerns.length > 0) {
+          const neg = catalog.dominantConcerns.find(c => NEGATIVE_SYMPTOMS.includes(c))
+          if (neg) symptoms.push(neg)
+        }
+        if (Math.random() < 0.3 + (w / weeks) * 0.4) {
+          symptoms.push(randomItem(POSITIVE_SYMPTOMS))
+        }
+
+        const checkInProducts: Array<{ productId: string; used: boolean; reaction?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' }> = []
+        if (routine) {
+          const seen = new Set<string>()
+          for (const step of routine.steps) {
+            if (seen.has(step.productId)) continue
+            seen.add(step.productId)
+
+            const used = compliant || Math.random() > 0.3
+            const freqBoost = (productFreq[step.productId] ?? 0) / maxFreq
+            const positiveThreshold = 0.75 - freqBoost * 0.2
+            const reactionRoll = Math.random()
+            const reaction: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | undefined = used
+              ? reactionRoll > positiveThreshold ? 'POSITIVE' : reactionRoll > 0.25 ? 'NEUTRAL' : 'NEGATIVE'
+              : undefined
+
+            checkInProducts.push({ productId: step.productId, used, ...(reaction !== undefined ? { reaction } : {}) })
+          }
+        }
+
+        try {
+          await prisma.checkIn.create({
+            data: {
+              endUserId: userId,
+              date: checkInDate,
+              skinRating,
+              symptoms: symptoms.filter(Boolean) as any,
+              compliant,
+              products: {
+                create: checkInProducts.map(p => ({
+                  product: { connect: { id: p.productId } },
+                  used: p.used,
+                  ...(p.reaction !== undefined ? { reaction: p.reaction } : {}),
+                })),
+              },
+            },
+          })
+          totalCheckIns++
+        } catch { /* skip this week's check-in on constraint error */ }
+      }
+    } catch { /* skip consumer entirely if routine lookup fails */ }
   }
 
   return totalCheckIns
