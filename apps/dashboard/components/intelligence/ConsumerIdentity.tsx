@@ -298,7 +298,7 @@ export function ConsumerIdentity({ data, signals, brandId }: Props) {
             <p className="text-[12px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
               When an identified consumer visits a new brand, their biological profile (skin type,
               concerns, hair type…) pre-fills the quiz — giving them a faster experience while
-              your brand gets richer first-party data from day one.
+              your brand gets richer zero-party and first-party data from day one.
             </p>
           </div>
         </InsightCard>
