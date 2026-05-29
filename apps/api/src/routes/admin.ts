@@ -754,19 +754,19 @@ export async function adminRoutes(server: FastifyInstance) {
     }
   )
 
-  // ── List all brands (demos + onboarded) ──────────────────────────
+  // ── List paying brands (non-demo) ─────────────────────────────────
   server.get(
     '/admin/brands',
     { preHandler: requireHaliteAdmin },
     async () => {
       const brands = await prisma.brand.findMany({
+        where: { isDemo: false },
         select: {
           id: true,
           name: true,
           slug: true,
           plan: true,
           active: true,
-          isDemo: true,
           createdAt: true,
           demoProspectName: true,
           _count: { select: { endUsers: true, products: true } },

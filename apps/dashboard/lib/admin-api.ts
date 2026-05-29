@@ -75,7 +75,6 @@ export interface BrandSummary {
   slug: string
   plan: string
   active: boolean
-  isDemo: boolean
   createdAt: string
   demoProspectName?: string | null
   _count: { endUsers: number; products: number }

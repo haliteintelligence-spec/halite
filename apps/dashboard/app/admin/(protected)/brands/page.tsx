@@ -2,12 +2,11 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Building2, Users, Package, Plus, ArrowUpDown, SlidersHorizontal, X } from 'lucide-react'
+import { Building2, Users, Package, Plus, ArrowUpDown, SlidersHorizontal, Check, X } from 'lucide-react'
 import type { BrandSummary } from '@/lib/admin-api'
 
 type SortKey = 'name' | 'plan' | 'consumers' | 'products' | 'joined'
 type SortDir = 'asc' | 'desc'
-type TypeFilter = '' | 'onboarded' | 'demo'
 
 const PLAN_ORDER: Record<string, number> = { STARTER: 0, GROWTH: 1, PRO: 2, ENTERPRISE: 3 }
 
@@ -18,7 +17,6 @@ export default function BrandsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [filterPlan, setFilterPlan] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'inactive'>('')
-  const [filterType, setFilterType] = useState<TypeFilter>('')
   const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
@@ -43,8 +41,6 @@ export default function BrandsPage() {
 
   const filtered = useMemo(() => {
     let out = brands
-    if (filterType === 'onboarded') out = out.filter(b => !b.isDemo)
-    if (filterType === 'demo') out = out.filter(b => b.isDemo)
     if (filterPlan) out = out.filter(b => b.plan === filterPlan)
     if (filterStatus === 'active') out = out.filter(b => b.active)
     if (filterStatus === 'inactive') out = out.filter(b => !b.active)
@@ -57,11 +53,9 @@ export default function BrandsPage() {
       else if (sortKey === 'joined') cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [brands, sortKey, sortDir, filterPlan, filterStatus, filterType])
+  }, [brands, sortKey, sortDir, filterPlan, filterStatus])
 
-  const onboardedCount = brands.filter(b => !b.isDemo).length
-  const demoCount = brands.filter(b => b.isDemo).length
-  const activeFilterCount = (filterPlan ? 1 : 0) + (filterStatus ? 1 : 0) + (filterType ? 1 : 0)
+  const activeFilterCount = (filterPlan ? 1 : 0) + (filterStatus ? 1 : 0)
 
   function SortBtn({ col, label }: { col: SortKey; label: string }) {
     const active = sortKey === col
@@ -83,10 +77,10 @@ export default function BrandsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold font-display" style={{ color: 'var(--ink)' }}>
-            Brands
+            Active Brands
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-            {loading ? '…' : `${onboardedCount} onboarded · ${demoCount} demo${demoCount !== 1 ? 's' : ''}`}
+            {loading ? '…' : `${filtered.length} of ${brands.length} brand${brands.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -113,25 +107,6 @@ export default function BrandsPage() {
                 className="absolute right-0 top-full mt-1.5 z-50 rounded-xl shadow-lg p-4 space-y-4"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', minWidth: '220px' }}
               >
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>Type</p>
-                  <div className="flex gap-1.5">
-                    {([['', 'All'], ['onboarded', 'Onboarded'], ['demo', 'Demo']] as [TypeFilter, string][]).map(([val, label]) => (
-                      <button
-                        key={val || 'all'}
-                        onClick={() => setFilterType(val)}
-                        className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                        style={{
-                          background: filterType === val ? 'var(--clay)' : 'var(--sand-1)',
-                          color: filterType === val ? 'white' : 'var(--ink)',
-                          border: '1px solid var(--border)',
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>Plan</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -172,7 +147,7 @@ export default function BrandsPage() {
                 </div>
                 {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setFilterPlan(''); setFilterStatus(''); setFilterType('') }}
+                    onClick={() => { setFilterPlan(''); setFilterStatus('') }}
                     className="flex items-center gap-1 text-[11px]"
                     style={{ color: 'var(--ink-3)' }}
                   >
@@ -200,113 +175,97 @@ export default function BrandsPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-xl p-12 text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
-            {brands.length === 0 ? 'No brands yet.' : 'No brands match the current filters.'}
+            {brands.length === 0 ? 'No active brands yet.' : 'No brands match the current filters.'}
           </p>
         </div>
       ) : (
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
-              <thead>
-                <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    <SortBtn col="name" label="Brand" />
-                  </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    <SortBtn col="plan" label="Plan" />
-                  </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    <SortBtn col="consumers" label="Consumers" />
-                  </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    <SortBtn col="products" label="Products" />
-                  </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                    <SortBtn col="joined" label="Created" />
-                  </th>
-                  <th className="px-4 py-3" />
+          <table className="w-full min-w-[640px]">
+            <thead>
+              <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  <SortBtn col="name" label="Brand" />
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  <SortBtn col="plan" label="Plan" />
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  <SortBtn col="consumers" label="Consumers" />
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  <SortBtn col="products" label="Products" />
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+                  <SortBtn col="joined" label="Joined" />
+                </th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((brand, i) => (
+                <tr
+                  key={brand.id}
+                  style={{
+                    background: 'var(--surface)',
+                    borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : undefined,
+                  }}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
+                        <Building2 size={12} style={{ color: 'var(--ink-3)' }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{brand.name}</p>
+                          {brand.demoProspectName && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#ede9fe', color: '#5b21b6' }}>From Demo</span>
+                          )}
+                        </div>
+                        <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{brand.slug}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><PlanBadge plan={brand.plan} /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--ink)' }}>
+                      <Users size={11} style={{ color: 'var(--ink-3)' }} />
+                      {brand._count.endUsers.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--ink)' }}>
+                      <Package size={11} style={{ color: 'var(--ink-3)' }} />
+                      {brand._count.products.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={brand.active ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#f3f4f6', color: '#6b7280' }}>
+                      {brand.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                    {new Date(brand.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/brands/${brand.id}`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                      Manage →
+                    </Link>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filtered.map((brand, i) => (
-                  <tr
-                    key={brand.id}
-                    style={{
-                      background: 'var(--surface)',
-                      borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : undefined,
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
-                          <Building2 size={12} style={{ color: 'var(--ink-3)' }} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{brand.name}</p>
-                            {brand.demoProspectName && !brand.isDemo && (
-                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#ede9fe', color: '#5b21b6' }}>Converted</span>
-                            )}
-                          </div>
-                          <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{brand.slug}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <TypeBadge isDemo={brand.isDemo} />
-                    </td>
-                    <td className="px-4 py-3"><PlanBadge plan={brand.plan} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--ink)' }}>
-                        <Users size={11} style={{ color: 'var(--ink-3)' }} />
-                        {brand._count.endUsers.toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--ink)' }}>
-                        <Package size={11} style={{ color: 'var(--ink-3)' }} />
-                        {brand._count.products.toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        style={brand.active ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#f3f4f6', color: '#6b7280' }}>
-                        {brand.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>
-                      {new Date(brand.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={brand.isDemo ? `/admin/demos/${brand.id}` : `/admin/brands/${brand.id}`}
-                        className="text-[12px] font-medium hover:underline"
-                        style={{ color: 'var(--clay)' }}
-                      >
-                        Manage →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
           </div>
         </div>
       )}
     </div>
   )
-}
-
-function TypeBadge({ isDemo }: { isDemo: boolean }) {
-  return isDemo
-    ? <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: '#fef3c7', color: '#92400e' }}>Demo</span>
-    : <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: '#d1fae5', color: '#065f46' }}>Onboarded</span>
 }
 
 function PlanBadge({ plan }: { plan: string }) {
