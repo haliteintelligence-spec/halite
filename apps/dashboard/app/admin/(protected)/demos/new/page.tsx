@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Upload, X, CheckCircle2, Loader2, Globe, Sparkles } from 'lucide-react'
 import { CircularProgress } from '@/components/ui/CircularProgress'
@@ -50,6 +50,24 @@ export default function NewDemoPage() {
   const purchaseRef = useRef<HTMLInputElement>(null)
   const customerProfileRef = useRef<HTMLInputElement>(null)
   const quizRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!demoId || step !== 3) return
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    const interval = setInterval(async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: 'no-store',
+      })
+      if (!res.ok) return
+      const data = await res.json() as { demo: { status: string } }
+      if (data.demo.status !== 'generating') {
+        clearInterval(interval)
+        router.push(`/admin/demos/${demoId}`)
+      }
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [demoId, step])
 
   function toggleArea(value: string) {
     setForm(f => ({
