@@ -717,6 +717,191 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Cross-brand ingredient signals ────────────────────────────────
+  server.get(
+    '/:brandId/intelligence/ingredient-signals',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+
+      // Identified consumers at this brand (by consumerId or email)
+      const thisEndUsers = await prisma.endUser.findMany({
+        where: { brandId, OR: [{ consumerId: { not: null } }, { email: { not: null } }] },
+        select: { id: true, email: true, consumerId: true },
+        take: 500,
+      })
+      if (thisEndUsers.length === 0) return { signals: [], crossBrandConsumerCount: 0 }
+
+      const consumerIds = thisEndUsers.map(u => u.consumerId).filter((c): c is string => !!c)
+      const emails = thisEndUsers.map(u => u.email).filter((e): e is string => !!e)
+      const orClauses: any[] = []
+      if (consumerIds.length > 0) orClauses.push({ consumerId: { in: consumerIds } })
+      if (emails.length > 0) orClauses.push({ email: { in: emails } })
+
+      // Match at partner brands
+      const partnerEndUsers = await prisma.endUser.findMany({
+        where: { brandId: { not: brandId }, OR: orClauses },
+        select: { id: true, consumerId: true, email: true, brandId: true },
+      })
+      if (partnerEndUsers.length === 0) return { signals: [], crossBrandConsumerCount: 0 }
+
+      // Build: partnerEndUserId → thisEndUserId (and track partner brandIds)
+      const thisByConsumerId = new Map(thisEndUsers.filter(u => u.consumerId).map(u => [u.consumerId!, u.id]))
+      const thisByEmail = new Map(thisEndUsers.filter(u => u.email).map(u => [u.email!, u.id]))
+      const partnerToThis = new Map<string, string>()
+      for (const pu of partnerEndUsers) {
+        const tid = (pu.consumerId && thisByConsumerId.get(pu.consumerId))
+          || (pu.email && thisByEmail.get(pu.email))
+        if (tid) partnerToThis.set(pu.id, tid)
+      }
+
+      const crossBrandConsumerCount = new Set([...partnerToThis.values()]).size
+      const partnerIds = [...partnerToThis.keys()]
+
+      // Get partner-brand active routines with product ingredients
+      const partnerRoutines = await prisma.routine.findMany({
+        where: { endUserId: { in: partnerIds }, activeTo: null },
+        select: {
+          endUserId: true,
+          steps: {
+            select: {
+              product: { select: { keyIngredients: true, category: true, brandId: true } },
+            },
+          },
+        },
+      })
+
+      // Build: ingredient → { thisEndUserIds: Set, partnerBrandIds: Set }
+      const ingredientMap = new Map<string, { thisIds: Set<string>; brandIds: Set<string> }>()
+      for (const routine of partnerRoutines) {
+        const thisId = partnerToThis.get(routine.endUserId)
+        if (!thisId) continue
+        for (const step of routine.steps) {
+          for (const raw of step.product.keyIngredients) {
+            const ing = raw.trim().replace(/\b\w/g, c => c.toUpperCase())
+            if (!ing) continue
+            if (!ingredientMap.has(ing)) ingredientMap.set(ing, { thisIds: new Set(), brandIds: new Set() })
+            const entry = ingredientMap.get(ing)!
+            entry.thisIds.add(thisId)
+            entry.brandIds.add(step.product.brandId)
+          }
+        }
+      }
+
+      // Top 10 ingredients by cross-brand consumer count
+      const topIngredients = [...ingredientMap.entries()]
+        .sort((a, b) => b[1].thisIds.size - a[1].thisIds.size)
+        .slice(0, 10)
+
+      if (topIngredients.length === 0) return { signals: [], crossBrandConsumerCount }
+
+      const allThisIds = [...new Set(topIngredients.flatMap(([, v]) => [...v.thisIds]))]
+
+      // Our-brand routines for those consumers → which of our products they use
+      const ourRoutines = await prisma.routine.findMany({
+        where: { endUserId: { in: allThisIds }, activeTo: null, endUser: { brandId } },
+        select: {
+          endUserId: true,
+          steps: {
+            select: { product: { select: { id: true, name: true, category: true } } },
+          },
+        },
+      })
+
+      const ourProductsByUser = new Map<string, Map<string, { id: string; name: string; category: string }>>()
+      for (const r of ourRoutines) {
+        if (!ourProductsByUser.has(r.endUserId)) ourProductsByUser.set(r.endUserId, new Map())
+        for (const s of r.steps) {
+          ourProductsByUser.get(r.endUserId)!.set(s.product.id, s.product)
+        }
+      }
+
+      // Check-ins at this brand for those consumers
+      const checkIns = await prisma.checkIn.findMany({
+        where: { endUserId: { in: allThisIds } },
+        select: { endUserId: true, skinRating: true, symptoms: true, compliant: true },
+      })
+
+      const checkInsByUser = new Map<string, typeof checkIns>()
+      for (const ci of checkIns) {
+        if (!checkInsByUser.has(ci.endUserId)) checkInsByUser.set(ci.endUserId, [])
+        checkInsByUser.get(ci.endUserId)!.push(ci)
+      }
+
+      // Build final signals
+      const signals = topIngredients.map(([ingredient, { thisIds, brandIds }]) => {
+        const ids = [...thisIds]
+
+        // Our products used by these consumers — with per-product outcomes
+        const productData = new Map<string, {
+          id: string; name: string; category: string
+          count: number; totalRating: number; ratingCount: number
+          positiveCount: number; symptoms: Map<string, number>
+        }>()
+
+        for (const uid of ids) {
+          const prods = ourProductsByUser.get(uid)
+          const userCIs = checkInsByUser.get(uid) ?? []
+          const avgUserRating = userCIs.length > 0
+            ? userCIs.reduce((s, c) => s + c.skinRating, 0) / userCIs.length
+            : null
+
+          if (prods) {
+            for (const [pid, prod] of prods) {
+              if (!productData.has(pid)) {
+                productData.set(pid, { ...prod, count: 0, totalRating: 0, ratingCount: 0, positiveCount: 0, symptoms: new Map() })
+              }
+              const pd = productData.get(pid)!
+              pd.count++
+              if (avgUserRating !== null) {
+                pd.totalRating += avgUserRating
+                pd.ratingCount++
+                if (avgUserRating >= 4) pd.positiveCount++
+              }
+              for (const ci of userCIs) {
+                for (const sym of (ci.symptoms ?? [])) {
+                  pd.symptoms.set(sym, (pd.symptoms.get(sym) ?? 0) + 1)
+                }
+              }
+            }
+          }
+        }
+
+        const ourProducts = [...productData.values()]
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5)
+          .map(p => ({
+            id: p.id, name: p.name, category: p.category, count: p.count,
+            avgRating: p.ratingCount > 0 ? Math.round((p.totalRating / p.ratingCount) * 10) / 10 : null,
+            positiveRate: p.ratingCount > 0 ? Math.round((p.positiveCount / p.ratingCount) * 100) : null,
+            topSymptoms: [...p.symptoms.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([s]) => s),
+          }))
+
+        // Aggregate outcomes across all consumers for this ingredient
+        const allCIs = ids.flatMap(uid => checkInsByUser.get(uid) ?? [])
+        const totalRating = allCIs.reduce((s, c) => s + c.skinRating, 0)
+        const avgRating = allCIs.length > 0 ? Math.round((totalRating / allCIs.length) * 10) / 10 : null
+        const positiveRate = allCIs.length > 0
+          ? Math.round((allCIs.filter(c => c.skinRating >= 4).length / allCIs.length) * 100) : 0
+        const symptomCounts = new Map<string, number>()
+        for (const ci of allCIs) {
+          for (const s of (ci.symptoms ?? [])) symptomCounts.set(s, (symptomCounts.get(s) ?? 0) + 1)
+        }
+        const topSymptoms = [...symptomCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([s]) => s)
+
+        return {
+          ingredient,
+          consumerCount: ids.length,
+          partnerBrandCount: brandIds.size,
+          ourProducts,
+          outcomes: { avgRating, positiveRate, topSymptoms, checkInCount: allCIs.length },
+        }
+      })
+
+      return { signals, crossBrandConsumerCount }
+    }
+  )
+
   // ── Brand Admin: find similar products ────────────────────────────
   server.get(
     '/:brandId/products/:productId/similar',

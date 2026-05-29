@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { InsightButton } from '@/components/ui/InsightButton'
@@ -7,9 +8,10 @@ import {
   AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import type { IdentityData } from '@/lib/api'
+import { ChevronDown, ChevronUp, Sparkles, FlaskConical } from 'lucide-react'
+import type { IdentityData, IngredientSignalsData, IngredientSignal } from '@/lib/api'
 
-type Props = { data: IdentityData; brandId: string }
+type Props = { data: IdentityData; signals: IngredientSignalsData | null; brandId: string }
 
 function KpiTile({
   label, value, sub, accent,
@@ -43,7 +45,155 @@ function KpiTile({
   )
 }
 
-export function ConsumerIdentity({ data, brandId }: Props) {
+function fmt(s: string) {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function RatingBar({ positive, label }: { positive: number; label: string }) {
+  const neutral = Math.max(0, Math.min(100 - positive, 40))
+  const negative = Math.max(0, 100 - positive - neutral)
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[10px]" style={{ color: 'var(--ink-3)' }}>
+        <span>{label}</span>
+        <span className="font-semibold" style={{ color: positive >= 60 ? '#059669' : positive >= 40 ? '#b45309' : '#dc2626' }}>
+          {positive}% positive
+        </span>
+      </div>
+      <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+        <div style={{ width: `${positive}%`, background: '#059669' }} />
+        <div style={{ width: `${neutral}%`, background: '#d1d5db' }} />
+        <div style={{ width: `${negative}%`, background: '#f87171' }} />
+      </div>
+    </div>
+  )
+}
+
+function IngredientCard({ signal }: { signal: IngredientSignal }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+    >
+      {/* Header row */}
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full text-left px-5 py-4 flex items-start justify-between gap-4 hover:bg-black/[0.015] transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <FlaskConical size={13} style={{ color: 'var(--clay)', flexShrink: 0 }} />
+            <span className="text-[15px] font-semibold font-display" style={{ color: 'var(--ink)' }}>
+              {signal.ingredient}
+            </span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: '#eff6ff', color: '#2563eb' }}>
+              {signal.partnerBrandCount} partner brand{signal.partnerBrandCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
+            <span className="font-semibold" style={{ color: 'var(--ink)' }}>{signal.consumerCount}</span>
+            {' '}cross-brand consumer{signal.consumerCount !== 1 ? 's' : ''} using this ingredient externally
+            also use your products — and have logged{' '}
+            <span className="font-semibold" style={{ color: 'var(--ink)' }}>{signal.outcomes.checkInCount}</span>
+            {' '}check-ins at your brand.
+          </p>
+          {signal.outcomes.topSymptoms.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {signal.outcomes.topSymptoms.map(s => (
+                <span key={s} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: 'var(--sand-1)', color: 'var(--ink-3)', border: '1px solid var(--border)' }}>
+                  {fmt(s)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex-shrink-0 flex flex-col items-end gap-2">
+          {signal.outcomes.avgRating !== null && (
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Avg Rating</p>
+              <p className="text-lg font-semibold font-display" style={{ color: 'var(--clay)' }}>
+                {signal.outcomes.avgRating}<span className="text-[11px] font-normal" style={{ color: 'var(--ink-3)' }}>/5</span>
+              </p>
+            </div>
+          )}
+          {expanded
+            ? <ChevronUp size={14} style={{ color: 'var(--ink-3)' }} />
+            : <ChevronDown size={14} style={{ color: 'var(--ink-3)' }} />}
+        </div>
+      </button>
+
+      {/* Collapsed summary bar */}
+      {!expanded && signal.outcomes.checkInCount > 0 && (
+        <div className="px-5 pb-4">
+          <RatingBar positive={signal.outcomes.positiveRate} label="Check-in sentiment across these consumers" />
+        </div>
+      )}
+
+      {/* Expanded detail: per-product breakdown */}
+      {expanded && (
+        <div className="border-t px-5 py-4 space-y-4" style={{ borderColor: 'var(--border)', background: 'var(--sand-1)' }}>
+          <p className="text-[10px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
+            Your Products Used by These Consumers
+          </p>
+          {signal.ourProducts.length === 0 ? (
+            <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>No active routines found for these consumers.</p>
+          ) : (
+            <div className="space-y-3">
+              {signal.ourProducts.map(p => (
+                <div
+                  key={p.id}
+                  className="rounded-xl p-4"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{p.name}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                        {fmt(p.category)} · {p.count} consumer{p.count !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    {p.avgRating !== null && (
+                      <span className="text-[13px] font-semibold" style={{ color: 'var(--clay)' }}>
+                        {p.avgRating}/5
+                      </span>
+                    )}
+                  </div>
+                  {p.positiveRate !== null && (
+                    <RatingBar positive={p.positiveRate} label={`Check-in sentiment · ${signal.ingredient} pairing`} />
+                  )}
+                  {p.topSymptoms.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                      <span className="text-[10px]" style={{ color: 'var(--ink-3)' }}>Reported:</span>
+                      {p.topSymptoms.map(s => (
+                        <span key={s} className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                          style={{ background: '#ecfdf5', color: '#059669' }}>
+                          {fmt(s)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="pt-1">
+            <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+              These {signal.consumerCount} consumers use <strong>{signal.ingredient}</strong> in routines at other Halite brands.
+              No private data from those brands is shared — only anonymised cross-brand signals.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function ConsumerIdentity({ data, signals, brandId }: Props) {
   const chartData = data.trend.map((t, i) => ({
     label: i === 7 ? 'Now' : i === 6 ? '-1w' : i === 0 ? '-7w' : '',
     identified: t.identified,

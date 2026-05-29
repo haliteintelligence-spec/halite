@@ -299,6 +299,43 @@ export async function getIdentityIntelligence(): Promise<IdentityData | null> {
   return apiFetch<IdentityData>(`/brands/${payload.brandId}/intelligence`, token)
 }
 
+export interface IngredientSignalProduct {
+  id: string
+  name: string
+  category: string
+  count: number
+  avgRating: number | null
+  positiveRate: number | null
+  topSymptoms: string[]
+}
+
+export interface IngredientSignal {
+  ingredient: string
+  consumerCount: number
+  partnerBrandCount: number
+  ourProducts: IngredientSignalProduct[]
+  outcomes: {
+    avgRating: number | null
+    positiveRate: number
+    topSymptoms: string[]
+    checkInCount: number
+  }
+}
+
+export interface IngredientSignalsData {
+  signals: IngredientSignal[]
+  crossBrandConsumerCount: number
+}
+
+export async function getIngredientSignals(): Promise<IngredientSignalsData | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('halite_token')?.value
+  if (!token) return null
+  const payload = decodeToken(token)
+  if (!payload?.brandId) return null
+  return apiFetch<IngredientSignalsData>(`/brands/${payload.brandId}/intelligence/ingredient-signals`, token)
+}
+
 export interface AgentWorkflow {
   id: string
   name: string

@@ -1,10 +1,14 @@
-import { getIdentityIntelligence, getTokenAndBrandId } from '@/lib/api'
+import { getIdentityIntelligence, getIngredientSignals, getTokenAndBrandId } from '@/lib/api'
 import { ConsumerIdentity } from '@/components/intelligence/ConsumerIdentity'
 
 export const metadata = { title: 'Consumer Identity | Halite Intelligence' }
 
 export default async function IdentityPage() {
-  const [data, authInfo] = await Promise.all([getIdentityIntelligence(), getTokenAndBrandId()])
+  const [data, signals, authInfo] = await Promise.all([
+    getIdentityIntelligence(),
+    getIngredientSignals(),
+    getTokenAndBrandId(),
+  ])
   const brandId = authInfo?.brandId ?? ''
 
   return (
@@ -21,7 +25,7 @@ export default async function IdentityPage() {
         </div>
       </div>
       {data ? (
-        <ConsumerIdentity data={data} brandId={brandId} />
+        <ConsumerIdentity data={data} signals={signals} brandId={brandId} />
       ) : (
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Could not load identity data.</p>
       )}
