@@ -261,6 +261,13 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
       setBrandId(bid)
       setSessionId(sid)
 
+      // Persist session so the check-in page can reuse it without re-auth
+      try {
+        localStorage.setItem('halite_session', JSON.stringify({
+          token, brandId: bid, expiresAt: Date.now() + 29 * 24 * 60 * 60 * 1000,
+        }))
+      } catch { /* ignore — private browsing */ }
+
       // Seed session with pre-filled answers before showing questions
       if (existingAnswers && Object.keys(existingAnswers).length > 0) {
         setAnswers(existingAnswers)

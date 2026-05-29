@@ -260,6 +260,56 @@ export async function brandRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Public: check-in page auth — find existing end user by email/phone ─
+  server.post(
+    '/slug/:slug/check-in/auth',
+    async (request, reply) => {
+      const { slug } = request.params as { slug: string }
+      const { email, phone } = z.object({
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+      }).parse(request.body)
+
+      if (!email && !phone) throw new ApiError(400, 'Email or phone required')
+
+      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true, active: true } })
+      if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
+
+      // Find end user at this brand who has completed the quiz (has a beauty profile)
+      let endUserId: string | null = null
+
+      if (email) {
+        const eu = await prisma.endUser.findFirst({
+          where: { brandId: brand.id, email, beautyProfile: { isNot: null } },
+          select: { id: true },
+        })
+        if (eu) endUserId = eu.id
+      }
+
+      if (!endUserId && phone) {
+        const consumer = await prisma.consumer.findFirst({
+          where: { phone },
+          include: {
+            endUsers: {
+              where: { brandId: brand.id, beautyProfile: { isNot: null } },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        })
+        if (consumer?.endUsers[0]) endUserId = consumer.endUsers[0].id
+      }
+
+      if (!endUserId) throw new ApiError(404, 'No profile found at this brand. Please complete the quiz first.')
+
+      const token = server.jwt.sign(
+        { role: 'end_user', userId: endUserId, brandId: brand.id },
+        { expiresIn: '30d' }
+      )
+      return reply.send({ token, userId: endUserId, brandId: brand.id })
+    }
+  )
+
   // ── Halite Admin: list all brands ──────────────────────────────────
   server.get(
     '/',
