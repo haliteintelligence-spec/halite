@@ -49,19 +49,20 @@ export async function brandRoutes(server: FastifyInstance) {
 
       if (!email && !phone) return reply.send({ found: false })
 
-      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true } })
+      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true, isDemo: true } })
       if (!brand) throw new ApiError(404, 'Brand not found')
 
       const orClauses: any[] = []
       if (email) orClauses.push({ email })
       if (phone) orClauses.push({ phone })
 
-      // 1. Check the Consumer (cross-brand identity) table first
+      // 1. Check the Consumer (cross-brand identity) table first.
+      // Privacy tier: demo consumers only surface profiles from demo brands; onboarded from onboarded brands.
       const consumer = await prisma.consumer.findFirst({
         where: { OR: orClauses },
         include: {
           endUsers: {
-            where: { brandId: { not: brand.id } },
+            where: { brandId: { not: brand.id }, brand: { isDemo: brand.isDemo } },
             select: { firstName: true, lastName: true, beautyProfile: { select: { completedAreas: true } } },
           },
         },
@@ -86,9 +87,9 @@ export async function brandRoutes(server: FastifyInstance) {
         })
       }
 
-      // 2. Fall back to EndUser by email at any other brand
+      // 2. Fall back to EndUser by email at any other brand in the same tier
       const endUser = email ? await prisma.endUser.findFirst({
-        where: { email, brandId: { not: brand.id }, beautyProfile: { isNot: null } },
+        where: { email, brandId: { not: brand.id }, beautyProfile: { isNot: null }, brand: { isDemo: brand.isDemo } },
         select: { id: true, firstName: true, lastName: true, beautyProfile: { select: { completedAreas: true } } },
       }) : null
 
@@ -118,7 +119,7 @@ export async function brandRoutes(server: FastifyInstance) {
       const { slug } = request.params as { slug: string }
       const { prefillToken } = z.object({ prefillToken: z.string() }).parse(request.body)
 
-      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true } })
+      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true, isDemo: true } })
       if (!brand) throw new ApiError(404, 'Brand not found')
 
       let prefillAnswers: Record<string, unknown> = {}
@@ -134,7 +135,7 @@ export async function brandRoutes(server: FastifyInstance) {
             where: { id: payload.consumerId },
             include: {
               endUsers: {
-                where: { brandId: { not: brand.id } },
+                where: { brandId: { not: brand.id }, brand: { isDemo: brand.isDemo } },
                 include: {
                   beautyProfile: { select: { completedAreas: true } },
                   quizSessions: { where: { completed: true }, orderBy: { completedAt: 'desc' }, take: 1 },
@@ -164,11 +165,13 @@ export async function brandRoutes(server: FastifyInstance) {
           const endUser = await prisma.endUser.findUnique({
             where: { id: payload.endUserId },
             include: {
+              brand: { select: { isDemo: true } },
               beautyProfile: { select: { completedAreas: true } },
               quizSessions: { where: { completed: true }, orderBy: { completedAt: 'desc' }, take: 1 },
             },
           })
-          if (endUser) {
+          // Only redeem if the source brand is in the same privacy tier
+          if (endUser && endUser.brand.isDemo === brand.isDemo) {
             prefillAnswers = (endUser.quizSessions[0]?.answers as Record<string, unknown>) ?? {}
             completedAreas = (endUser.beautyProfile?.completedAreas as string[]) ?? []
             firstName = endUser.firstName
@@ -272,7 +275,7 @@ export async function brandRoutes(server: FastifyInstance) {
 
       if (!email && !phone) throw new ApiError(400, 'Email or phone required')
 
-      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true, active: true } })
+      const brand = await prisma.brand.findUnique({ where: { slug }, select: { id: true, active: true, isDemo: true } })
       if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
 
       // Find end user at this brand who has completed the quiz (has a beauty profile)
@@ -300,13 +303,67 @@ export async function brandRoutes(server: FastifyInstance) {
         if (consumer?.endUsers[0]) endUserId = consumer.endUsers[0].id
       }
 
-      if (!endUserId) throw new ApiError(404, 'No profile found at this brand. Please complete the quiz first.')
+      if (endUserId) {
+        const token = server.jwt.sign(
+          { role: 'end_user', userId: endUserId, brandId: brand.id },
+          { expiresIn: '30d' }
+        )
+        return reply.send({ token, userId: endUserId, brandId: brand.id })
+      }
 
-      const token = server.jwt.sign(
-        { role: 'end_user', userId: endUserId, brandId: brand.id },
-        { expiresIn: '30d' }
-      )
-      return reply.send({ token, userId: endUserId, brandId: brand.id })
+      // ── Cross-brand fallback ───────────────────────────────────────────────────
+      // No profile at this brand — check whether this consumer exists at another
+      // brand in the same privacy tier (demo↔demo or onboarded↔onboarded).
+      const orClauses: any[] = []
+      if (email) orClauses.push({ email })
+      if (phone) orClauses.push({ phone })
+
+      const crossConsumer = await prisma.consumer.findFirst({
+        where: { OR: orClauses },
+        include: {
+          endUsers: {
+            where: { brandId: { not: brand.id }, brand: { isDemo: brand.isDemo } },
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      })
+
+      if (crossConsumer && crossConsumer.endUsers.length > 0) {
+        const best = crossConsumer.endUsers[0]!
+        const externalId = `consumer-${crossConsumer.id}`
+
+        const endUser = await prisma.endUser.upsert({
+          where: { brandId_externalId: { brandId: brand.id, externalId } },
+          update: {
+            ...(crossConsumer.email ? { email: crossConsumer.email } : {}),
+            ...(best.firstName ? { firstName: best.firstName } : {}),
+            ...(best.lastName ? { lastName: best.lastName } : {}),
+            consumerId: crossConsumer.id,
+          },
+          create: {
+            brandId: brand.id,
+            externalId,
+            email: crossConsumer.email ?? best.email ?? null,
+            firstName: best.firstName ?? null,
+            lastName: best.lastName ?? null,
+            consumerId: crossConsumer.id,
+          },
+        })
+
+        const token = server.jwt.sign(
+          { role: 'end_user', userId: endUser.id, brandId: brand.id },
+          { expiresIn: '30d' }
+        )
+        return reply.send({ token, userId: endUser.id, brandId: brand.id, crossBrand: true })
+      }
+
+      throw new ApiError(404, 'No profile found. Please complete the quiz first.')
     }
   )
 

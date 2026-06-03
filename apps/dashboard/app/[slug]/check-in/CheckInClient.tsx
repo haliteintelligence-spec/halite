@@ -25,7 +25,7 @@ const SYMPTOMS_NEGATIVE = [
 const RATING_EMOJIS = ['😔', '😐', '🙂', '😊', '🤩']
 const RATING_LABELS = ['Rough', 'Okay', 'Good', 'Great', 'Glowing']
 
-type Phase = 'init' | 'login' | 'no_profile' | 'rating' | 'symptoms' | 'products' | 'notes' | 'photo' | 'submitting' | 'success' | 'error'
+type Phase = 'init' | 'login' | 'no_profile' | 'cross_brand_welcome' | 'rating' | 'symptoms' | 'products' | 'notes' | 'photo' | 'submitting' | 'success' | 'error'
 
 const FORM_STEPS: Phase[] = ['rating', 'symptoms', 'products', 'notes', 'photo']
 
@@ -116,11 +116,15 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
       })
       if (res.status === 404) { setPhase('no_profile'); return }
       if (!res.ok) throw new Error()
-      const { token: tok, brandId: bid } = await res.json() as { token: string; brandId: string }
-      setToken(tok)
-      setBrandId(bid)
-      saveSession({ token: tok, brandId: bid, expiresAt: Date.now() + 29 * 24 * 60 * 60 * 1000 })
-      await loadRoutineData(tok, bid)
+      const data = await res.json() as { token: string; brandId: string; crossBrand?: boolean }
+      setToken(data.token)
+      setBrandId(data.brandId)
+      saveSession({ token: data.token, brandId: data.brandId, expiresAt: Date.now() + 29 * 24 * 60 * 60 * 1000 })
+      if (data.crossBrand) {
+        setPhase('cross_brand_welcome')
+        return
+      }
+      await loadRoutineData(data.token, data.brandId)
     } catch {
       setLoginError('Something went wrong. Please try again.')
     } finally {
@@ -230,6 +234,10 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
             accent={accent} brandName={brand.name} slug={slug}
             onEmail={setEmail} onPhone={setPhone} onSubmit={handleLogin}
           />
+        )}
+
+        {phase === 'cross_brand_welcome' && (
+          <CrossBrandWelcome accent={accent} brandName={brand.name} onContinue={() => loadRoutineData(token, brandId)} />
         )}
 
         {phase === 'no_profile' && (
@@ -396,6 +404,28 @@ function LoginStep({
       <p style={{ fontSize: 13, color: '#aaa', textAlign: 'center', marginTop: 20 }}>
         New to {brandName}?{' '}
         <a href={`/${slug}/quiz`} style={{ color: accent, textDecoration: 'none', fontWeight: 500 }}>Take the skin quiz</a>
+      </p>
+    </div>
+  )
+}
+
+function CrossBrandWelcome({ accent, brandName, onContinue }: { accent: string; brandName: string; onContinue: () => void }) {
+  return (
+    <div>
+      <div style={{ width: 52, height: 52, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 20 }}>✦</div>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>Welcome back</p>
+      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', margin: '0 0 10px', lineHeight: 1.2 }}>Your profile is linked</h1>
+      <p style={{ fontSize: 14, color: '#888', margin: '0 0 32px', lineHeight: 1.6 }}>
+        We found your beauty profile and connected it to {brandName}. You can check in now — take the skin quiz to get product recommendations personalised for this brand.
+      </p>
+      <button
+        onClick={onContinue}
+        style={{ width: '100%', padding: '14px', borderRadius: 12, background: accent, border: 'none', fontSize: 15, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+      >
+        Continue to check-in
+      </button>
+      <p style={{ fontSize: 12, color: '#bbb', textAlign: 'center', marginTop: 16 }}>
+        Your data is private and never shared across brands.
       </p>
     </div>
   )
