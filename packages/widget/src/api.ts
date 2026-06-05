@@ -176,6 +176,13 @@ export class HaliteApi {
     return { consumerId: res.consumerId, prefillAnswers: res.prefillAnswers, isReturning: res.isReturning }
   }
 
+  async saveEndUserName(firstName: string, lastName?: string): Promise<void> {
+    await this.patch(`/brands/${this.brandId}/me`, {
+      firstName,
+      ...(lastName ? { lastName } : {}),
+    })
+  }
+
   async saveConsumerAnswers(answers: Record<string, unknown>): Promise<void> {
     if (!this.consumerToken) return
     await fetch(`${this.apiUrl}/consumers/me/answers`, {

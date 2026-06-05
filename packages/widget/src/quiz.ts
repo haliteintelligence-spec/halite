@@ -128,7 +128,7 @@ export class QuizController {
 
   private showQuestion() {
     const q = this.questions[this.index]
-    if (!q) { this.complete(); return }
+    if (!q) { this.showNameCapture(); return }
 
     // Skip pre-filled questions silently — answer already in this.answers
     if (PREFILL_IDS.has(q.id) && this.answers[q.id] !== undefined) {
@@ -300,8 +300,76 @@ export class QuizController {
     return 0
   }
 
+  private showNameCapture() {
+    this.setProgress(1)
+    this.setBack(() => { this.index = Math.max(0, this.index - 1); this.showQuestion() })
+
+    const el = document.createElement('div')
+
+    const title = document.createElement('p')
+    title.className = 'hlw-question-text'
+    title.textContent = 'Almost done — what\'s your name?'
+    el.appendChild(title)
+
+    const sub = document.createElement('p')
+    sub.className = 'hlw-question-sub'
+    sub.textContent = "We'll use this to personalise your routine."
+    el.appendChild(sub)
+
+    const nameRow = document.createElement('div')
+    nameRow.style.cssText = 'display:flex;gap:8px;margin-top:8px;'
+
+    const firstInput = document.createElement('input')
+    firstInput.type = 'text'
+    firstInput.className = 'hlw-text-input'
+    firstInput.placeholder = 'First name'
+    firstInput.style.flex = '1'
+    firstInput.autofocus = true
+
+    const lastInput = document.createElement('input')
+    lastInput.type = 'text'
+    lastInput.className = 'hlw-text-input'
+    lastInput.placeholder = 'Last name'
+    lastInput.style.flex = '1'
+
+    nameRow.appendChild(firstInput)
+    nameRow.appendChild(lastInput)
+    el.appendChild(nameRow)
+
+    const errMsg = document.createElement('p')
+    errMsg.style.cssText = 'font-size:11px;color:#e57373;margin-top:8px;display:none;'
+    errMsg.textContent = 'Please enter your first name to continue.'
+    el.appendChild(errMsg)
+
+    const nextBtn = document.createElement('button')
+    nextBtn.className = 'hlw-btn-next'
+    nextBtn.textContent = 'Get My Routine'
+    nextBtn.disabled = true
+
+    firstInput.addEventListener('input', () => {
+      nextBtn.disabled = !firstInput.value.trim()
+    })
+
+    const submit = () => {
+      const firstName = firstInput.value.trim()
+      if (!firstName) { errMsg.style.display = 'block'; return }
+      errMsg.style.display = 'none'
+      nextBtn.disabled = true
+      nextBtn.textContent = 'Building…'
+      const lastName = lastInput.value.trim() || undefined
+      this.api.saveEndUserName(firstName, lastName).catch(() => {})
+      this.complete()
+    }
+
+    nextBtn.addEventListener('click', submit)
+    firstInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && firstInput.value.trim()) submit() })
+
+    ;(el as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = nextBtn
+    this.render(el)
+  }
+
   private async complete() {
-    this.renderLoading('Building your routine…', 'Claude is analysing your profile and selecting products just for you.')
+    this.renderLoading('Building your routine…', 'Our AI is analysing your profile and selecting products just for you.')
     try {
       await this.api.saveAnswers(this.sessionId, this.answers)
       await this.api.completeSession(this.sessionId)

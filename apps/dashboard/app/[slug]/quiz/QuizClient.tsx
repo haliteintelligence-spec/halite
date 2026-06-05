@@ -73,6 +73,7 @@ type Phase =
   | 'starting'
   | 'area_select'
   | 'questions'
+  | 'name'
   | 'submitting'
   | 'done'
   | 'routine'
@@ -228,12 +229,10 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
   ) {
     setPhase('starting')
     try {
-      // Get end-user token — pass contact info and consumerId if returning
+      // Get end-user token — pass contact info only (name is collected at end of quiz)
       const tokenBody: Record<string, string> = {}
       if (contact.email) tokenBody.email = contact.email
       if (contact.phone) tokenBody.phone = contact.phone
-      if (contact.firstName) tokenBody.firstName = contact.firstName
-      if (contact.lastName) tokenBody.lastName = contact.lastName
 
       const tokenRes = await fetch(`${apiUrl}/brands/slug/${slug}/quiz/token`, {
         method: 'POST',
@@ -388,7 +387,7 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
   function advance() {
     setCurrentIndex((i) => {
       if (i < flatQuestions.length - 1) return i + 1
-      handleComplete()
+      setTimeout(() => setPhase('name'), 0)
       return i
     })
   }
@@ -425,6 +424,18 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
     setAnswers((prev) => ({ ...prev, ...partial }))
     saveAnswers(partial)
     advance()
+  }
+
+  async function handleNameSubmit(firstName: string, lastName: string) {
+    setContact(c => ({ ...c, firstName, lastName }))
+    if (userToken && brandId) {
+      fetch(`${apiUrl}/brands/${brandId}/me`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, ...(lastName ? { lastName } : {}) }),
+      }).catch(() => {})
+    }
+    await handleComplete()
   }
 
   async function handleComplete() {
@@ -574,6 +585,15 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
             />
           )}
 
+          {/* ── Name capture ── */}
+          {phase === 'name' && (
+            <NameStep
+              initialFirstName={contact.firstName}
+              initialLastName={contact.lastName}
+              onSubmit={handleNameSubmit}
+            />
+          )}
+
           {/* ── Submitting ── */}
           {phase === 'submitting' && (
             <div className="text-center space-y-5">
@@ -645,7 +665,7 @@ function ContactStep({
   onChange: (v: ContactInfo) => void
   onSubmit: () => void
 }) {
-  const canSubmit = value.firstName.trim().length > 0 && (value.email.trim().length > 0 || value.phone.trim().length > 0)
+  const canSubmit = value.email.trim().length > 0 || value.phone.trim().length > 0
 
   return (
     <div className="space-y-8">
@@ -654,46 +674,11 @@ function ContactStep({
           Let's get to know you
         </h2>
         <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-          If you've taken a quiz with another brand, we can pre-fill your results.
+          Enter your email or phone so we can save your profile. If you've taken a quiz with another brand on Halite, we'll pre-fill your results.
         </p>
       </div>
 
       <div className="space-y-3">
-        <div className="flex gap-2.5">
-          <div className="flex-1">
-            <label className="block text-[10px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'var(--text-3)' }}>
-              First name <span style={{ color: '#f09118' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={value.firstName}
-              onChange={e => onChange({ ...value, firstName: e.target.value })}
-              placeholder="Sofia"
-              autoComplete="given-name"
-              className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none transition-all"
-              style={{ borderColor: 'var(--border)', background: 'white', color: 'var(--text-1)' }}
-              onFocus={e => (e.target.style.borderColor = '#f09118')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-[10px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'var(--text-3)' }}>
-              Last name
-            </label>
-            <input
-              type="text"
-              value={value.lastName}
-              onChange={e => onChange({ ...value, lastName: e.target.value })}
-              placeholder="Osei"
-              autoComplete="family-name"
-              className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none transition-all"
-              style={{ borderColor: 'var(--border)', background: 'white', color: 'var(--text-1)' }}
-              onFocus={e => (e.target.style.borderColor = '#f09118')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-            />
-          </div>
-        </div>
-
         <div>
           <label className="block text-[10px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'var(--text-3)' }}>
             Email address <span className="text-[9px] font-normal normal-case" style={{ color: 'var(--text-3)' }}>or phone below</span>
@@ -735,6 +720,80 @@ function ContactStep({
           Your information is private and never sold.
         </p>
       </div>
+    </div>
+  )
+}
+
+// ── Name capture step ─────────────────────────────────────────────────────────
+
+function NameStep({
+  initialFirstName,
+  initialLastName,
+  onSubmit,
+}: {
+  initialFirstName: string
+  initialLastName: string
+  onSubmit: (firstName: string, lastName: string) => void
+}) {
+  const [firstName, setFirstName] = useState(initialFirstName)
+  const [lastName, setLastName] = useState(initialLastName)
+
+  const canSubmit = firstName.trim().length > 0
+
+  return (
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h2 className="font-display text-3xl leading-snug" style={{ color: 'var(--text-1)' }}>
+          Almost done — what's your name?
+        </h2>
+        <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+          We'll use this to personalise your routine.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex gap-2.5">
+          <div className="flex-1">
+            <label className="block text-[10px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'var(--text-3)' }}>
+              First name <span style={{ color: '#f09118' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={e => setFirstName(e.target.value)}
+              placeholder="Sofia"
+              autoComplete="given-name"
+              autoFocus
+              className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none transition-all"
+              style={{ borderColor: 'var(--border)', background: 'white', color: 'var(--text-1)' }}
+              onFocus={e => (e.target.style.borderColor = '#f09118')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+              onKeyDown={e => { if (e.key === 'Enter' && canSubmit) onSubmit(firstName.trim(), lastName.trim()) }}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-[10px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'var(--text-3)' }}>
+              Last name
+            </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={e => setLastName(e.target.value)}
+              placeholder="Osei"
+              autoComplete="family-name"
+              className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none transition-all"
+              style={{ borderColor: 'var(--border)', background: 'white', color: 'var(--text-1)' }}
+              onFocus={e => (e.target.style.borderColor = '#f09118')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+              onKeyDown={e => { if (e.key === 'Enter' && canSubmit) onSubmit(firstName.trim(), lastName.trim()) }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Btn onClick={() => onSubmit(firstName.trim(), lastName.trim())} disabled={!canSubmit}>
+        Get My Routine
+      </Btn>
     </div>
   )
 }

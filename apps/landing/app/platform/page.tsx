@@ -132,7 +132,7 @@ export default function Platform() {
                 Routine Engine
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: '#8B6575' }}>
-                The brain behind your personalization. Claude generates bespoke regimens from your product catalogue — inclusive by design, ingredient-matched, and updated as the consumer's skin evolves.
+                The brain behind your personalization. Our AI generates bespoke regimens from your product catalogue — inclusive by design, ingredient-matched, and updated as the consumer's skin evolves.
               </p>
             </div>
           </div>

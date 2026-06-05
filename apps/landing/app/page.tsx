@@ -244,7 +244,7 @@ export default function Landing() {
               {
                 n: '02',
                 title: 'Personalize',
-                body: 'Claude generates a bespoke routine from your catalogue — inclusive by design, ingredient-matched, and price-filtered. No generic picks, ever.',
+                body: 'Our AI generates a bespoke routine from your catalogue — inclusive by design, ingredient-matched, and price-filtered. No generic picks, ever.',
               },
               {
                 n: '03',
