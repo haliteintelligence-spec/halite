@@ -175,23 +175,73 @@ export class QuizController {
     }
 
     if (q.type === 'single' && q.options) {
-      const opts = document.createElement('div')
-      opts.className = 'hlw-options'
       let selected = ''
 
-      q.options.forEach(opt => {
-        const el = document.createElement('div')
-        el.className = 'hlw-option'
-        el.innerHTML = `<div class="hlw-option-label">${opt.label}</div>${opt.description ? `<div class="hlw-option-desc">${opt.description}</div>` : ''}`
-        el.addEventListener('click', () => {
-          opts.querySelectorAll('.hlw-option').forEach(o => o.classList.remove('selected'))
-          el.classList.add('selected')
-          selected = opt.value
-          nextBtn.disabled = false
+      if (q.options[0]?.swatchColor) {
+        // Swatch grid for skin tone questions
+        const grid = document.createElement('div')
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:8px;'
+
+        const preview = document.createElement('div')
+        preview.style.cssText = 'display:none;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;border:1.5px solid #f09118;background:#fef9ee;margin-top:10px;'
+
+        q.options.forEach(opt => {
+          const cell = document.createElement('button')
+          cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;padding:0;'
+
+          const circle = document.createElement('span')
+          circle.style.cssText = `width:36px;height:36px;border-radius:50%;display:block;background:${opt.swatchColor};box-shadow:0 0 0 1.5px rgba(0,0,0,0.08);transition:box-shadow 0.15s,transform 0.15s;`
+
+          const num = document.createElement('span')
+          num.style.cssText = 'font-size:9px;font-weight:500;color:#aaa;'
+          num.textContent = opt.value
+
+          cell.appendChild(circle)
+          cell.appendChild(num)
+
+          cell.addEventListener('click', () => {
+            // Reset all circles
+            grid.querySelectorAll('span[data-swatch]').forEach((s) => {
+              const el = s as HTMLSpanElement
+              el.style.boxShadow = '0 0 0 1.5px rgba(0,0,0,0.08)'
+              el.style.transform = 'scale(1)'
+            })
+            num.style.color = '#333'
+            circle.style.boxShadow = `0 0 0 2px white, 0 0 0 4px ${opt.swatchColor}`
+            circle.style.transform = 'scale(1.12)'
+            selected = opt.value
+            nextBtn.disabled = false
+
+            // Update preview
+            preview.style.display = 'flex'
+            preview.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:${opt.swatchColor};flex-shrink:0;display:inline-block;"></span><div><p style="font-size:12px;font-weight:600;color:#1a1a1a;margin:0;">${opt.label}</p><p style="font-size:11px;color:#888;margin:0;">${opt.description ?? ''}</p></div>`
+          })
+
+          circle.setAttribute('data-swatch', opt.value)
+          grid.appendChild(cell)
         })
-        opts.appendChild(el)
-      })
-      container.appendChild(opts)
+
+        container.appendChild(grid)
+        container.appendChild(preview)
+      } else {
+        const opts = document.createElement('div')
+        opts.className = 'hlw-options'
+
+        q.options.forEach(opt => {
+          const el = document.createElement('div')
+          el.className = 'hlw-option'
+          el.innerHTML = `<div class="hlw-option-label">${opt.label}</div>${opt.description ? `<div class="hlw-option-desc">${opt.description}</div>` : ''}`
+          el.addEventListener('click', () => {
+            opts.querySelectorAll('.hlw-option').forEach(o => o.classList.remove('selected'))
+            el.classList.add('selected')
+            selected = opt.value
+            nextBtn.disabled = false
+          })
+          opts.appendChild(el)
+        })
+        container.appendChild(opts)
+      }
+
       getValue = () => selected
       isValid = () => !!selected
 

@@ -12,6 +12,7 @@ interface QuizOption {
   value: string
   label: string
   description?: string
+  swatchColor?: string
 }
 
 interface QuizQuestion {
@@ -985,8 +986,11 @@ function QuestionStep({
       </div>
 
       {question.type === 'single' && question.options && (
-        <SingleChoice options={question.options} value={answer as string | undefined}
-          onSelect={(v) => onAnswer(question.id, v, true)} />
+        question.options[0]?.swatchColor
+          ? <SkinToneSelector options={question.options} value={answer as string | undefined}
+              onSelect={(v) => onAnswer(question.id, v, true)} />
+          : <SingleChoice options={question.options} value={answer as string | undefined}
+              onSelect={(v) => onAnswer(question.id, v, true)} />
       )}
       {question.type === 'multi' && question.options && (
         <MultiChoice options={question.options} value={(answer as string[] | undefined) ?? []}
@@ -1002,6 +1006,54 @@ function QuestionStep({
       {question.type === 'unit_select' && question.units && (
         <UnitSelect units={question.units} value={answer as string | undefined}
           onConfirm={(v) => { onAnswer(question.id, v, false); onContinue() }} />
+      )}
+    </div>
+  )
+}
+
+// ── Skin tone selector (swatch grid) ─────────────────────────────────────────
+
+function SkinToneSelector({ options, value, onSelect }: { options: QuizOption[]; value?: string; onSelect: (v: string) => void }) {
+  const selected = options.find(o => o.value === value)
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-5 gap-3">
+        {options.map(opt => {
+          const active = value === opt.value
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onSelect(opt.value)}
+              className="flex flex-col items-center gap-1.5 group"
+              title={`${opt.label} — ${opt.description}`}
+            >
+              <span
+                className="w-11 h-11 rounded-full block transition-all"
+                style={{
+                  background: opt.swatchColor,
+                  boxShadow: active
+                    ? `0 0 0 2px white, 0 0 0 4px ${opt.swatchColor}`
+                    : '0 0 0 1.5px rgba(0,0,0,0.08)',
+                  transform: active ? 'scale(1.12)' : 'scale(1)',
+                }}
+              />
+              <span className="text-[9px] font-medium" style={{ color: active ? 'var(--text-1)' : 'var(--text-3)' }}>
+                {opt.value}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {selected && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all"
+          style={{ borderColor: '#f09118', background: '#fef9ee' }}>
+          <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: selected.swatchColor }} />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{selected.label}</p>
+            <p className="text-xs" style={{ color: 'var(--text-3)' }}>{selected.description}</p>
+          </div>
+        </div>
       )}
     </div>
   )

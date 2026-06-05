@@ -2,6 +2,7 @@ export interface QuizOption {
   value: string
   label: string
   description?: string
+  swatchColor?: string
 }
 
 export interface QuizQuestion {
