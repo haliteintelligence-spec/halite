@@ -101,7 +101,7 @@ function WorkflowCard({ workflow, slug, isDemo }: { workflow: Workflow; slug: st
   const typeLabel = TYPE_LABELS[workflow.type] ?? workflow.type
 
   return (
-    <div className="relative rounded-xl transition-all hover:shadow-sm" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="group relative rounded-xl transition-all hover:shadow-sm" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
       <Link
         href={`/${slug}/agents/${workflow.id}`}
         className="block p-4"
@@ -110,7 +110,7 @@ function WorkflowCard({ workflow, slug, isDemo }: { workflow: Workflow; slug: st
           <div className="min-w-0">
             <p className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{workflow.name}</p>
             {workflow.description && (
-              <p className="text-[12px] mt-0.5 line-clamp-2" style={{ color: 'var(--ink-3)' }}>
+              <p className="text-[12px] mt-0.5 overflow-hidden transition-all duration-300 max-h-9 group-hover:max-h-40" style={{ color: 'var(--ink-3)' }}>
                 {workflow.description}
               </p>
             )}
@@ -145,7 +145,11 @@ function WorkflowCard({ workflow, slug, isDemo }: { workflow: Workflow; slug: st
       </Link>
       {isDemo && (
         <div className="px-4 pb-3 -mt-1">
-          <RunNowButton workflowId={workflow.id} />
+          <RunNowButton
+            workflowId={workflow.id}
+            workflowType={workflow.type}
+            workflowName={workflow.name}
+          />
         </div>
       )}
     </div>
