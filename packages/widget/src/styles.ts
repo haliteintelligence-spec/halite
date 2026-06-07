@@ -173,6 +173,16 @@ export function getStyles(accent: string): string {
       background: ${accent}15; color: ${accent};
       font-weight: 500;
     }
+    .hlw-add-to-cart {
+      display: inline-flex; align-items: center;
+      margin-top: 10px;
+      padding: 7px 14px; border-radius: 100px;
+      font-size: 12px; font-weight: 600;
+      text-decoration: none;
+      background: ${accent}; color: #fff;
+      transition: opacity 0.15s;
+    }
+    .hlw-add-to-cart:hover { opacity: 0.8; }
     .hlw-error {
       padding: 32px 24px; text-align: center;
     }

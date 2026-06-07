@@ -564,6 +564,7 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement) {
         </div>
         <p class="hlw-step-instruction">${step.instruction}</p>
         ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${i}</span>`).join('')}</div>` : ''}
+        ${step.product.productUrl ? `<a href="${step.product.productUrl}" target="_blank" rel="noopener noreferrer" class="hlw-add-to-cart">Add to cart</a>` : ''}
       `
       group.appendChild(card)
     }
