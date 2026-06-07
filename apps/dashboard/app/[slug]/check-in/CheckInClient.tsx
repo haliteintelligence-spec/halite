@@ -155,8 +155,20 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
     }
   }
 
+  function isValidEmail(v: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
+  }
+  function isValidPhone(v: string) {
+    const digits = v.replace(/\D/g, '')
+    return digits.length >= 7 && digits.length <= 15 && /^[\+\d\s\-\(\)]+$/.test(v.trim())
+  }
+
   async function handleLogin() {
-    if (!email.trim() && !phone.trim()) return
+    const emailVal = email.trim()
+    const phoneVal = phone.trim()
+    if (!emailVal && !phoneVal) return
+    if (emailVal && !isValidEmail(emailVal)) { setLoginError('Please enter a valid email address.'); return }
+    if (phoneVal && !isValidPhone(phoneVal)) { setLoginError('Please enter a valid phone number.'); return }
     setLoggingIn(true)
     setLoginError('')
     try {

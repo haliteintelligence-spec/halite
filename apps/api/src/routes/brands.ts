@@ -223,10 +223,14 @@ export async function brandRoutes(server: FastifyInstance) {
               ...(phone && !existing.phone ? { phone } : {}),
             },
           }).catch(() => {})
-        } else if (email) {
-          // Create a new Consumer record for this person
+        } else {
+          // Create a new Consumer record — works for email-only, phone-only, or both
           const created = await prisma.consumer.create({
-            data: { email, ...(phone ? { phone } : {}), prefillAnswers: {} as any },
+            data: {
+              ...(email ? { email } : {}),
+              ...(phone ? { phone } : {}),
+              prefillAnswers: {} as any,
+            },
             select: { id: true },
           }).catch(() => null)
           if (created) resolvedConsumerId = created.id
@@ -281,17 +285,13 @@ export async function brandRoutes(server: FastifyInstance) {
       // Find end user at this brand who has completed the quiz (has a beauty profile)
       let endUserId: string | null = null
 
-      if (email) {
-        const eu = await prisma.endUser.findFirst({
-          where: { brandId: brand.id, email, beautyProfile: { isNot: null } },
-          select: { id: true },
-        })
-        if (eu) endUserId = eu.id
-      }
-
-      if (!endUserId && phone) {
+      // Check Consumer table first (covers both email and phone, and finds the EndUser at this brand)
+      if (email || phone) {
+        const orClauses: any[] = []
+        if (email) orClauses.push({ email })
+        if (phone) orClauses.push({ phone })
         const consumer = await prisma.consumer.findFirst({
-          where: { phone },
+          where: { OR: orClauses },
           include: {
             endUsers: {
               where: { brandId: brand.id, beautyProfile: { isNot: null } },
@@ -301,6 +301,15 @@ export async function brandRoutes(server: FastifyInstance) {
           },
         })
         if (consumer?.endUsers[0]) endUserId = consumer.endUsers[0].id
+      }
+
+      // Fallback: EndUser.email direct match at this brand (catches consumers not yet linked to a Consumer record)
+      if (!endUserId && email) {
+        const eu = await prisma.endUser.findFirst({
+          where: { brandId: brand.id, email, beautyProfile: { isNot: null } },
+          select: { id: true },
+        })
+        if (eu) endUserId = eu.id
       }
 
       if (endUserId) {
@@ -337,6 +346,14 @@ export async function brandRoutes(server: FastifyInstance) {
       if (crossConsumer && crossConsumer.endUsers.length > 0) {
         const best = crossConsumer.endUsers[0]!
         const externalId = `consumer-${crossConsumer.id}`
+
+        // Merge any newly-provided contact info onto the Consumer record
+        const consumerMerge: Record<string, string> = {}
+        if (email && !crossConsumer.email) consumerMerge.email = email
+        if (phone && !crossConsumer.phone) consumerMerge.phone = phone
+        if (Object.keys(consumerMerge).length > 0) {
+          await prisma.consumer.update({ where: { id: crossConsumer.id }, data: consumerMerge }).catch(() => {})
+        }
 
         const endUser = await prisma.endUser.upsert({
           where: { brandId_externalId: { brandId: brand.id, externalId } },

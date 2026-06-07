@@ -82,8 +82,34 @@ export class QuizController {
 
     const errMsg = document.createElement('p')
     errMsg.style.cssText = 'font-size:11px;color:#e57373;margin-top:8px;display:none;'
-    errMsg.textContent = 'Please enter an email or phone number to continue.'
     el.appendChild(errMsg)
+
+    function isValidEmail(v: string) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)
+    }
+    function isValidPhone(v: string) {
+      const digits = v.replace(/\D/g, '')
+      return digits.length >= 7 && digits.length <= 15 && /^[\+\d\s\-\(\)]+$/.test(v)
+    }
+
+    emailInput.addEventListener('blur', () => {
+      const v = emailInput.value.trim()
+      if (v && !isValidEmail(v)) {
+        errMsg.textContent = 'Please enter a valid email address.'
+        errMsg.style.display = 'block'
+      } else if (errMsg.textContent?.includes('email')) {
+        errMsg.style.display = 'none'
+      }
+    })
+    phoneInput.addEventListener('blur', () => {
+      const v = phoneInput.value.trim()
+      if (v && !isValidPhone(v)) {
+        errMsg.textContent = 'Please enter a valid phone number (e.g. +1 555 000 0000).'
+        errMsg.style.display = 'block'
+      } else if (errMsg.textContent?.includes('phone')) {
+        errMsg.style.display = 'none'
+      }
+    })
 
     const nextBtn = document.createElement('button')
     nextBtn.className = 'hlw-btn-next'
@@ -95,6 +121,17 @@ export class QuizController {
       const phone = phoneInput.value.trim()
 
       if (!email && !phone) {
+        errMsg.textContent = 'Please enter an email address or phone number to continue.'
+        errMsg.style.display = 'block'
+        return
+      }
+      if (email && !isValidEmail(email)) {
+        errMsg.textContent = 'Please enter a valid email address.'
+        errMsg.style.display = 'block'
+        return
+      }
+      if (phone && !isValidPhone(phone)) {
+        errMsg.textContent = 'Please enter a valid phone number (e.g. +1 555 000 0000).'
         errMsg.style.display = 'block'
         return
       }

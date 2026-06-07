@@ -663,6 +663,14 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
 
 // ── Contact step ──────────────────────────────────────────────────────────────
 
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
+}
+function isValidPhone(v: string) {
+  const digits = v.replace(/\D/g, '')
+  return digits.length >= 7 && digits.length <= 15 && /^[\+\d\s\-\(\)]+$/.test(v.trim())
+}
+
 function ContactStep({
   value,
   onChange,
@@ -672,7 +680,38 @@ function ContactStep({
   onChange: (v: ContactInfo) => void
   onSubmit: () => void
 }) {
-  const canSubmit = value.email.trim().length > 0 || value.phone.trim().length > 0
+  const [emailErr, setEmailErr] = useState('')
+  const [phoneErr, setPhoneErr] = useState('')
+
+  const email = value.email.trim()
+  const phone = value.phone.trim()
+
+  function validate() {
+    let ok = true
+    if (email && !isValidEmail(email)) {
+      setEmailErr('Please enter a valid email address.')
+      ok = false
+    } else {
+      setEmailErr('')
+    }
+    if (phone && !isValidPhone(phone)) {
+      setPhoneErr('Please enter a valid phone number.')
+      ok = false
+    } else {
+      setPhoneErr('')
+    }
+    if (!email && !phone) {
+      setEmailErr('Enter an email address or phone number to continue.')
+      ok = false
+    }
+    return ok
+  }
+
+  function handleSubmit() {
+    if (validate()) onSubmit()
+  }
+
+  const canSubmit = email.length > 0 || phone.length > 0
 
   return (
     <div className="space-y-8">
@@ -693,14 +732,15 @@ function ContactStep({
           <input
             type="email"
             value={value.email}
-            onChange={e => onChange({ ...value, email: e.target.value })}
+            onChange={e => { onChange({ ...value, email: e.target.value }); setEmailErr('') }}
+            onBlur={() => { if (email && !isValidEmail(email)) setEmailErr('Please enter a valid email address.') }}
             placeholder="sofia@example.com"
             autoComplete="email"
             className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none transition-all"
-            style={{ borderColor: 'var(--border)', background: 'white', color: 'var(--text-1)' }}
-            onFocus={e => (e.target.style.borderColor = '#f09118')}
-            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            style={{ borderColor: emailErr ? '#e57373' : 'var(--border)', background: 'white', color: 'var(--text-1)' }}
+            onFocus={e => (e.target.style.borderColor = emailErr ? '#e57373' : '#f09118')}
           />
+          {emailErr && <p className="text-[11px] mt-1" style={{ color: '#e57373' }}>{emailErr}</p>}
         </div>
 
         <div>
@@ -710,19 +750,20 @@ function ContactStep({
           <input
             type="tel"
             value={value.phone}
-            onChange={e => onChange({ ...value, phone: e.target.value })}
+            onChange={e => { onChange({ ...value, phone: e.target.value }); setPhoneErr('') }}
+            onBlur={() => { if (phone && !isValidPhone(phone)) setPhoneErr('Please enter a valid phone number.') }}
             placeholder="+1 555 000 0000"
             autoComplete="tel"
             className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none transition-all"
-            style={{ borderColor: 'var(--border)', background: 'white', color: 'var(--text-1)' }}
-            onFocus={e => (e.target.style.borderColor = '#f09118')}
-            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            style={{ borderColor: phoneErr ? '#e57373' : 'var(--border)', background: 'white', color: 'var(--text-1)' }}
+            onFocus={e => (e.target.style.borderColor = phoneErr ? '#e57373' : '#f09118')}
           />
+          {phoneErr && <p className="text-[11px] mt-1" style={{ color: '#e57373' }}>{phoneErr}</p>}
         </div>
       </div>
 
       <div className="space-y-3">
-        <Btn onClick={onSubmit} disabled={!canSubmit}>Continue</Btn>
+        <Btn onClick={handleSubmit} disabled={!canSubmit}>Continue</Btn>
         <p className="text-[11px] text-center" style={{ color: 'var(--text-3)' }}>
           Your information is private and never sold.
         </p>
