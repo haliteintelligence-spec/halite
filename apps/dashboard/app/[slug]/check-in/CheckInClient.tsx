@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 const SESSION_KEY = 'halite_session'
@@ -25,13 +25,48 @@ const SYMPTOMS_NEGATIVE = [
 const RATING_EMOJIS = ['😔', '😐', '🙂', '😊', '🤩']
 const RATING_LABELS = ['Rough', 'Okay', 'Good', 'Great', 'Glowing']
 
-type Phase = 'init' | 'login' | 'no_profile' | 'cross_brand_welcome' | 'rating' | 'symptoms' | 'products' | 'notes' | 'photo' | 'submitting' | 'success' | 'error'
+const AREA_META: Record<string, { icon: string; label: string }> = {
+  SKINCARE:    { icon: '🧴', label: 'Skincare' },
+  BODY:        { icon: '🫧', label: 'Body Care' },
+  HAIR:        { icon: '💇', label: 'Hair Care' },
+  MAKEUP:      { icon: '💄', label: 'Makeup' },
+  FRAGRANCE:   { icon: '🌸', label: 'Fragrance' },
+  NAILS:       { icon: '💅', label: 'Nails' },
+  WELLNESS:    { icon: '🌿', label: 'Wellness' },
+  SUN_CARE:    { icon: '☀️', label: 'Sun Care' },
+  LIP_CARE:    { icon: '💋', label: 'Lip Care' },
+  EYE_CARE:    { icon: '👁️', label: 'Eye Care' },
+}
+
+function areaLabel(area: string) {
+  return AREA_META[area]?.label ?? area.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function areaIcon(area: string) {
+  return AREA_META[area]?.icon ?? '✦'
+}
+
+type Phase =
+  | 'init'
+  | 'login'
+  | 'no_profile'
+  | 'no_routine'
+  | 'cross_brand_welcome'
+  | 'area_select'
+  | 'rating'
+  | 'symptoms'
+  | 'products'
+  | 'notes'
+  | 'photo'
+  | 'submitting'
+  | 'success'
+  | 'error'
 
 const FORM_STEPS: Phase[] = ['rating', 'symptoms', 'products', 'notes', 'photo']
 
 interface Product { id: string; name: string }
 interface RoutineStep { id: string; product: Product }
-interface Routine { steps: RoutineStep[] }
+interface Routine { id: string; focusArea: string; steps: RoutineStep[] }
 interface Brand { id: string; name: string; logoUrl?: string; primaryColor?: string }
 interface StoredSession { token: string; brandId: string; expiresAt: number }
 
@@ -55,7 +90,8 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
   const [phase, setPhase] = useState<Phase>('init')
   const [token, setToken] = useState('')
   const [brandId, setBrandId] = useState('')
-  const [routine, setRoutine] = useState<Routine | null>(null)
+  const [routines, setRoutines] = useState<Routine[]>([])
+  const [selectedArea, setSelectedArea] = useState('')
   const [totalCheckIns, setTotalCheckIns] = useState(0)
 
   const [email, setEmail] = useState('')
@@ -72,6 +108,10 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
 
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Derived: the routine for the selected area
+  const activeRoutine = routines.find(r => r.focusArea === selectedArea) ?? null
+
+  // On mount — check for an existing valid session scoped to this brand
   useEffect(() => {
     const session = loadSession()
     if (session && session.brandId === brand.id) {
@@ -81,24 +121,38 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
     } else {
       setPhase('login')
     }
-  }, [brand.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function loadRoutineData(tok: string, bid: string) {
     try {
-      const [routineRes, checkInsRes] = await Promise.all([
-        fetch(`${API_URL}/brands/${bid}/me/routine`, { headers: { Authorization: `Bearer ${tok}` } }),
+      const [routinesRes, checkInsRes] = await Promise.all([
+        fetch(`${API_URL}/brands/${bid}/me/routines`, { headers: { Authorization: `Bearer ${tok}` } }),
         fetch(`${API_URL}/brands/${bid}/me/check-ins`, { headers: { Authorization: `Bearer ${tok}` } }),
       ])
-      if (routineRes.ok) {
-        const data = await routineRes.json() as { routine: Routine }
-        setRoutine(data.routine)
+
+      if (routinesRes.ok) {
+        const data = await routinesRes.json() as { routines: Routine[] }
+        setRoutines(data.routines)
+        if (data.routines.length === 0) {
+          setPhase('no_routine')
+        } else if (data.routines.length === 1) {
+          setSelectedArea(data.routines[0]!.focusArea)
+          setPhase('rating')
+        } else {
+          setPhase('area_select')
+        }
+      } else {
+        setPhase('no_routine')
       }
+
       if (checkInsRes.ok) {
         const data = await checkInsRes.json() as { checkIns: unknown[] }
         setTotalCheckIns(data.checkIns.length)
       }
-    } catch { /* non-fatal — continue without routine */ }
-    setPhase('rating')
+    } catch {
+      setPhase('no_routine')
+    }
   }
 
   async function handleLogin() {
@@ -132,6 +186,17 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
     }
   }
 
+  function handleAreaSelect(area: string) {
+    setSelectedArea(area)
+    // Reset any prior check-in state when switching areas
+    setSkinRating(0)
+    setSymptoms(new Set())
+    setReactions({})
+    setNotes('')
+    setPhotoUrl('')
+    setPhase('rating')
+  }
+
   function stepIndex() { return FORM_STEPS.indexOf(phase) }
 
   function progress() {
@@ -141,6 +206,7 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
 
   function goBack() {
     const idx = stepIndex()
+    if (idx === 0 && routines.length > 1) { setPhase('area_select'); return }
     if (idx > 0) setPhase(FORM_STEPS[idx - 1]!)
   }
 
@@ -178,7 +244,7 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
 
   async function submitCheckIn() {
     setPhase('submitting')
-    const steps = routine?.steps ?? []
+    const steps = activeRoutine?.steps ?? []
     const seen = new Set<string>()
     const unique = steps.filter(s => { if (seen.has(s.product.id)) return false; seen.add(s.product.id); return true })
     const products = unique.map(s => ({
@@ -205,6 +271,7 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
   const isFormStep = FORM_STEPS.includes(phase)
   const idx = stepIndex()
   const canContinue = phase !== 'rating' || skinRating > 0
+  const canGoBack = idx > 0 || (idx === 0 && routines.length > 1)
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf6f0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', WebkitFontSmoothing: 'antialiased' }}>
@@ -217,7 +284,7 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: '#bbb' }}>Halite Intelligence</span>
       </header>
 
-      {/* Progress bar */}
+      {/* Progress bar — only during form steps */}
       {isFormStep && (
         <div style={{ height: 3, background: '#f0ece6' }}>
           <div style={{ height: '100%', width: `${Math.round(progress() * 100)}%`, background: accent, transition: 'width 0.4s ease', borderRadius: 2 }} />
@@ -226,6 +293,7 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
 
       {/* Content */}
       <main style={{ maxWidth: 520, margin: '0 auto', padding: '32px 24px 120px' }}>
+
         {phase === 'init' && <Spinner />}
 
         {phase === 'login' && (
@@ -253,8 +321,29 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
           </CenteredCard>
         )}
 
+        {phase === 'no_routine' && (
+          <CenteredCard>
+            <div style={{ fontSize: 36, marginBottom: 16 }}>🧴</div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: '#1a1a1a' }}>No active routine yet</h2>
+            <p style={{ fontSize: 14, color: '#888', margin: '0 0 24px', lineHeight: 1.5 }}>
+              Take the personalisation quiz to get your routine, then come back here to check in.
+            </p>
+            <a href={`/${slug}/quiz`} style={{ display: 'inline-block', padding: '12px 24px', borderRadius: 10, background: accent, color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Take the Quiz
+            </a>
+          </CenteredCard>
+        )}
+
+        {phase === 'area_select' && (
+          <AreaSelectStep
+            routines={routines}
+            accent={accent}
+            onSelect={handleAreaSelect}
+          />
+        )}
+
         {phase === 'rating' && (
-          <RatingStep skinRating={skinRating} accent={accent} onChange={setSkinRating} />
+          <RatingStep skinRating={skinRating} accent={accent} area={selectedArea} onChange={setSkinRating} />
         )}
 
         {phase === 'symptoms' && (
@@ -262,7 +351,7 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
         )}
 
         {phase === 'products' && (
-          <ProductsStep routine={routine} reactions={reactions} accent={accent}
+          <ProductsStep routine={activeRoutine} reactions={reactions} accent={accent}
             onReaction={(id, r) => setReactions(prev => ({ ...prev, [id]: r }))} />
         )}
 
@@ -283,12 +372,28 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
           <CenteredCard>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 20px' }}>✦</div>
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', color: '#1a1a1a' }}>Check-in logged</h2>
-            <p style={{ fontSize: 14, color: '#888', margin: '0 0 20px', lineHeight: 1.5 }}>
-              Your skin data has been recorded. Consistent check-ins help refine your routine over time.
+            <p style={{ fontSize: 14, color: '#888', margin: '0 0 8px', lineHeight: 1.5 }}>
+              Your {areaLabel(selectedArea).toLowerCase()} data has been recorded.
+            </p>
+            <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 20px', lineHeight: 1.5 }}>
+              Consistent check-ins help refine your routine over time.
             </p>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 100, background: `${accent}15`, fontSize: 13, fontWeight: 600, color: accent }}>
               🔥 {totalCheckIns + 1} check-in{totalCheckIns + 1 !== 1 ? 's' : ''} total
             </div>
+            {routines.length > 1 && (
+              <div style={{ marginTop: 20 }}>
+                <button
+                  onClick={() => {
+                    setSkinRating(0); setSymptoms(new Set()); setReactions({}); setNotes(''); setPhotoUrl('')
+                    setPhase('area_select')
+                  }}
+                  style={{ padding: '11px 20px', borderRadius: 10, background: '#f5f5f5', border: 'none', fontSize: 14, fontWeight: 500, color: '#555', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Check in on another routine →
+                </button>
+              </div>
+            )}
           </CenteredCard>
         )}
 
@@ -304,10 +409,10 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
         )}
       </main>
 
-      {/* Sticky footer nav */}
+      {/* Sticky footer nav — only during form steps */}
       {isFormStep && phase !== 'submitting' && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #f0ece6', padding: '16px 24px 24px', display: 'flex', gap: 10 }}>
-          {idx > 0 && (
+          {canGoBack && (
             <button onClick={goBack} style={{ padding: '12px 20px', borderRadius: 10, background: '#f5f5f5', border: 'none', fontSize: 14, fontWeight: 500, color: '#555', cursor: 'pointer' }}>
               ← Back
             </button>
@@ -357,8 +462,8 @@ function LoginStep({
 
   return (
     <div>
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>Weekly Check-in</p>
-      <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px', lineHeight: 1.2 }}>How&apos;s your skin?</h1>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>Check-in</p>
+      <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px', lineHeight: 1.2 }}>Welcome back</h1>
       <p style={{ fontSize: 14, color: '#888', margin: '0 0 32px', lineHeight: 1.5 }}>Enter your email or phone number to access your profile at {brandName}.</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
@@ -431,10 +536,61 @@ function CrossBrandWelcome({ accent, brandName, onContinue }: { accent: string; 
   )
 }
 
-function RatingStep({ skinRating, accent, onChange }: { skinRating: number; accent: string; onChange: (n: number) => void }) {
+function AreaSelectStep({ routines, accent, onSelect }: {
+  routines: Array<{ focusArea: string; steps: Array<{ product: { name: string } }> }>
+  accent: string
+  onSelect: (area: string) => void
+}) {
   return (
     <div>
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>Step 1 of 5</p>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>Check-in</p>
+      <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', margin: '0 0 6px', lineHeight: 1.2 }}>Which routine today?</h2>
+      <p style={{ fontSize: 14, color: '#888', margin: '0 0 28px', lineHeight: 1.5 }}>You have {routines.length} active routines. Select one to check in on.</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {routines.map(r => {
+          const seen = new Set<string>()
+          const unique = r.steps.filter(s => { if (seen.has(s.product.name)) return false; seen.add(s.product.name); return true })
+          const preview = unique.slice(0, 3).map(s => s.product.name)
+          const extra = unique.length - preview.length
+
+          return (
+            <button
+              key={r.focusArea}
+              onClick={() => onSelect(r.focusArea)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px',
+                borderRadius: 14, border: '1.5px solid #e8e8e8', background: '#fff',
+                cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = accent; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 0 3px ${accent}18` }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e8e8e8'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none' }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${accent}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                {areaIcon(r.focusArea)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', margin: '0 0 3px' }}>{areaLabel(r.focusArea)}</p>
+                <p style={{ fontSize: 12, color: '#aaa', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                  {preview.join(' · ')}{extra > 0 ? ` +${extra} more` : ''}
+                </p>
+              </div>
+              <span style={{ fontSize: 18, color: '#ccc', flexShrink: 0 }}>›</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function RatingStep({ skinRating, accent, area, onChange }: { skinRating: number; accent: string; area: string; onChange: (n: number) => void }) {
+  return (
+    <div>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>
+        {areaLabel(area)} · Step 1 of 5
+      </p>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', margin: '0 0 6px' }}>How is your skin today?</h2>
       <p style={{ fontSize: 14, color: '#888', margin: '0 0 28px' }}>Rate your overall skin condition</p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -477,8 +633,7 @@ function SymptomsStep({ symptoms, accent, onToggle }: { symptoms: Set<string>; a
             <button key={s.value} onClick={() => onToggle(s.value)} style={{
               padding: '11px 12px', borderRadius: 10, textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 500,
               border: `1.5px solid ${sel ? '#4caf82' : '#e8e8e8'}`,
-              background: sel ? '#4caf8214' : '#fff',
-              color: sel ? '#4caf82' : '#555',
+              background: sel ? '#4caf8214' : '#fff', color: sel ? '#4caf82' : '#555',
               transition: 'border-color 0.15s, background 0.15s',
             }}>
               {s.label}
@@ -495,8 +650,7 @@ function SymptomsStep({ symptoms, accent, onToggle }: { symptoms: Set<string>; a
             <button key={s.value} onClick={() => onToggle(s.value)} style={{
               padding: '11px 12px', borderRadius: 10, textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 500,
               border: `1.5px solid ${sel ? accent : '#e8e8e8'}`,
-              background: sel ? `${accent}14` : '#fff',
-              color: sel ? accent : '#555',
+              background: sel ? `${accent}14` : '#fff', color: sel ? accent : '#555',
               transition: 'border-color 0.15s, background 0.15s',
             }}>
               {s.label}
@@ -509,7 +663,7 @@ function SymptomsStep({ symptoms, accent, onToggle }: { symptoms: Set<string>; a
 }
 
 function ProductsStep({ routine, reactions, accent, onReaction }: {
-  routine: Routine | null
+  routine: { steps: Array<{ product: { id: string; name: string } }> } | null
   reactions: Record<string, string>
   accent: string
   onReaction: (productId: string, reaction: string) => void
@@ -532,7 +686,7 @@ function ProductsStep({ routine, reactions, accent, onReaction }: {
               const r = reactions[step.product.id]
               const REACTIONS = [
                 { value: 'POSITIVE', emoji: '👍', activeColor: '#4caf82' },
-                { value: 'NEUTRAL', emoji: '👌', activeColor: '#aaa' },
+                { value: 'NEUTRAL',  emoji: '👌', activeColor: '#aaa' },
                 { value: 'NEGATIVE', emoji: '👎', activeColor: '#e57373' },
               ]
               return (
