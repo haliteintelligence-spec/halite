@@ -204,6 +204,20 @@ function randomSlug4() {
   return Math.random().toString(36).slice(2, 6)
 }
 
+// Generate a deterministic but realistic-looking phone for a demo consumer.
+// Uses the endUserId as a seed so the same consumer always gets the same number.
+const COUNTRY_DIAL: Record<string, string> = {
+  US: '+1', CA: '+1', GB: '+44', NG: '+234', GH: '+233', KE: '+254',
+  ZA: '+27', FR: '+33', IN: '+91', AU: '+61', BR: '+55', SG: '+65', MA: '+212',
+}
+function generateDemoPhone(countryCode: string | null, seed: string): string {
+  const prefix = COUNTRY_DIAL[countryCode ?? 'US'] ?? '+1'
+  let h = 5381
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(h, 31) ^ seed.charCodeAt(i)) >>> 0
+  const digits = String(h % 9000000000 + 1000000000)
+  return `${prefix}${digits}`
+}
+
 // ── Synthetic product catalog ─────────────────────────────────────────────────
 
 interface ProductTemplate {
@@ -705,10 +719,16 @@ async function importSharedConsumers(
       const bp = sourceUser.beautyProfile
       if (!bp || !sourceUser.email) continue
       try {
+        const legacyPhone = generateDemoPhone(bp.countryCode ?? null, sourceUser.id)
         const consumer = await prisma.consumer.create({
-          data: { email: sourceUser.email, prefillAnswers: {} as any },
+          data: { email: sourceUser.email, phone: legacyPhone, prefillAnswers: {} as any },
           select: { id: true },
-        })
+        }).catch(async () =>
+          prisma.consumer.create({
+            data: { email: sourceUser.email, prefillAnswers: {} as any },
+            select: { id: true },
+          })
+        )
         // Retroactively link the source EndUser so it becomes cross-brand
         await prisma.endUser.update({ where: { id: sourceUser.id }, data: { consumerId: consumer.id } }).catch(() => {})
         const endUser = await prisma.endUser.create({
@@ -1013,7 +1033,7 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
 
   const profiles = await prisma.userBeautyProfile.findMany({
     where: { endUserId: { in: identifiedIds } },
-    select: { endUserId: true, skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true },
+    select: { endUserId: true, skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true, countryCode: true },
   })
   const profileMap = new Map(profiles.map(p => [p.endUserId, p]))
 
@@ -1026,10 +1046,11 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
   for (const endUserId of identifiedIds) {
     const email = emailMap.get(endUserId) ?? null
     const profile = profileMap.get(endUserId)
+    const phone = generateDemoPhone(profile?.countryCode ?? null, endUserId)
 
     const prefillAnswers: Record<string, unknown> = {}
     if (profile) {
-      if (profile.ageRange) prefillAnswers['SH0'] = profile.ageRange
+      // SH0 is birthday (real date only — never fabricate it)
       if (profile.skinType) prefillAnswers['S1'] = profile.skinType.toLowerCase()
       if (profile.skinConcerns?.length) prefillAnswers['S4'] = profile.skinConcerns
       if (profile.monkSkinTone) prefillAnswers['S5'] = String(profile.monkSkinTone)
@@ -1038,14 +1059,22 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
     let consumer: { id: string }
     try {
       consumer = await prisma.consumer.create({
-        data: { email: email ?? null, prefillAnswers: prefillAnswers as any },
+        data: { email: email ?? null, phone, prefillAnswers: prefillAnswers as any },
         select: { id: true },
       })
     } catch {
-      consumer = await prisma.consumer.create({
-        data: { prefillAnswers: prefillAnswers as any },
-        select: { id: true },
-      })
+      // email or phone conflict — fall back without both
+      try {
+        consumer = await prisma.consumer.create({
+          data: { email: email ?? null, prefillAnswers: prefillAnswers as any },
+          select: { id: true },
+        })
+      } catch {
+        consumer = await prisma.consumer.create({
+          data: { prefillAnswers: prefillAnswers as any },
+          select: { id: true },
+        })
+      }
     }
 
     await prisma.endUser.update({
