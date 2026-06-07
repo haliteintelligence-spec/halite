@@ -36,8 +36,19 @@ interface BeautyProfile {
   monkSkinTone: number | null
   city: string | null
   country: string | null
-  sleepHours: number | null
+  climateTag: string | null
+  sleepHours: string | null
   stressLevel: number | null
+  waterIntakeMl: string | null
+  hairProfile: Record<string, unknown> | null
+  bodyProfile: Record<string, unknown> | null
+  makeupProfile: Record<string, unknown> | null
+  fragranceProfile: Record<string, unknown> | null
+  nailsProfile: Record<string, unknown> | null
+  wellnessProfile: Record<string, unknown> | null
+  sunCareProfile: Record<string, unknown> | null
+  lipProfile: Record<string, unknown> | null
+  eyeProfile: Record<string, unknown> | null
 }
 
 interface CheckInProduct {
@@ -197,31 +208,55 @@ export default function ConsumerDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Skin Profile */}
         <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Skin Profile</p>
+          <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Profile</p>
           <div className="space-y-2">
             <Row label="Skin Type" value={bp?.skinType ? (SKIN_TYPE_LABELS[bp.skinType] ?? bp.skinType) : '—'} />
             <Row label="Birthday" value={consumer.birthday ? new Date(consumer.birthday).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
             <Row label="Age" value={consumer.birthday ? String(calcAge(consumer.birthday)) : '—'} />
             <Row label="Location" value={[bp?.city, bp?.country].filter(Boolean).join(', ') || '—'} />
-            <Row label="Sleep" value={bp?.sleepHours != null ? `${bp.sleepHours}h/night` : '—'} />
-            <Row label="Stress Level" value={bp?.stressLevel != null ? `${bp.stressLevel}/5` : '—'} />
+            <Row label="Climate" value={bp?.climateTag ? fmt(bp.climateTag) : '—'} />
+            <Row label="Sleep" value={bp?.sleepHours ?? '—'} />
+            <Row label="Water" value={bp?.waterIntakeMl ?? '—'} />
+            <Row label="Stress" value={bp?.stressLevel != null ? `${bp.stressLevel}/5` : '—'} />
           </div>
           {bp?.skinConcerns && bp.skinConcerns.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold tracking-wide uppercase mb-2" style={{ color: 'var(--ink-3)' }}>Concerns</p>
+              <p className="text-[10px] font-semibold tracking-wide uppercase mb-2" style={{ color: 'var(--ink-3)' }}>Skin Concerns</p>
               <div className="flex flex-wrap gap-1.5">
                 {bp.skinConcerns.map(c => (
-                  <span
-                    key={c}
-                    className="px-2 py-0.5 rounded-full text-[11px]"
-                    style={{ background: 'var(--clay-light)', color: 'var(--clay-dim)' }}
-                  >
+                  <span key={c} className="px-2 py-0.5 rounded-full text-[11px]"
+                    style={{ background: 'var(--clay-light)', color: 'var(--clay-dim)' }}>
                     {CONCERN_LABELS[c] ?? c}
                   </span>
                 ))}
               </div>
             </div>
           )}
+          {/* Area-specific profiles */}
+          {[
+            { key: 'hairProfile', label: 'Hair' },
+            { key: 'bodyProfile', label: 'Body' },
+            { key: 'makeupProfile', label: 'Makeup' },
+            { key: 'fragranceProfile', label: 'Fragrance' },
+            { key: 'nailsProfile', label: 'Nails' },
+            { key: 'wellnessProfile', label: 'Wellness' },
+            { key: 'sunCareProfile', label: 'Sun Care' },
+            { key: 'lipProfile', label: 'Lip' },
+            { key: 'eyeProfile', label: 'Eye' },
+          ].map(({ key, label }) => {
+            const data = bp?.[key as keyof BeautyProfile] as Record<string, unknown> | null | undefined
+            if (!data || Object.keys(data).length === 0) return null
+            return (
+              <div key={key}>
+                <p className="text-[10px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'var(--ink-3)' }}>{label} Profile</p>
+                <div className="space-y-1">
+                  {Object.entries(data).map(([k, v]) => (
+                    <Row key={k} label={fmt(k)} value={Array.isArray(v) ? (v as string[]).map(fmt).join(', ') || '—' : v != null ? fmt(String(v)) : '—'} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Active Routine */}
@@ -336,6 +371,10 @@ export default function ConsumerDetailPage() {
       </div>
     </div>
   )
+}
+
+function fmt(s: string): string {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function Row({ label, value }: { label: string; value: string }) {

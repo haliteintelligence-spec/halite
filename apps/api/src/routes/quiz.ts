@@ -252,8 +252,8 @@ export async function quizRoutes(server: FastifyInstance) {
           spendMin: budgetRange[0] ? parseFloat(budgetRange[0]) : null,
           spendMax: budgetRange[1] ? parseFloat(budgetRange[1]) : null,
           spendCurrency: locationData?.currency ?? 'USD',
-          waterIntakeMl: answers['SH4'] ? parseFloat(answers['SH4'] as string) : null,
-          sleepHours: answers['SH5'] ? parseFloat(answers['SH5'] as string) : null,
+          waterIntakeMl: answers['SH4'] ? (WATER_LABELS[answers['SH4'] as string] ?? String(answers['SH4'])) : null,
+          sleepHours: answers['SH5'] ? (SLEEP_LABELS[answers['SH5'] as string] ?? String(answers['SH5'])) : null,
           stressLevel: answers['SH6'] ? parseInt(answers['SH6'] as string) : null,
           monkSkinTone: answers['S5'] ? parseInt(answers['S5'] as string) : null,
           skinType: mapSkinType(answers['S1'] as string | undefined),
@@ -286,8 +286,8 @@ export async function quizRoutes(server: FastifyInstance) {
           spendMin: budgetRange[0] ? parseFloat(budgetRange[0]) : null,
           spendMax: budgetRange[1] ? parseFloat(budgetRange[1]) : null,
           spendCurrency: locationData?.currency ?? 'USD',
-          waterIntakeMl: answers['SH4'] ? parseFloat(answers['SH4'] as string) : null,
-          sleepHours: answers['SH5'] ? parseFloat(answers['SH5'] as string) : null,
+          waterIntakeMl: answers['SH4'] ? (WATER_LABELS[answers['SH4'] as string] ?? String(answers['SH4'])) : null,
+          sleepHours: answers['SH5'] ? (SLEEP_LABELS[answers['SH5'] as string] ?? String(answers['SH5'])) : null,
           stressLevel: answers['SH6'] ? parseInt(answers['SH6'] as string) : null,
           monkSkinTone: answers['S5'] ? parseInt(answers['S5'] as string) : null,
           skinType: mapSkinType(answers['S1'] as string | undefined),
@@ -384,6 +384,13 @@ export async function quizRoutes(server: FastifyInstance) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+const SLEEP_LABELS: Record<string, string> = {
+  '4': 'Under 5 hours', '6': '5–7 hours', '8': '7–9 hours', '9.5': 'Over 9 hours',
+}
+const WATER_LABELS: Record<string, string> = {
+  '500': 'Under 1L', '1250': '1–1.5L', '1750': '1.5–2L', '2250': '2–2.5L', '3000': 'Over 2.5L',
+}
 
 function birthdayToAgeRange(birthday: string): string | null {
   const dob = new Date(birthday)

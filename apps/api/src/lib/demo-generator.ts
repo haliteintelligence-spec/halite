@@ -157,17 +157,33 @@ const LAST_NAMES = [
   'Parker','Reed','Scott','Thomas','Underwood','Vasquez','Williams','Xavier','Yamamoto','Zander',
 ]
 
-const US_CITIES = [
-  'New York, NY','Los Angeles, CA','Chicago, IL','Houston, TX','Phoenix, AZ',
-  'Philadelphia, PA','San Antonio, TX','San Diego, CA','Dallas, TX','San Jose, CA',
-  'Atlanta, GA','Austin, TX','Jacksonville, FL','Fort Worth, TX','Columbus, OH',
-  'Charlotte, NC','Indianapolis, IN','San Francisco, CA','Seattle, WA','Denver, CO',
-  'Washington, DC','Nashville, TN','Oklahoma City, OK','El Paso, TX','Boston, MA',
-  'Portland, OR','Miami, FL','Las Vegas, NV','Memphis, TN','Louisville, KY',
-  'Baltimore, MD','Milwaukee, WI','Sacramento, CA','Kansas City, MO','Cleveland, OH',
-  'New Orleans, LA','Minneapolis, MN','Tampa, FL','Honolulu, HI','Arlington, TX',
-  'Raleigh, NC','Omaha, NE','Colorado Springs, CO','Richmond, VA','Fresno, CA',
-  'Tucson, AZ','Oakland, CA','Pittsburgh, PA','Cincinnati, OH','St. Louis, MO',
+// city, countryCode, countryName
+const GLOBAL_CITIES: [string, string, string][] = [
+  ['New York', 'US', 'United States'], ['Los Angeles', 'US', 'United States'], ['Chicago', 'US', 'United States'],
+  ['Houston', 'US', 'United States'], ['Atlanta', 'US', 'United States'], ['Miami', 'US', 'United States'],
+  ['San Francisco', 'US', 'United States'], ['Seattle', 'US', 'United States'], ['Boston', 'US', 'United States'],
+  ['Washington DC', 'US', 'United States'], ['Dallas', 'US', 'United States'], ['Phoenix', 'US', 'United States'],
+  ['London', 'GB', 'United Kingdom'], ['Manchester', 'GB', 'United Kingdom'], ['Birmingham', 'GB', 'United Kingdom'],
+  ['Lagos', 'NG', 'Nigeria'], ['Abuja', 'NG', 'Nigeria'], ['Port Harcourt', 'NG', 'Nigeria'],
+  ['Accra', 'GH', 'Ghana'], ['Kumasi', 'GH', 'Ghana'],
+  ['Nairobi', 'KE', 'Kenya'], ['Mombasa', 'KE', 'Kenya'],
+  ['Johannesburg', 'ZA', 'South Africa'], ['Cape Town', 'ZA', 'South Africa'], ['Durban', 'ZA', 'South Africa'],
+  ['Toronto', 'CA', 'Canada'], ['Vancouver', 'CA', 'Canada'], ['Montreal', 'CA', 'Canada'],
+  ['Paris', 'FR', 'France'], ['Lyon', 'FR', 'France'],
+  ['Berlin', 'DE', 'Germany'], ['Munich', 'DE', 'Germany'],
+  ['Dubai', 'AE', 'United Arab Emirates'], ['Abu Dhabi', 'AE', 'United Arab Emirates'],
+  ['Mumbai', 'IN', 'India'], ['Delhi', 'IN', 'India'], ['Bangalore', 'IN', 'India'],
+  ['Sydney', 'AU', 'Australia'], ['Melbourne', 'AU', 'Australia'],
+  ['São Paulo', 'BR', 'Brazil'], ['Rio de Janeiro', 'BR', 'Brazil'],
+  ['Singapore', 'SG', 'Singapore'],
+  ['Kuala Lumpur', 'MY', 'Malaysia'],
+  ['Jakarta', 'ID', 'Indonesia'],
+  ['Amsterdam', 'NL', 'Netherlands'],
+  ['Stockholm', 'SE', 'Sweden'],
+  ['Dakar', 'SN', 'Senegal'],
+  ['Addis Ababa', 'ET', 'Ethiopia'],
+  ['Cairo', 'EG', 'Egypt'],
+  ['Casablanca', 'MA', 'Morocco'],
 ]
 
 const AGE_RANGES = ['18_24','25_34','25_34','35_44','35_44','45_54','55_64']
@@ -659,10 +675,10 @@ async function importSharedConsumers(
           skinType: bp.skinType as any, skinConcerns: (bp.skinConcerns ?? []) as any,
           monkSkinTone: bp.monkSkinTone ?? randomInt(1, 10),
           completedAreas: completedAreas as any,
-          city: bp.city ?? null, country: bp.country ?? 'United States', countryCode: bp.countryCode ?? 'US',
-          sleepHours: bp.sleepHours ?? randomItem([6, 6.5, 7, 7.5, 8]),
+          city: bp.city ?? null, country: bp.country ?? null, countryCode: bp.countryCode ?? null,
+          sleepHours: bp.sleepHours ?? randomItem(['Under 5 hours', '5–7 hours', '7–9 hours', 'Over 9 hours']),
           stressLevel: bp.stressLevel ?? randomInt(1, 5),
-          waterIntakeMl: bp.waterIntakeMl ?? randomInt(1000, 3000),
+          waterIntakeMl: bp.waterIntakeMl ?? randomItem(['Under 1L', '1–1.5L', '1.5–2L', '2–2.5L', 'Over 2.5L']),
           ...(hasHair && bp.hairProfile ? { hairProfile: bp.hairProfile as any } : {}),
         },
       })
@@ -709,10 +725,10 @@ async function importSharedConsumers(
             skinType: bp.skinType as any, skinConcerns: (bp.skinConcerns ?? []) as any,
             monkSkinTone: bp.monkSkinTone ?? randomInt(1, 10),
             completedAreas: completedAreas as any,
-            city: bp.city ?? null, country: bp.country ?? 'United States', countryCode: bp.countryCode ?? 'US',
-            sleepHours: bp.sleepHours ?? randomItem([6, 6.5, 7, 7.5, 8]),
+            city: bp.city ?? null, country: bp.country ?? null, countryCode: bp.countryCode ?? null,
+            sleepHours: bp.sleepHours ?? randomItem(['Under 5 hours', '5–7 hours', '7–9 hours', 'Over 9 hours']),
             stressLevel: bp.stressLevel ?? randomInt(1, 5),
-            waterIntakeMl: bp.waterIntakeMl ?? randomInt(1000, 3000),
+            waterIntakeMl: bp.waterIntakeMl ?? randomItem(['Under 1L', '1–1.5L', '1.5–2L', '2–2.5L', 'Over 2.5L']),
             ...(hasHair && bp.hairProfile ? { hairProfile: bp.hairProfile as any } : {}),
           },
         })
@@ -760,8 +776,7 @@ async function generateConsumers(
     const weightedPool = [...catalog.dominantConcerns, ...catalog.dominantConcerns, ...CONCERN_POOL]
     const concerns = shuffle([...new Set(weightedPool)]).slice(0, numConcerns)
     const monkTone = randomInt(1, 10)
-    const city = randomItem(US_CITIES)
-    const [cityName, countryCode] = city.split(', ')
+    const [cityName, countryCode, countryName] = randomItem(GLOBAL_CITIES)
 
     const endUser = await prisma.endUser.create({
       data: { brandId, email, firstName, lastName },
@@ -782,12 +797,12 @@ async function generateConsumers(
         skinConcerns: concerns as any,
         monkSkinTone: monkTone,
         completedAreas: catalog.areas as any,
-        sleepHours: randomItem([6, 6.5, 7, 7.5, 8, 8.5]),
+        sleepHours: randomItem(['Under 5 hours', '5–7 hours', '7–9 hours', 'Over 9 hours']),
         stressLevel: randomInt(1, 5),
-        waterIntakeMl: randomInt(1000, 3000),
+        waterIntakeMl: randomItem(['Under 1L', '1–1.5L', '1.5–2L', '2–2.5L', 'Over 2.5L']),
         city: cityName ?? null,
-        country: 'United States',
-        countryCode: 'US',
+        country: countryName ?? null,
+        countryCode: countryCode ?? null,
         ...(hairProfile ? { hairProfile: hairProfile as any } : {}),
       },
     })

@@ -413,9 +413,9 @@ model UserBeautyProfile {
   spendCurrency String? @default("USD")
 
   // ── Shared lifestyle ───────────────────────
-  waterIntakeMl  Float?
-  sleepHours     Float?
-  stressLevel    Int?    // 1–5
+  waterIntakeMl  String?  // e.g. "1–1.5L", "Under 1L"
+  sleepHours     String?  // e.g. "5–7 hours", "Under 5 hours"
+  stressLevel    Int?     // 1–5
 
   // ── Skincare profile ───────────────────────
   ageRange        String?   // under_18 | 18_24 | 25_34 | 35_44 | 45_54 | 55_64 | 65_plus
