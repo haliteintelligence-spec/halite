@@ -212,15 +212,15 @@ export async function brandRoutes(server: FastifyInstance) {
         const orClauses: any[] = []
         if (email) orClauses.push({ email })
         if (phone) orClauses.push({ phone })
-        const existing = await prisma.consumer.findFirst({ where: { OR: orClauses }, select: { id: true } })
+        const existing = await prisma.consumer.findFirst({ where: { OR: orClauses }, select: { id: true, email: true, phone: true } })
         if (existing) {
           resolvedConsumerId = existing.id
           // Fill in any missing contact info on the Consumer record
           await prisma.consumer.update({
             where: { id: existing.id },
             data: {
-              ...(email && !existing ? { email } : {}),
-              ...(phone && !existing ? { phone } : {}),
+              ...(email && !existing.email ? { email } : {}),
+              ...(phone && !existing.phone ? { phone } : {}),
             },
           }).catch(() => {})
         } else if (email) {
