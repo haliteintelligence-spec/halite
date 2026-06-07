@@ -80,6 +80,8 @@ interface ConsumerDetail {
   email: string | null
   createdAt: string
   birthday: string | null
+  quizCompletedAt: string | null
+  brandPresence: Array<{ name: string; slug: string; joinedAt: string }>
   beautyProfile: BeautyProfile | null
   checkIns: CheckIn[]
   routines: Array<{ id: string; focusArea: string; steps: RoutineStep[] }>
@@ -189,7 +191,15 @@ export default function ConsumerDetailPage() {
             )}
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
               Joined {new Date(consumer.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {consumer.quizCompletedAt && (
+                <span> · Quiz completed {new Date(consumer.quizCompletedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+              )}
             </p>
+            {consumer.brandPresence.length > 0 && (
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                Also at: {consumer.brandPresence.map(b => b.name).join(', ')}
+              </p>
+            )}
           </div>
         </div>
         {brandId && (

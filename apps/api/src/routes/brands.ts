@@ -873,7 +873,7 @@ export async function brandRoutes(server: FastifyInstance) {
 
       if (!endUser) throw new ApiError(404, 'Consumer not found')
 
-      const [allCheckIns, consumerRecord] = await Promise.all([
+      const [allCheckIns, consumerRecord, quizSession, brandPresence] = await Promise.all([
         prisma.checkIn.findMany({
           where: { endUserId: consumerId },
           select: { compliant: true, skinRating: true },
@@ -881,6 +881,18 @@ export async function brandRoutes(server: FastifyInstance) {
         endUser.consumerId
           ? prisma.consumer.findUnique({ where: { id: endUser.consumerId }, select: { birthday: true } })
           : Promise.resolve(null),
+        prisma.quizSession.findFirst({
+          where: { endUserId: consumerId, completed: true },
+          select: { completedAt: true },
+          orderBy: { completedAt: 'desc' },
+        }),
+        endUser.consumerId
+          ? prisma.endUser.findMany({
+              where: { consumerId: endUser.consumerId, brandId: { not: brandId } },
+              select: { brandId: true, createdAt: true, brand: { select: { name: true, slug: true } } },
+              orderBy: { createdAt: 'asc' },
+            })
+          : Promise.resolve([]),
       ])
 
       const complianceRate = allCheckIns.length > 0
@@ -894,6 +906,8 @@ export async function brandRoutes(server: FastifyInstance) {
         consumer: {
           ...endUser,
           birthday: consumerRecord?.birthday ?? null,
+          quizCompletedAt: quizSession?.completedAt ?? null,
+          brandPresence: brandPresence.map(e => ({ name: e.brand.name, slug: e.brand.slug, joinedAt: e.createdAt })),
           stats: { totalCheckIns: endUser._count.checkIns, complianceRate, avgSkinRating },
         },
       }
