@@ -236,7 +236,7 @@ export async function quizRoutes(server: FastifyInstance) {
       await prisma.userBeautyProfile.upsert({
         where: { endUserId: userId },
         update: {
-          ageRange: (answers['SH0'] as string | undefined) ?? null,
+          ageRange: answers['SH0'] ? birthdayToAgeRange(answers['SH0'] as string) : null,
           completedAreas: selectedAreas as any,
           city: locationData?.city ?? null,
           country: locationData?.country ?? null,
@@ -270,7 +270,7 @@ export async function quizRoutes(server: FastifyInstance) {
         },
         create: {
           endUserId: userId,
-          ageRange: (answers['SH0'] as string | undefined) ?? null,
+          ageRange: answers['SH0'] ? birthdayToAgeRange(answers['SH0'] as string) : null,
           completedAreas: selectedAreas as any,
           city: locationData?.city ?? null,
           country: locationData?.country ?? null,
@@ -326,9 +326,13 @@ export async function quizRoutes(server: FastifyInstance) {
           for (const [key, val] of Object.entries(answers)) {
             if (!BRAND_SPECIFIC.has(key) && val !== undefined) merged[key] = val
           }
+          const birthdayVal = answers['SH0'] as string | undefined
           await prisma.consumer.update({
             where: { id: endUserRecord.consumerId },
-            data: { prefillAnswers: merged as Prisma.InputJsonValue },
+            data: {
+              prefillAnswers: merged as Prisma.InputJsonValue,
+              ...(birthdayVal ? { birthday: new Date(birthdayVal) } : {}),
+            },
           }).catch(() => {})
 
           // Push name and email to any sibling EndUsers that are missing them
@@ -380,6 +384,22 @@ export async function quizRoutes(server: FastifyInstance) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+function birthdayToAgeRange(birthday: string): string | null {
+  const dob = new Date(birthday)
+  if (isNaN(dob.getTime())) return null
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const m = today.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  if (age < 18) return 'under_18'
+  if (age < 25) return '18_24'
+  if (age < 35) return '25_34'
+  if (age < 45) return '35_44'
+  if (age < 55) return '45_54'
+  if (age < 65) return '55_64'
+  return '65_plus'
+}
 
 function mapSkinType(s1Answer: string | undefined) {
   if (!s1Answer) return undefined

@@ -342,14 +342,15 @@ enum SkinType {
 // Stores quiz answers that are about the person (biology, lifestyle, location)
 // so returning consumers get a shorter onboarding at each new brand.
 model Consumer {
-  id             String   @id @default(cuid())
-  email          String?  @unique
-  phone          String?  @unique
+  id             String    @id @default(cuid())
+  email          String?   @unique
+  phone          String?   @unique
+  birthday       DateTime?
   // JSON map of questionId → answer for brand-agnostic questions
-  // e.g. { S1: "dry", S4: ["ACNE","DRYNESS"], SH0: "25_34", SH1_location: {...}, H1: "coily" }
-  prefillAnswers Json     @default("{}")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  // e.g. { S1: "dry", S4: ["ACNE","DRYNESS"], SH1_location: {...}, H1: "coily" }
+  prefillAnswers Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   endUsers EndUser[]
 

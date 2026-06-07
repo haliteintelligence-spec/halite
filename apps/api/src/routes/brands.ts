@@ -873,10 +873,16 @@ export async function brandRoutes(server: FastifyInstance) {
 
       if (!endUser) throw new ApiError(404, 'Consumer not found')
 
-      const allCheckIns = await prisma.checkIn.findMany({
-        where: { endUserId: consumerId },
-        select: { compliant: true, skinRating: true },
-      })
+      const [allCheckIns, consumerRecord] = await Promise.all([
+        prisma.checkIn.findMany({
+          where: { endUserId: consumerId },
+          select: { compliant: true, skinRating: true },
+        }),
+        endUser.consumerId
+          ? prisma.consumer.findUnique({ where: { id: endUser.consumerId }, select: { birthday: true } })
+          : Promise.resolve(null),
+      ])
+
       const complianceRate = allCheckIns.length > 0
         ? Math.round((allCheckIns.filter(c => c.compliant).length / allCheckIns.length) * 100)
         : null
@@ -887,6 +893,7 @@ export async function brandRoutes(server: FastifyInstance) {
       return {
         consumer: {
           ...endUser,
+          birthday: consumerRecord?.birthday ?? null,
           stats: { totalCheckIns: endUser._count.checkIns, complianceRate, avgSkinRating },
         },
       }

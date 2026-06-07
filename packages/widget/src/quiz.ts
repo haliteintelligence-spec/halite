@@ -293,6 +293,17 @@ export class QuizController {
       getValue = () => input.value.trim()
       isValid = () => !!input.value.trim()
 
+    } else if (q.type === 'date') {
+      const input = document.createElement('input')
+      input.type = 'date'
+      input.className = 'hlw-text-input'
+      // Prevent future dates
+      input.max = new Date().toISOString().split('T')[0]!
+      container.appendChild(input)
+      // Optional question — next is always enabled
+      getValue = () => input.value || null
+      isValid = () => true
+
     } else if (q.type === 'area_select' && q.options) {
       const opts = document.createElement('div')
       opts.className = 'hlw-options'
@@ -323,7 +334,7 @@ export class QuizController {
     // Configure and wire up the next button (declared above the if/else blocks)
     nextBtn.className = 'hlw-btn-next'
     nextBtn.textContent = this.index === this.questions.length - 1 ? 'Get My Routine' : 'Continue'
-    nextBtn.disabled = !['scale'].includes(q.type)
+    nextBtn.disabled = !['scale', 'date'].includes(q.type)
     nextBtn.addEventListener('click', onNext)
 
     // Inject next btn into footer via custom event
@@ -544,6 +555,17 @@ interface BrandConfig {
 function buildRoutineSteps(routine: Routine, container: HTMLElement, config: BrandConfig) {
   const { isDemo, shopifyShop, api } = config
 
+  // Deduplicated product list for the shop section (one per product ID)
+  const uniqueProducts = Array.from(
+    routine.steps.reduce<Map<string, typeof routine.steps[0]>>(
+      (map, step) => { if (!map.has(step.product.id)) map.set(step.product.id, step); return map },
+      new Map()
+    ).values()
+  )
+
+  // Track which products are checked (all auto-checked)
+  const checkedIds = new Set(uniqueProducts.map(s => s.product.id))
+
   const grouped: Record<string, typeof routine.steps> = {}
   for (const step of routine.steps) {
     const key = step.timeOfDay
@@ -578,23 +600,7 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
         </div>
         <p class="hlw-step-instruction">${step.instruction}</p>
         ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${i}</span>`).join('')}</div>` : ''}
-        ${!isDemo && step.product.productUrl ? `<a href="${step.product.productUrl}" target="_blank" rel="noopener noreferrer" class="hlw-add-to-cart">Add to cart</a>` : ''}
       `
-
-      // Demo: add per-product save button as interactive element (not innerHTML — needs event listener)
-      if (isDemo) {
-        const singleBtn = document.createElement('button')
-        singleBtn.className = 'hlw-add-to-cart'
-        singleBtn.style.cssText = 'background:transparent;border:1.5px solid currentColor;color:inherit;'
-        singleBtn.textContent = 'Add to cart'
-        singleBtn.addEventListener('click', async () => {
-          singleBtn.disabled = true
-          singleBtn.textContent = 'Adding…'
-          await api.recordCartIntent([step.product.id])
-          singleBtn.textContent = '✓ Added'
-        })
-        card.appendChild(singleBtn)
-      }
 
       group.appendChild(card)
     }
@@ -602,22 +608,67 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
     container.appendChild(group)
   }
 
-  // "Add all to cart" / "Save routine" button — always shown
+  // "Shop your routine" section with checkboxes + "Add to cart" button
+  const shopSection = document.createElement('div')
+  shopSection.className = 'hlw-shop-section'
+  shopSection.style.cssText = 'margin-top:16px;padding:16px;border-radius:12px;background:var(--hlw-surface,#f9f5f0);'
+
+  const shopLabel = document.createElement('p')
+  shopLabel.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:12px;'
+  shopLabel.textContent = 'Shop your routine'
+  shopSection.appendChild(shopLabel)
+
+  // Checkbox list
+  const checkList = document.createElement('div')
+  checkList.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin-bottom:14px;'
+
+  for (const step of uniqueProducts) {
+    const row = document.createElement('label')
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;cursor:pointer;'
+
+    const cb = document.createElement('input')
+    cb.type = 'checkbox'
+    cb.checked = true
+    cb.style.cssText = 'width:16px;height:16px;flex-shrink:0;cursor:pointer;'
+    cb.addEventListener('change', () => {
+      if (cb.checked) checkedIds.add(step.product.id)
+      else checkedIds.delete(step.product.id)
+      updateCartBtn()
+    })
+
+    const info = document.createElement('div')
+    info.style.cssText = 'flex:1;min-width:0;'
+    info.innerHTML = `<p style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${step.product.name}</p>` +
+      (step.product.price > 0 ? `<p style="font-size:11px;opacity:.5;">${step.product.currency} ${step.product.price.toFixed(2)}</p>` : '')
+
+    row.appendChild(cb)
+    row.appendChild(info)
+    checkList.appendChild(row)
+  }
+  shopSection.appendChild(checkList)
+
+  // "Add to cart" button
   const btn = document.createElement('button')
   btn.className = 'hlw-add-all-btn'
-  btn.textContent = `Add all to cart (${routine.steps.length} item${routine.steps.length !== 1 ? 's' : ''})`
+
+  function updateCartBtn() {
+    btn.textContent = `Add to cart (${checkedIds.size})`
+    btn.disabled = checkedIds.size === 0
+  }
+  updateCartBtn()
 
   btn.addEventListener('click', async () => {
+    if (checkedIds.size === 0) return
     btn.disabled = true
-    btn.textContent = isDemo ? 'Saving…' : 'Adding…'
+    btn.textContent = 'Adding…'
 
-    // Always record intent on Halite
-    await api.recordCartIntent(routine.steps.map(s => s.product.id))
+    const selectedIds = Array.from(checkedIds)
+    await api.recordCartIntent(selectedIds)
 
     if (!isDemo) {
-      const variantSteps = routine.steps.filter(s => s.product.shopifyVariantId)
+      const selectedSteps = uniqueProducts.filter(s => checkedIds.has(s.product.id))
+      const variantSteps = selectedSteps.filter(s => s.product.shopifyVariantId)
       if (variantSteps.length > 0) {
-        // Use Shopify AJAX Cart API (widget runs on the Shopify store — same origin)
         try {
           await fetch('/cart/add.js', {
             method: 'POST',
@@ -626,14 +677,15 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
           })
         } catch { /* non-fatal */ }
       } else if (shopifyShop) {
-        // No variant IDs — redirect to Shopify store cart page with product URLs
-        const urls = routine.steps.filter(s => s.product.productUrl)
-        urls.forEach(s => window.open(s.product.productUrl!, '_blank', 'noopener,noreferrer'))
+        selectedSteps
+          .filter(s => s.product.productUrl)
+          .forEach(s => window.open(s.product.productUrl!, '_blank', 'noopener,noreferrer'))
       }
     }
 
     btn.textContent = '✓ Added to cart'
   })
 
-  container.appendChild(btn)
+  shopSection.appendChild(btn)
+  container.appendChild(shopSection)
 }

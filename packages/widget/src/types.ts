@@ -8,7 +8,7 @@ export interface QuizOption {
 export interface QuizQuestion {
   id: string
   area: string
-  type: 'single' | 'multi' | 'scale' | 'text' | 'unit_select' | 'area_select' | 'location'
+  type: 'single' | 'multi' | 'scale' | 'text' | 'date' | 'unit_select' | 'area_select' | 'location'
   question: string
   subtext?: string
   options?: QuizOption[]

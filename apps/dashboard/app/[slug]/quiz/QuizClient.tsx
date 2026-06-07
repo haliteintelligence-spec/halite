@@ -6,7 +6,7 @@ import { UnitSelect } from '@/components/quiz/UnitSelect'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type QuestionType = 'single' | 'multi' | 'scale' | 'text' | 'unit_select' | 'area_select' | 'location'
+type QuestionType = 'single' | 'multi' | 'scale' | 'text' | 'date' | 'unit_select' | 'area_select' | 'location'
 
 interface QuizOption {
   value: string
@@ -1013,6 +1013,19 @@ function QuestionStep({
         <UnitSelect units={question.units} value={answer as string | undefined}
           onConfirm={(v) => { onAnswer(question.id, v, false); onContinue() }} />
       )}
+      {question.type === 'date' && (
+        <div className="space-y-3">
+          <input
+            type="date"
+            max={new Date().toISOString().split('T')[0]}
+            value={(answer as string | undefined) ?? ''}
+            onChange={(e) => onAnswer(question.id, e.target.value || null, false)}
+            className="w-full rounded-xl px-4 py-3 text-sm border outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+          />
+          <Btn onClick={onContinue}>Continue</Btn>
+        </div>
+      )}
     </div>
   )
 }
@@ -1160,7 +1173,7 @@ function ScaleInput({ steps, min, max, value, onSelect }: {
   )
 }
 
-// ── Routine display ───────────────────────────────────────────────────────────
+// ── Routine display ──────────────────────────────────────────────────────────
 
 function RoutineDisplay({
   routine, brand, firstName, userToken, brandId, apiUrl,
@@ -1168,8 +1181,18 @@ function RoutineDisplay({
   routine: Routine; brand: BrandInfo; firstName: string | null
   userToken: string | null; brandId: string; apiUrl: string
 }) {
+  // Deduplicated product list for "Shop your routine" (one per product ID)
+  const uniqueProducts = Array.from(
+    routine.steps.reduce<Map<string, RoutineStep>>(
+      (map, step) => { if (!map.has(step.product.id)) map.set(step.product.id, step); return map },
+      new Map()
+    ).values()
+  )
+
   const [cartState, setCartState] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const [singleSaved, setSingleSaved] = useState<Set<string>>(new Set())
+  const [checked, setChecked] = useState<Set<string>>(
+    () => new Set(uniqueProducts.map(s => s.product.id))
+  )
 
   const grouped = routine.steps.reduce<Record<string, RoutineStep[]>>((acc, step) => {
     const key = step.timeOfDay
@@ -1185,30 +1208,37 @@ function RoutineDisplay({
 
   const area = routine.focusArea.charAt(0) + routine.focusArea.slice(1).toLowerCase().replace('_', ' ')
 
-  const shoppableSteps = routine.steps.filter(s => s.product.shopifyVariantId || s.product.productUrl)
+  function toggleChecked(productId: string) {
+    setChecked(prev => {
+      const next = new Set(prev)
+      if (next.has(productId)) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+  }
 
-  async function handleAddAll() {
-    if (cartState !== 'idle') return
+  async function handleAddToCart() {
+    if (cartState !== 'idle' || checked.size === 0) return
     setCartState('saving')
 
-    // Always record intent on the Halite side
+    const selectedIds = Array.from(checked)
+    const selectedSteps = uniqueProducts.filter(s => checked.has(s.product.id))
+
     if (userToken) {
       await fetch(`${apiUrl}/brands/${brandId}/me/cart`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productIds: routine.steps.map(s => s.product.id) }),
+        body: JSON.stringify({ productIds: selectedIds }),
       }).catch(() => {})
     }
 
     if (!brand.isDemo) {
-      // Onboarded: build Shopify cart URL from variant IDs, fall back to opening product pages
-      const variantSteps = routine.steps.filter(s => s.product.shopifyVariantId)
+      const variantSteps = selectedSteps.filter(s => s.product.shopifyVariantId)
       if (variantSteps.length > 0 && brand.shopifyShop) {
         const cartPath = variantSteps.map(s => `${s.product.shopifyVariantId}:1`).join(',')
         window.open(`https://${brand.shopifyShop}/cart/${cartPath}`, '_blank', 'noopener,noreferrer')
       } else {
-        // No variant IDs — open product pages individually
-        routine.steps
+        selectedSteps
           .filter(s => s.product.productUrl)
           .forEach(s => window.open(s.product.productUrl!, '_blank', 'noopener,noreferrer'))
       }
@@ -1217,17 +1247,7 @@ function RoutineDisplay({
     setCartState('saved')
   }
 
-  async function handleAddSingle(productId: string) {
-    if (singleSaved.has(productId)) return
-    if (userToken) {
-      await fetch(`${apiUrl}/brands/${brandId}/me/cart`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productIds: [productId] }),
-      }).catch(() => {})
-    }
-    setSingleSaved(prev => new Set([...prev, productId]))
-  }
+  const showShop = (brand.isDemo || uniqueProducts.some(s => s.product.shopifyVariantId || s.product.productUrl)) && uniqueProducts.length > 0
 
   return (
     <div className="space-y-8">
@@ -1264,39 +1284,13 @@ function RoutineDisplay({
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{step.product.name}</p>
-                      <p className="text-xs mt-0.5 capitalize" style={{ color: 'var(--text-3)' }}>
-                        {step.product.category.toLowerCase().replace('_', ' ')}
-                        {step.product.price > 0 && (
-                          <span> · {step.product.currency === 'USD' ? '$' : step.product.currency}{step.product.price.toFixed(0)}</span>
-                        )}
-                      </p>
-                    </div>
-                    {brand.isDemo ? (
-                      <button
-                        onClick={() => handleAddSingle(step.product.id)}
-                        className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap"
-                        style={{
-                          background: singleSaved.has(step.product.id) ? '#4caf82' : (brand.primaryColor ?? '#111'),
-                          color: 'white', border: 'none', cursor: 'pointer',
-                        }}
-                      >
-                        {singleSaved.has(step.product.id) ? '✓ Added' : 'Add to cart'}
-                      </button>
-                    ) : step.product.productUrl ? (
-                      <a
-                        href={step.product.productUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 whitespace-nowrap"
-                        style={{ background: brand.primaryColor ?? '#111', color: 'white' }}
-                      >
-                        Add to cart
-                      </a>
-                    ) : null}
-                  </div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{step.product.name}</p>
+                  <p className="text-xs mt-0.5 capitalize" style={{ color: 'var(--text-3)' }}>
+                    {step.product.category.toLowerCase().replace('_', ' ')}
+                    {step.product.price > 0 && (
+                      <span> · {step.product.currency === 'USD' ? '$' : step.product.currency}{step.product.price.toFixed(0)}</span>
+                    )}
+                  </p>
                   {step.instruction && (
                     <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-2)' }}>{step.instruction}</p>
                   )}
@@ -1316,30 +1310,28 @@ function RoutineDisplay({
         </div>
       ))}
 
-      {(shoppableSteps.length > 0 || brand.isDemo) && routine.steps.length > 0 && (
+      {showShop && (
         <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--bg-muted)' }}>
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold tracking-[0.12em] uppercase" style={{ color: 'var(--text-3)' }}>
               Shop your routine
             </p>
             <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-              {routine.steps.length} item{routine.steps.length !== 1 ? 's' : ''}
+              {checked.size} of {uniqueProducts.length} selected
             </span>
           </div>
 
-          <button
-            onClick={handleAddAll}
-            disabled={cartState === 'saving'}
-            className="w-full py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-85 active:scale-[0.98] disabled:opacity-50"
-            style={{ background: cartState === 'saved' ? '#4caf82' : (brand.primaryColor ?? '#111'), color: '#fff' }}
-          >
-            {cartState === 'saved' ? '✓ Added to cart' : cartState === 'saving' ? 'Adding…' : 'Add all to cart'}
-          </button>
-
           <div className="space-y-2.5">
-            {routine.steps.map(s => (
-              <div key={s.id} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+            {uniqueProducts.map(s => (
+              <label key={s.product.id} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked.has(s.product.id)}
+                  onChange={() => toggleChecked(s.product.id)}
+                  className="w-4 h-4 rounded flex-shrink-0"
+                  style={{ accentColor: brand.primaryColor ?? '#111' }}
+                />
+                <div className="min-w-0 flex-1">
                   <p className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{s.product.name}</p>
                   {s.product.price > 0 && (
                     <p className="text-xs" style={{ color: 'var(--text-3)' }}>
@@ -1347,32 +1339,18 @@ function RoutineDisplay({
                     </p>
                   )}
                 </div>
-                {brand.isDemo ? (
-                  <button
-                    onClick={() => handleAddSingle(s.product.id)}
-                    className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all whitespace-nowrap"
-                    style={{
-                      borderColor: singleSaved.has(s.product.id) ? '#4caf82' : (brand.primaryColor ?? '#111'),
-                      color: singleSaved.has(s.product.id) ? '#4caf82' : (brand.primaryColor ?? '#111'),
-                      background: 'transparent', cursor: 'pointer',
-                    }}
-                  >
-                    {singleSaved.has(s.product.id) ? '✓ Added' : 'Add to cart →'}
-                  </button>
-                ) : s.product.productUrl ? (
-                  <a
-                    href={s.product.productUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all hover:opacity-70 whitespace-nowrap"
-                    style={{ borderColor: brand.primaryColor ?? '#111', color: brand.primaryColor ?? '#111' }}
-                  >
-                    Add to cart →
-                  </a>
-                ) : null}
-              </div>
+              </label>
             ))}
           </div>
+
+          <button
+            onClick={handleAddToCart}
+            disabled={cartState === 'saving' || checked.size === 0}
+            className="w-full py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-85 active:scale-[0.98] disabled:opacity-50"
+            style={{ background: cartState === 'saved' ? '#4caf82' : (brand.primaryColor ?? '#111'), color: '#fff' }}
+          >
+            {cartState === 'saved' ? '✓ Added to cart' : cartState === 'saving' ? 'Adding…' : `Add to cart (${checked.size})`}
+          </button>
         </div>
       )}
 

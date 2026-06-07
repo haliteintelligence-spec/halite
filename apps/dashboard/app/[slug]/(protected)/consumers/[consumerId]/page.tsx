@@ -20,9 +20,13 @@ const CONCERN_LABELS: Record<string, string> = {
 const SKIN_TYPE_LABELS: Record<string, string> = {
   DRY: 'Dry', OILY: 'Oily', COMBINATION: 'Combination', NORMAL: 'Normal', SENSITIVE: 'Sensitive',
 }
-const AGE_LABELS: Record<string, string> = {
-  under_18: 'Under 18', '18_24': '18–24', '25_34': '25–34',
-  '35_44': '35–44', '45_54': '45–54', '55_64': '55–64', '65_plus': '65+',
+function calcAge(birthday: string): number {
+  const dob = new Date(birthday)
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const m = today.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  return age
 }
 
 interface BeautyProfile {
@@ -64,6 +68,7 @@ interface ConsumerDetail {
   lastName: string | null
   email: string | null
   createdAt: string
+  birthday: string | null
   beautyProfile: BeautyProfile | null
   checkIns: CheckIn[]
   routines: Array<{ id: string; focusArea: string; steps: RoutineStep[] }>
@@ -136,7 +141,7 @@ export default function ConsumerDetailPage() {
     name,
     skinType: bp?.skinType,
     skinConcerns: bp?.skinConcerns,
-    ageRange: bp?.ageRange,
+    ageRange: consumer.birthday ? `${calcAge(consumer.birthday)} years old` : (bp?.ageRange ?? undefined),
     monkSkinTone: bp?.monkSkinTone,
     totalCheckIns: consumer.stats.totalCheckIns,
     complianceRate: consumer.stats.complianceRate,
@@ -195,7 +200,8 @@ export default function ConsumerDetailPage() {
           <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Skin Profile</p>
           <div className="space-y-2">
             <Row label="Skin Type" value={bp?.skinType ? (SKIN_TYPE_LABELS[bp.skinType] ?? bp.skinType) : '—'} />
-            <Row label="Age Range" value={bp?.ageRange ? (AGE_LABELS[bp.ageRange] ?? bp.ageRange) : '—'} />
+            <Row label="Birthday" value={consumer.birthday ? new Date(consumer.birthday).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
+            <Row label="Age" value={consumer.birthday ? String(calcAge(consumer.birthday)) : '—'} />
             <Row label="Location" value={[bp?.city, bp?.country].filter(Boolean).join(', ') || '—'} />
             <Row label="Sleep" value={bp?.sleepHours != null ? `${bp.sleepHours}h/night` : '—'} />
             <Row label="Stress Level" value={bp?.stressLevel != null ? `${bp.stressLevel}/5` : '—'} />

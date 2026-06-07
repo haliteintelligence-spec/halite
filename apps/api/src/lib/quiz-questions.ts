@@ -1,7 +1,7 @@
 // All question definitions for every beauty area.
 // Each question has a stable ID, area tag, type, and options.
 
-export type QuestionType = 'single' | 'multi' | 'scale' | 'text' | 'unit_select' | 'area_select' | 'location'
+export type QuestionType = 'single' | 'multi' | 'scale' | 'text' | 'date' | 'unit_select' | 'area_select' | 'location'
 export type BeautyArea = 'SKINCARE' | 'BODY' | 'HAIR' | 'MAKEUP' | 'FRAGRANCE' | 'NAILS' | 'WELLNESS' | 'SUN_CARE' | 'LIP_CARE' | 'EYE_CARE' | 'SHARED'
 
 export interface QuizOption {
@@ -652,19 +652,10 @@ export const SHARED_QUESTIONS: QuizQuestion[] = [
   {
     id: 'SH0',
     area: 'SHARED',
-    type: 'single',
-    question: 'What is your age range?',
-    subtext: 'Helps us match formulations and active ingredients appropriate for your skin\'s stage',
-    required: true,
-    options: [
-      { value: 'under_18', label: 'Under 18', description: 'Gentle, non-active-heavy formulations' },
-      { value: '18_24', label: '18 – 24', description: 'Prevention, balancing, early care' },
-      { value: '25_34', label: '25 – 34', description: 'Early prevention, antioxidants, hydration' },
-      { value: '35_44', label: '35 – 44', description: 'Targeted actives, firming, pigmentation' },
-      { value: '45_54', label: '45 – 54', description: 'Richer formulations, retinoids, collagen support' },
-      { value: '55_64', label: '55 – 64', description: 'Intensive nourishment, barrier repair' },
-      { value: '65_plus', label: '65+', description: 'Gentle yet potent, barrier-focused' },
-    ],
+    type: 'date',
+    question: 'What is your date of birth?',
+    subtext: 'Helps us match formulations and active ingredients to your skin\'s stage. Leave blank to skip.',
+    required: false,
   },
   {
     id: 'SH1',
