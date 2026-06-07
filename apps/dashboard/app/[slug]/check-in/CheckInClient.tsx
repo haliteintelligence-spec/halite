@@ -131,6 +131,13 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
         fetch(`${API_URL}/brands/${bid}/me/check-ins`, { headers: { Authorization: `Bearer ${tok}` } }),
       ])
 
+      // Token expired or invalid — clear session and go back to login
+      if (routinesRes.status === 401 || routinesRes.status === 403) {
+        localStorage.removeItem(SESSION_KEY)
+        setPhase('login')
+        return
+      }
+
       if (routinesRes.ok) {
         const data = await routinesRes.json() as { routines: Routine[] }
         setRoutines(data.routines)
