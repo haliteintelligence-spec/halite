@@ -1384,6 +1384,22 @@ function RoutineDisplay({
             ))}
           </div>
 
+          {(() => {
+            const totalPrice = uniqueProducts
+              .filter(s => checked.has(s.product.id) && s.product.price > 0)
+              .reduce((sum, s) => sum + s.product.price, 0)
+            const currency = uniqueProducts.find(s => s.product.price > 0)?.product.currency ?? 'USD'
+            const hasPrices = uniqueProducts.some(s => s.product.price > 0)
+            return hasPrices && totalPrice > 0 ? (
+              <div className="flex items-center justify-between pt-2.5 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-3)' }}>Estimated total</span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
+                  {currency === 'USD' ? '$' : currency + ' '}{totalPrice.toFixed(2)}
+                </span>
+              </div>
+            ) : null
+          })()}
+
           <button
             onClick={handleAddToCart}
             disabled={cartState === 'saving' || checked.size === 0}

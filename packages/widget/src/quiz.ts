@@ -684,6 +684,20 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
   }
   shopSection.appendChild(checkList)
 
+  // Price total row
+  const hasPrices = uniqueProducts.some(s => s.product.price > 0)
+  const firstCurrency = uniqueProducts.find(s => s.product.price > 0)?.product.currency ?? 'USD'
+  const totalRow = document.createElement('div')
+  totalRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding-top:10px;margin-bottom:12px;border-top:1px solid rgba(0,0,0,0.08);'
+  const totalLabel = document.createElement('span')
+  totalLabel.style.cssText = 'font-size:11px;opacity:.5;'
+  totalLabel.textContent = 'Estimated total'
+  const totalAmt = document.createElement('span')
+  totalAmt.style.cssText = 'font-size:13px;font-weight:700;'
+  totalRow.appendChild(totalLabel)
+  totalRow.appendChild(totalAmt)
+  if (hasPrices) shopSection.appendChild(totalRow)
+
   // "Add to cart" button
   const btn = document.createElement('button')
   btn.className = 'hlw-add-all-btn'
@@ -691,6 +705,13 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
   function updateCartBtn() {
     btn.textContent = `Add to cart (${checkedIds.size})`
     btn.disabled = checkedIds.size === 0
+    if (hasPrices) {
+      const total = uniqueProducts
+        .filter(s => checkedIds.has(s.product.id) && s.product.price > 0)
+        .reduce((sum, s) => sum + s.product.price, 0)
+      totalRow.style.display = total > 0 ? 'flex' : 'none'
+      totalAmt.textContent = (firstCurrency === 'USD' ? '$' : firstCurrency + ' ') + total.toFixed(2)
+    }
   }
   updateCartBtn()
 
