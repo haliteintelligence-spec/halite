@@ -313,11 +313,12 @@ export async function brandRoutes(server: FastifyInstance) {
       }
 
       if (endUserId) {
+        const eu = await prisma.endUser.findUnique({ where: { id: endUserId }, select: { firstName: true } })
         const token = server.jwt.sign(
           { role: 'end_user', userId: endUserId, brandId: brand.id },
           { expiresIn: '30d' }
         )
-        return reply.send({ token, userId: endUserId, brandId: brand.id })
+        return reply.send({ token, userId: endUserId, brandId: brand.id, firstName: eu?.firstName ?? null })
       }
 
       // ── Cross-brand fallback ───────────────────────────────────────────────────
@@ -377,7 +378,7 @@ export async function brandRoutes(server: FastifyInstance) {
           { role: 'end_user', userId: endUser.id, brandId: brand.id },
           { expiresIn: '30d' }
         )
-        return reply.send({ token, userId: endUser.id, brandId: brand.id, crossBrand: true })
+        return reply.send({ token, userId: endUser.id, brandId: brand.id, crossBrand: true, firstName: best.firstName ?? null })
       }
 
       throw new ApiError(404, 'No profile found. Please complete the quiz first.')

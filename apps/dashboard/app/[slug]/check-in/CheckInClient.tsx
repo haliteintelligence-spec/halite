@@ -51,7 +51,8 @@ type Phase =
   | 'login'
   | 'no_profile'
   | 'no_routine'
-  | 'cross_brand_welcome'
+  | 'generating'
+  | 'welcome'
   | 'area_select'
   | 'rating'
   | 'symptoms'
@@ -98,6 +99,8 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
   const [phone, setPhone] = useState('')
   const [loginError, setLoginError] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
+  const [userName, setUserName] = useState('')
+  const [isCrossBrand, setIsCrossBrand] = useState(false)
 
   const [skinRating, setSkinRating] = useState(0)
   const [symptoms, setSymptoms] = useState<Set<string>>(new Set())
@@ -111,17 +114,9 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
   // Derived: the routine for the selected area
   const activeRoutine = routines.find(r => r.focusArea === selectedArea) ?? null
 
-  // On mount — check for an existing valid session scoped to this brand
+  // Always start at login — no auto-load from saved session
   useEffect(() => {
-    const session = loadSession()
-    if (session && session.brandId === brand.id) {
-      setToken(session.token)
-      setBrandId(session.brandId)
-      loadRoutineData(session.token, session.brandId)
-    } else {
-      setPhase('login')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPhase('login')
   }, [])
 
   async function loadRoutineData(tok: string, bid: string) {
@@ -143,11 +138,9 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
         setRoutines(data.routines)
         if (data.routines.length === 0) {
           setPhase('no_routine')
-        } else if (data.routines.length === 1) {
-          setSelectedArea(data.routines[0]!.focusArea)
-          setPhase('rating')
         } else {
-          setPhase('area_select')
+          if (data.routines.length === 1) setSelectedArea(data.routines[0]!.focusArea)
+          setPhase('welcome')
         }
       } else {
         setPhase('no_routine')
@@ -157,6 +150,52 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
         const data = await checkInsRes.json() as { checkIns: unknown[] }
         setTotalCheckIns(data.checkIns.length)
       }
+    } catch {
+      setPhase('no_routine')
+    }
+  }
+
+  async function autoSetup(tok: string, bid: string) {
+    setPhase('generating')
+    try {
+      const res = await fetch(`${API_URL}/brands/${bid}/quiz/auto-setup`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      if (!res.ok) { setPhase('no_routine'); return }
+      const data = await res.json() as { status: string; routines: Routine[]; firstName: string | null }
+      if (data.firstName && !userName) setUserName(data.firstName)
+
+      if (data.status === 'ready' && data.routines.length > 0) {
+        setRoutines(data.routines)
+        if (data.routines.length === 1) setSelectedArea(data.routines[0]!.focusArea)
+        setPhase('welcome')
+        return
+      }
+
+      // Routines are generating — poll every 2s for up to 30s
+      let attempts = 0
+      const poll = setInterval(async () => {
+        attempts++
+        try {
+          const r = await fetch(`${API_URL}/brands/${bid}/me/routines`, {
+            headers: { Authorization: `Bearer ${tok}` },
+          })
+          if (r.ok) {
+            const d = await r.json() as { routines: Routine[] }
+            if (d.routines.length > 0 || attempts >= 15) {
+              clearInterval(poll)
+              setRoutines(d.routines)
+              if (d.routines.length > 0) {
+                if (d.routines.length === 1) setSelectedArea(d.routines[0]!.focusArea)
+                setPhase('welcome')
+              } else {
+                setPhase('no_routine')
+              }
+            }
+          }
+        } catch { /* continue polling */ }
+      }, 2000)
     } catch {
       setPhase('no_routine')
     }
@@ -189,12 +228,14 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
       })
       if (res.status === 404) { setPhase('no_profile'); return }
       if (!res.ok) throw new Error()
-      const data = await res.json() as { token: string; brandId: string; crossBrand?: boolean }
+      const data = await res.json() as { token: string; brandId: string; crossBrand?: boolean; firstName?: string | null }
       setToken(data.token)
       setBrandId(data.brandId)
+      if (data.firstName) setUserName(data.firstName)
       saveSession({ token: data.token, brandId: data.brandId, expiresAt: Date.now() + 29 * 24 * 60 * 60 * 1000 })
       if (data.crossBrand) {
-        setPhase('cross_brand_welcome')
+        setIsCrossBrand(true)
+        await autoSetup(data.token, data.brandId)
         return
       }
       await loadRoutineData(data.token, data.brandId)
@@ -205,15 +246,23 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
     }
   }
 
-  function handleAreaSelect(area: string) {
-    setSelectedArea(area)
-    // Reset any prior check-in state when switching areas
+  function startCheckIn(area?: string) {
+    const target = area ?? selectedArea
+    setSelectedArea(target)
     setSkinRating(0)
     setSymptoms(new Set())
     setReactions({})
     setNotes('')
     setPhotoUrl('')
-    setPhase('rating')
+    if (routines.length > 1 && !area) {
+      setPhase('area_select')
+    } else {
+      setPhase('rating')
+    }
+  }
+
+  function handleAreaSelect(area: string) {
+    startCheckIn(area)
   }
 
   function stepIndex() { return FORM_STEPS.indexOf(phase) }
@@ -323,8 +372,30 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
           />
         )}
 
-        {phase === 'cross_brand_welcome' && (
-          <CrossBrandWelcome accent={accent} brandName={brand.name} onContinue={() => loadRoutineData(token, brandId)} />
+        {phase === 'generating' && (
+          <CenteredCard>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', border: `3px solid ${accent}`, borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 20px' }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: '#1a1a1a' }}>
+              {isCrossBrand ? 'Setting up your routine…' : 'Loading your profile…'}
+            </h2>
+            <p style={{ fontSize: 14, color: '#888', margin: 0, lineHeight: 1.5 }}>
+              {isCrossBrand
+                ? `Building your personalised routine at ${brand.name} based on your skin profile.`
+                : 'Just a moment.'}
+            </p>
+          </CenteredCard>
+        )}
+
+        {phase === 'welcome' && (
+          <WelcomeStep
+            routines={routines}
+            userName={userName}
+            isCrossBrand={isCrossBrand}
+            accent={accent}
+            brandName={brand.name}
+            onStart={() => startCheckIn()}
+          />
         )}
 
         {phase === 'no_profile' && (
@@ -545,20 +616,57 @@ function LoginStep({
   )
 }
 
-function CrossBrandWelcome({ accent, brandName, onContinue }: { accent: string; brandName: string; onContinue: () => void }) {
+function WelcomeStep({
+  routines, userName, isCrossBrand, accent, brandName, onStart,
+}: {
+  routines: Routine[]; userName: string; isCrossBrand: boolean
+  accent: string; brandName: string; onStart: () => void
+}) {
   return (
     <div>
-      <div style={{ width: 52, height: 52, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 20 }}>✦</div>
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>Welcome back</p>
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', margin: '0 0 10px', lineHeight: 1.2 }}>Your profile is linked</h1>
-      <p style={{ fontSize: 14, color: '#888', margin: '0 0 32px', lineHeight: 1.6 }}>
-        We found your beauty profile and connected it to {brandName}. You can check in now — take the skin quiz to get product recommendations personalised for this brand.
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 8px' }}>
+        {isCrossBrand ? `Welcome to ${brandName}` : 'Welcome back'}
       </p>
+      <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', margin: '0 0 6px', lineHeight: 1.2 }}>
+        {userName ? `Hey, ${userName}` : 'Your routine is ready'}
+      </h1>
+      <p style={{ fontSize: 14, color: '#888', margin: '0 0 28px', lineHeight: 1.5 }}>
+        {isCrossBrand
+          ? `We've built your ${brandName} routine based on your profile.`
+          : `Here's your current routine at ${brandName}.`}
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+        {routines.map(routine => {
+          const seen = new Set<string>()
+          const products = routine.steps.filter(s => {
+            if (seen.has(s.product.id)) return false
+            seen.add(s.product.id)
+            return true
+          })
+          return (
+            <div key={routine.id} style={{ borderRadius: 12, border: '1.5px solid #f0ece6', padding: '14px 16px', background: '#fff' }}>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: accent, margin: '0 0 10px' }}>
+                {areaLabel(routine.focusArea)}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {products.map(s => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: '#333' }}>{s.product.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
       <button
-        onClick={onContinue}
+        onClick={onStart}
         style={{ width: '100%', padding: '14px', borderRadius: 12, background: accent, border: 'none', fontSize: 15, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
       >
-        Continue to check-in
+        Start check-in
       </button>
       <p style={{ fontSize: 12, color: '#bbb', textAlign: 'center', marginTop: 16 }}>
         Your data is private and never shared across brands.

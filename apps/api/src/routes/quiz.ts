@@ -368,6 +368,100 @@ export async function quizRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Check-in auto-setup ───────────────────────────────────────────
+  // Called after cross-brand check-in auth. Uses the Consumer's stored
+  // brand-agnostic answers (skin/hair/lifestyle concerns only — no
+  // product or brand data from other brands) to generate a routine for
+  // this brand's catalog without the consumer redoing the full quiz.
+  server.post(
+    '/:brandId/quiz/auto-setup',
+    { preHandler: requireEndUser },
+    async (request, reply) => {
+      const { brandId } = request.params as { brandId: string }
+      const userId = request.endUser!.userId
+
+      const endUserRecord = await prisma.endUser.findUnique({
+        where: { id: userId },
+        select: { firstName: true, consumerId: true },
+      })
+
+      // Already has routines — return them immediately
+      const existingRoutines = await prisma.routine.findMany({
+        where: { endUserId: userId, brandId },
+        include: { steps: { include: { product: { select: { id: true, name: true } } } } },
+      })
+      if (existingRoutines.length > 0) {
+        return reply.send({ status: 'ready', routines: existingRoutines, firstName: endUserRecord?.firstName ?? null })
+      }
+
+      // Already has a completed quiz — routines may still be generating
+      const existingSession = await prisma.quizSession.findFirst({
+        where: { endUserId: userId, brandId, completed: true },
+      })
+      if (existingSession) {
+        return reply.send({ status: 'generating', routines: [], firstName: endUserRecord?.firstName ?? null })
+      }
+
+      // Get Consumer prefillAnswers — brand-agnostic concerns and preferences only
+      // (skin type, concerns, hair, lifestyle — never products or brand-specific choices)
+      const consumer = endUserRecord?.consumerId
+        ? await prisma.consumer.findUnique({
+            where: { id: endUserRecord.consumerId },
+            select: { prefillAnswers: true },
+          })
+        : null
+      const rawAnswers = (consumer?.prefillAnswers as Record<string, unknown>) ?? {}
+
+      // Strip any brand-specific keys that may have crept in
+      const BRAND_SPECIFIC = new Set(['SH2A', 'SH2B', 'SH3'])
+      const answers: Record<string, unknown> = Object.fromEntries(
+        Object.entries(rawAnswers).filter(([k]) => !BRAND_SPECIFIC.has(k))
+      )
+
+      const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { focusAreas: true } })
+      const areas = (brand?.focusAreas as string[]) ?? []
+
+      // Upsert beauty profile so check-in auth can find the EndUser
+      await prisma.userBeautyProfile.upsert({
+        where: { endUserId: userId },
+        update: {
+          completedAreas: areas as any,
+          skinType: mapSkinType(answers['S1'] as string | undefined),
+          skinConcerns: (answers['S4'] as any) ?? [],
+          monkSkinTone: answers['S5'] ? parseInt(answers['S5'] as string) : null,
+          hairProfile: (extractAreaAnswers(answers, 'H') ?? Prisma.JsonNull) as any,
+          bodyProfile: (extractAreaAnswers(answers, 'B') ?? Prisma.JsonNull) as any,
+        },
+        create: {
+          endUserId: userId,
+          completedAreas: areas as any,
+          skinType: mapSkinType(answers['S1'] as string | undefined),
+          skinConcerns: (answers['S4'] as any) ?? [],
+          monkSkinTone: answers['S5'] ? parseInt(answers['S5'] as string) : null,
+          hairProfile: (extractAreaAnswers(answers, 'H') ?? Prisma.JsonNull) as any,
+          bodyProfile: (extractAreaAnswers(answers, 'B') ?? Prisma.JsonNull) as any,
+        },
+      })
+
+      // Create a completed quiz session
+      const session = await prisma.quizSession.create({
+        data: {
+          brandId,
+          endUserId: userId,
+          answers: answers as any,
+          selectedAreas: areas as any,
+          completed: true,
+          completedAt: new Date(),
+        },
+      })
+
+      // Generate routines using this brand's catalog — non-blocking
+      generateRoutinesAsync(userId, brandId, session.id, areas, answers)
+
+      return reply.send({ status: 'generating', routines: [], firstName: endUserRecord?.firstName ?? null })
+    }
+  )
+
   // ── Get session (for resuming) ─────────────────────────────────────
   server.get(
     '/:brandId/quiz/sessions/:sessionId',
