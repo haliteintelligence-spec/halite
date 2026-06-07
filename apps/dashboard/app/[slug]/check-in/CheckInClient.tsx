@@ -337,6 +337,12 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
             <a href={`/${slug}/quiz`} style={{ display: 'inline-block', padding: '12px 24px', borderRadius: 10, background: accent, color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Take the Quiz
             </a>
+            <button
+              onClick={() => setPhase('login')}
+              style={{ display: 'block', margin: '16px auto 0', background: 'none', border: 'none', fontSize: 13, color: '#aaa', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Try a different email or phone
+            </button>
           </CenteredCard>
         )}
 
@@ -350,6 +356,12 @@ export function CheckInClient({ brand, slug }: { brand: Brand; slug: string }) {
             <a href={`/${slug}/quiz`} style={{ display: 'inline-block', padding: '12px 24px', borderRadius: 10, background: accent, color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Take the Quiz
             </a>
+            <button
+              onClick={() => { localStorage.removeItem(SESSION_KEY); setPhase('login') }}
+              style={{ display: 'block', margin: '16px auto 0', background: 'none', border: 'none', fontSize: 13, color: '#aaa', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Sign in as someone else
+            </button>
           </CenteredCard>
         )}
 
