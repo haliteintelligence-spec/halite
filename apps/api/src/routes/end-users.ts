@@ -147,6 +147,23 @@ export async function endUserRoutes(server: FastifyInstance) {
     }
   )
 
+  // End user: record purchase intent (cart add)
+  server.post(
+    '/:brandId/me/cart',
+    { preHandler: requireEndUser },
+    async (request, reply) => {
+      const userId = request.endUser!.userId
+      const { productIds } = z.object({ productIds: z.array(z.string()) }).parse(request.body)
+
+      // No-op write for now — endpoint exists so the client can record cart intent
+      // (will be wired to a CartEvent model in a future schema migration)
+      void productIds
+      void userId
+
+      return reply.status(200).send({ ok: true })
+    }
+  )
+
   // End user: get check-in history
   server.get(
     '/:brandId/me/check-ins',

@@ -28,10 +28,10 @@ export async function brandRoutes(server: FastifyInstance) {
       const { slug } = request.params as { slug: string }
       const brand = await prisma.brand.findUnique({
         where: { slug },
-        select: { id: true, name: true, focusAreas: true, logoUrl: true, primaryColor: true, active: true },
+        select: { id: true, name: true, focusAreas: true, logoUrl: true, primaryColor: true, active: true, isDemo: true, shopifyShop: true },
       })
       if (!brand || !brand.active) throw new ApiError(404, 'Brand not found')
-      return { brand }
+      return { brand: { ...brand, shopifyShop: brand.shopifyShop ?? null } }
     }
   )
 

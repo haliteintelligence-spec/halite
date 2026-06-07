@@ -45,6 +45,8 @@ interface StoredSession {
   token: string
   userId: string
   brandId: string
+  isDemo?: boolean
+  shopifyShop?: string | null
   expiresAt: number
 }
 
@@ -87,6 +89,8 @@ export class HaliteApi {
   private userId = ''
   private brandId = ''
   private consumerToken = ''
+  isDemo = false
+  shopifyShop: string | null = null
 
   constructor(private apiUrl: string, private apiKey: string) {
     const stored = loadConsumer()
@@ -99,14 +103,20 @@ export class HaliteApi {
       this.token = stored.token
       this.userId = stored.userId
       this.brandId = stored.brandId
+      this.isDemo = stored.isDemo ?? false
+      this.shopifyShop = stored.shopifyShop ?? null
       return
     }
-    const res = await this.post<{ token: string; userId: string }>('/auth/end-user/token', {
+    const res = await this.post<{
+      token: string; userId: string; isDemo: boolean; shopifyShop: string | null
+    }>('/auth/end-user/token', {
       apiKey: this.apiKey,
       externalId: `widget-${Math.random().toString(36).slice(2)}`,
     }, false)
     this.token = res.token
     this.userId = res.userId
+    this.isDemo = res.isDemo
+    this.shopifyShop = res.shopifyShop ?? null
 
     // Decode brandId from JWT payload
     const payload = JSON.parse(atob(res.token.split('.')[1])) as { brandId: string }
@@ -116,8 +126,14 @@ export class HaliteApi {
       token: this.token,
       userId: this.userId,
       brandId: this.brandId,
+      isDemo: this.isDemo,
+      shopifyShop: this.shopifyShop,
       expiresAt: Date.now() + 29 * 24 * 60 * 60 * 1000,
     })
+  }
+
+  async recordCartIntent(productIds: string[]): Promise<void> {
+    await this.post(`/brands/${this.brandId}/me/cart`, { productIds }).catch(() => {})
   }
 
   async getQuestions(): Promise<QuizQuestion[]> {

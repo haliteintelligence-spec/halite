@@ -39,6 +39,8 @@ interface BrandInfo {
   focusAreas: string[]
   logoUrl?: string
   primaryColor?: string
+  isDemo: boolean
+  shopifyShop: string | null
 }
 
 interface LocationData {
@@ -94,6 +96,7 @@ interface RoutineStep {
     currency: string
     imageUrl?: string
     productUrl?: string
+    shopifyVariantId?: string | null
     keyIngredients?: string[]
   }
 }
@@ -631,7 +634,10 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
 
           {/* ── Routine ── */}
           {phase === 'routine' && routine && (
-            <RoutineDisplay routine={routine} brand={brand} firstName={contact.firstName || null} />
+            <RoutineDisplay
+              routine={routine} brand={brand} firstName={contact.firstName || null}
+              userToken={userToken} brandId={brandId} apiUrl={apiUrl}
+            />
           )}
 
           {/* ── Error ── */}
@@ -1156,7 +1162,15 @@ function ScaleInput({ steps, min, max, value, onSelect }: {
 
 // ── Routine display ───────────────────────────────────────────────────────────
 
-function RoutineDisplay({ routine, brand, firstName }: { routine: Routine; brand: BrandInfo; firstName: string | null }) {
+function RoutineDisplay({
+  routine, brand, firstName, userToken, brandId, apiUrl,
+}: {
+  routine: Routine; brand: BrandInfo; firstName: string | null
+  userToken: string | null; brandId: string; apiUrl: string
+}) {
+  const [cartState, setCartState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [singleSaved, setSingleSaved] = useState<Set<string>>(new Set())
+
   const grouped = routine.steps.reduce<Record<string, RoutineStep[]>>((acc, step) => {
     const key = step.timeOfDay
     if (!acc[key]) acc[key] = []
@@ -1170,6 +1184,50 @@ function RoutineDisplay({ routine, brand, firstName }: { routine: Routine; brand
   }
 
   const area = routine.focusArea.charAt(0) + routine.focusArea.slice(1).toLowerCase().replace('_', ' ')
+
+  const shoppableSteps = routine.steps.filter(s => s.product.shopifyVariantId || s.product.productUrl)
+
+  async function handleAddAll() {
+    if (cartState !== 'idle') return
+    setCartState('saving')
+
+    // Always record intent on the Halite side
+    if (userToken) {
+      await fetch(`${apiUrl}/brands/${brandId}/me/cart`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds: routine.steps.map(s => s.product.id) }),
+      }).catch(() => {})
+    }
+
+    if (!brand.isDemo) {
+      // Onboarded: build Shopify cart URL from variant IDs, fall back to opening product pages
+      const variantSteps = routine.steps.filter(s => s.product.shopifyVariantId)
+      if (variantSteps.length > 0 && brand.shopifyShop) {
+        const cartPath = variantSteps.map(s => `${s.product.shopifyVariantId}:1`).join(',')
+        window.open(`https://${brand.shopifyShop}/cart/${cartPath}`, '_blank', 'noopener,noreferrer')
+      } else {
+        // No variant IDs — open product pages individually
+        routine.steps
+          .filter(s => s.product.productUrl)
+          .forEach(s => window.open(s.product.productUrl!, '_blank', 'noopener,noreferrer'))
+      }
+    }
+
+    setCartState('saved')
+  }
+
+  async function handleAddSingle(productId: string) {
+    if (singleSaved.has(productId)) return
+    if (userToken) {
+      await fetch(`${apiUrl}/brands/${brandId}/me/cart`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds: [productId] }),
+      }).catch(() => {})
+    }
+    setSingleSaved(prev => new Set([...prev, productId]))
+  }
 
   return (
     <div className="space-y-8">
@@ -1216,7 +1274,18 @@ function RoutineDisplay({ routine, brand, firstName }: { routine: Routine; brand
                         )}
                       </p>
                     </div>
-                    {step.product.productUrl && (
+                    {brand.isDemo ? (
+                      <button
+                        onClick={() => handleAddSingle(step.product.id)}
+                        className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap"
+                        style={{
+                          background: singleSaved.has(step.product.id) ? '#4caf82' : (brand.primaryColor ?? '#111'),
+                          color: 'white', border: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        {singleSaved.has(step.product.id) ? '✓ Added' : 'Add to cart'}
+                      </button>
+                    ) : step.product.productUrl ? (
                       <a
                         href={step.product.productUrl}
                         target="_blank"
@@ -1226,7 +1295,7 @@ function RoutineDisplay({ routine, brand, firstName }: { routine: Routine; brand
                       >
                         Add to cart
                       </a>
-                    )}
+                    ) : null}
                   </div>
                   {step.instruction && (
                     <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-2)' }}>{step.instruction}</p>
@@ -1247,13 +1316,28 @@ function RoutineDisplay({ routine, brand, firstName }: { routine: Routine; brand
         </div>
       ))}
 
-      {routine.steps.some(s => s.product.productUrl) && (
-        <div className="rounded-2xl p-5 space-y-3" style={{ background: 'var(--bg-muted)' }}>
-          <p className="text-xs font-semibold tracking-[0.12em] uppercase" style={{ color: 'var(--text-3)' }}>
-            Shop your routine
-          </p>
+      {(shoppableSteps.length > 0 || brand.isDemo) && routine.steps.length > 0 && (
+        <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--bg-muted)' }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold tracking-[0.12em] uppercase" style={{ color: 'var(--text-3)' }}>
+              Shop your routine
+            </p>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+              {routine.steps.length} item{routine.steps.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <button
+            onClick={handleAddAll}
+            disabled={cartState === 'saving'}
+            className="w-full py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-85 active:scale-[0.98] disabled:opacity-50"
+            style={{ background: cartState === 'saved' ? '#4caf82' : (brand.primaryColor ?? '#111'), color: '#fff' }}
+          >
+            {cartState === 'saved' ? '✓ Added to cart' : cartState === 'saving' ? 'Adding…' : 'Add all to cart'}
+          </button>
+
           <div className="space-y-2.5">
-            {routine.steps.filter(s => s.product.productUrl).map(s => (
+            {routine.steps.map(s => (
               <div key={s.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{s.product.name}</p>
@@ -1263,15 +1347,29 @@ function RoutineDisplay({ routine, brand, firstName }: { routine: Routine; brand
                     </p>
                   )}
                 </div>
-                <a
-                  href={s.product.productUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all hover:opacity-70 whitespace-nowrap"
-                  style={{ borderColor: brand.primaryColor ?? '#111', color: brand.primaryColor ?? '#111' }}
-                >
-                  Add to cart →
-                </a>
+                {brand.isDemo ? (
+                  <button
+                    onClick={() => handleAddSingle(s.product.id)}
+                    className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all whitespace-nowrap"
+                    style={{
+                      borderColor: singleSaved.has(s.product.id) ? '#4caf82' : (brand.primaryColor ?? '#111'),
+                      color: singleSaved.has(s.product.id) ? '#4caf82' : (brand.primaryColor ?? '#111'),
+                      background: 'transparent', cursor: 'pointer',
+                    }}
+                  >
+                    {singleSaved.has(s.product.id) ? '✓ Added' : 'Add to cart →'}
+                  </button>
+                ) : s.product.productUrl ? (
+                  <a
+                    href={s.product.productUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all hover:opacity-70 whitespace-nowrap"
+                    style={{ borderColor: brand.primaryColor ?? '#111', color: brand.primaryColor ?? '#111' }}
+                  >
+                    Add to cart →
+                  </a>
+                ) : null}
               </div>
             ))}
           </div>

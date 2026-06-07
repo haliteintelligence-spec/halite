@@ -133,7 +133,10 @@ export async function authRoutes(server: FastifyInstance) {
     })
     const { apiKey, externalId, email } = schema.parse(request.body)
 
-    const brand = await prisma.brand.findUnique({ where: { apiKey } })
+    const brand = await prisma.brand.findUnique({
+      where: { apiKey },
+      select: { id: true, active: true, isDemo: true, shopifyShop: true },
+    })
     if (!brand || !brand.active) throw new ApiError(401, 'Invalid API key')
 
     // Upsert end user
@@ -156,6 +159,11 @@ export async function authRoutes(server: FastifyInstance) {
       { role: 'end_user', userId: endUser.id, brandId: brand.id },
       { expiresIn: '30d' }
     )
-    return reply.send({ token, userId: endUser.id })
+    return reply.send({
+      token,
+      userId: endUser.id,
+      isDemo: brand.isDemo,
+      shopifyShop: brand.shopifyShop ?? null,
+    })
   })
 }

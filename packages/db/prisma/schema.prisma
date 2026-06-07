@@ -228,8 +228,9 @@ model Product {
   keyIngredients   String[]
   price            Float
   currency         String          @default("USD")
-  imageUrl         String?
-  productUrl       String?
+  imageUrl            String?
+  productUrl          String?
+  shopifyVariantId    String?
   inStock          Boolean         @default(true)
   metadata         Json?
   /// @db.VectorType(1536) — populated async after ingestion

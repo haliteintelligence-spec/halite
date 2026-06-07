@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-const SESSION_KEY = 'halite_session'
+const SESSION_KEY = 'halite_checkin_session'
 
 const SYMPTOMS_POSITIVE = [
   { value: 'IMPROVEMENT', label: '✨ Improving' },

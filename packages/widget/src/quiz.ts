@@ -164,6 +164,8 @@ export class QuizController {
 
     let getValue: () => unknown = () => null
     let isValid: () => boolean = () => false
+    // Hoisted here to avoid "used before declaration" errors in the if/else blocks below
+    const nextBtn = document.createElement('button')
 
     const onNext = () => {
       if (!isValid()) return
@@ -318,8 +320,7 @@ export class QuizController {
       return
     }
 
-    // Next button (appended after question body)
-    const nextBtn = document.createElement('button')
+    // Configure and wire up the next button (declared above the if/else blocks)
     nextBtn.className = 'hlw-btn-next'
     nextBtn.textContent = this.index === this.questions.length - 1 ? 'Get My Routine' : 'Continue'
     nextBtn.disabled = !['scale'].includes(q.type)
@@ -474,6 +475,10 @@ export class QuizController {
   private renderRoutines(routines: Routine[]) {
     this.setProgress(1); this.setBack(null)
 
+    const isDemo = this.api.isDemo
+    const shopifyShop = this.api.shopifyShop
+    const api = this.api
+
     const el = document.createElement('div')
     el.className = 'hlw-routine'
 
@@ -504,7 +509,7 @@ export class QuizController {
         const panel = document.createElement('div')
         panel.className = 'hlw-area-panel'
         panel.style.display = i === 0 ? 'block' : 'none'
-        buildRoutineSteps(routine, panel)
+        buildRoutineSteps(routine, panel, { isDemo, shopifyShop, api })
         panels.push(panel)
       })
 
@@ -515,7 +520,7 @@ export class QuizController {
       sub.className = 'hlw-routine-sub'
       sub.textContent = `${totalSteps} step${totalSteps !== 1 ? 's' : ''} · ${fmt(routines[0]!.focusArea)} routine`
       header.appendChild(sub)
-      buildRoutineSteps(routines[0]!, el)
+      buildRoutineSteps(routines[0]!, el, { isDemo, shopifyShop, api })
     }
 
     this.render(el)
@@ -530,7 +535,15 @@ function fmt(s: string) {
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function buildRoutineSteps(routine: Routine, container: HTMLElement) {
+interface BrandConfig {
+  isDemo: boolean
+  shopifyShop: string | null
+  api: import('./api').HaliteApi
+}
+
+function buildRoutineSteps(routine: Routine, container: HTMLElement, config: BrandConfig) {
+  const { isDemo, shopifyShop, api } = config
+
   const grouped: Record<string, typeof routine.steps> = {}
   for (const step of routine.steps) {
     const key = step.timeOfDay
@@ -556,6 +569,7 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement) {
       const card = document.createElement('div')
       card.className = 'hlw-step-card'
       const ingredients = (step.product.keyIngredients ?? []).slice(0, 3)
+
       card.innerHTML = `
         <div class="hlw-step-top">
           <div class="hlw-step-num">${step.step}</div>
@@ -564,11 +578,62 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement) {
         </div>
         <p class="hlw-step-instruction">${step.instruction}</p>
         ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${i}</span>`).join('')}</div>` : ''}
-        ${step.product.productUrl ? `<a href="${step.product.productUrl}" target="_blank" rel="noopener noreferrer" class="hlw-add-to-cart">Add to cart</a>` : ''}
+        ${!isDemo && step.product.productUrl ? `<a href="${step.product.productUrl}" target="_blank" rel="noopener noreferrer" class="hlw-add-to-cart">Add to cart</a>` : ''}
       `
+
+      // Demo: add per-product save button as interactive element (not innerHTML — needs event listener)
+      if (isDemo) {
+        const singleBtn = document.createElement('button')
+        singleBtn.className = 'hlw-add-to-cart'
+        singleBtn.style.cssText = 'background:transparent;border:1.5px solid currentColor;color:inherit;'
+        singleBtn.textContent = 'Add to cart'
+        singleBtn.addEventListener('click', async () => {
+          singleBtn.disabled = true
+          singleBtn.textContent = 'Adding…'
+          await api.recordCartIntent([step.product.id])
+          singleBtn.textContent = '✓ Added'
+        })
+        card.appendChild(singleBtn)
+      }
+
       group.appendChild(card)
     }
 
     container.appendChild(group)
   }
+
+  // "Add all to cart" / "Save routine" button — always shown
+  const btn = document.createElement('button')
+  btn.className = 'hlw-add-all-btn'
+  btn.textContent = `Add all to cart (${routine.steps.length} item${routine.steps.length !== 1 ? 's' : ''})`
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true
+    btn.textContent = isDemo ? 'Saving…' : 'Adding…'
+
+    // Always record intent on Halite
+    await api.recordCartIntent(routine.steps.map(s => s.product.id))
+
+    if (!isDemo) {
+      const variantSteps = routine.steps.filter(s => s.product.shopifyVariantId)
+      if (variantSteps.length > 0) {
+        // Use Shopify AJAX Cart API (widget runs on the Shopify store — same origin)
+        try {
+          await fetch('/cart/add.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: variantSteps.map(s => ({ id: s.product.shopifyVariantId, quantity: 1 })) }),
+          })
+        } catch { /* non-fatal */ }
+      } else if (shopifyShop) {
+        // No variant IDs — redirect to Shopify store cart page with product URLs
+        const urls = routine.steps.filter(s => s.product.productUrl)
+        urls.forEach(s => window.open(s.product.productUrl!, '_blank', 'noopener,noreferrer'))
+      }
+    }
+
+    btn.textContent = '✓ Added to cart'
+  })
+
+  container.appendChild(btn)
 }

@@ -32,6 +32,8 @@ export interface RoutineStep {
     currency: string
     keyIngredients: string[]
     description: string
+    productUrl?: string | null
+    shopifyVariantId?: string | null
   }
 }
 

@@ -19,6 +19,8 @@ export default async function QuizPage({ params }: Props) {
       focusAreas: string[]
       logoUrl?: string
       primaryColor?: string
+      isDemo: boolean
+      shopifyShop: string | null
     }
   }
 

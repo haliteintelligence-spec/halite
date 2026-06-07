@@ -183,6 +183,15 @@ export function getStyles(accent: string): string {
       transition: opacity 0.15s;
     }
     .hlw-add-to-cart:hover { opacity: 0.8; }
+    .hlw-add-all-btn {
+      display: block; width: 100%; box-sizing: border-box;
+      margin-top: 20px; padding: 12px 16px;
+      border-radius: 12px; border: none; cursor: pointer;
+      font-size: 13px; font-weight: 700;
+      background: ${accent}; color: #fff;
+      transition: opacity 0.15s;
+    }
+    .hlw-add-all-btn:hover { opacity: 0.85; }
     .hlw-error {
       padding: 32px 24px; text-align: center;
     }
