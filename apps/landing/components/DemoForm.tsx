@@ -4,9 +4,9 @@ import { useState } from 'react'
 
 const INTERESTS = [
   'Customer retention intelligence',
-  'Ingredient-level outcome data',
+  'Product-level outcome data',
   'Product-market fit optimization',
-  'R&D & procurement strategy',
+  'R&D & portfolio strategy',
   'Consumer targeting & segmentation',
   'Personalized recommendation engine',
   'Other',

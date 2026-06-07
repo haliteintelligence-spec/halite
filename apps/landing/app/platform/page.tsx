@@ -19,7 +19,7 @@ const PLATFORM_MODULES = [
 
 export const metadata = {
   title: 'Platform',
-  description: 'The complete Halite Intelligence platform: Routine Engine, Outcome Tracker, Brand Dashboard, and Embedded Widget — four connected modules that turn consumer skin data into retention leverage.',
+  description: 'The complete Halite Intelligence platform: Routine Engine, Outcome Tracker, Brand Dashboard, and Embedded Widget — four connected modules that turn consumer product data into retention leverage.',
   alternates: {
     canonical: 'https://haliteintelligence.com/platform',
   },
@@ -132,7 +132,7 @@ export default function Platform() {
                 Routine Engine
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: '#8B6575' }}>
-                The brain behind your personalization. Our AI generates bespoke regimens from your product catalogue — inclusive by design, ingredient-matched, and updated as the consumer's skin evolves.
+                The brain behind your personalization. Our AI generates bespoke recommendations from your product catalogue — inclusive by design, need-matched, and updated as the consumer's preferences evolve.
               </p>
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function Platform() {
                 Outcome Tracker
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: 'rgba(250,246,240,0.6)' }}>
-                The real-world feedback loop. Weekly consumer check-ins capture skin progress, product reactions, and compliance — turning anecdotal results into structured, brand-level intelligence.
+                The real-world feedback loop. Regular consumer check-ins capture product satisfaction, reactions, and engagement — turning anecdotal results into structured, brand-level intelligence.
               </p>
             </div>
           </div>
@@ -242,8 +242,8 @@ export default function Platform() {
               {[
                 {
                   icon: '◎',
-                  title: 'Weekly skin check-ins',
-                  body: 'Consumers rate their skin weekly across key dimensions — hydration, clarity, texture, and concern-specific metrics. Each response updates their profile and aggregates into your brand analytics.',
+                  title: 'Regular product check-ins',
+                  body: 'Consumers rate their product experience across key dimensions — satisfaction, efficacy, and concern-specific metrics. Each response updates their profile and aggregates into your brand analytics.',
                 },
                 {
                   icon: '⬡',
@@ -257,8 +257,8 @@ export default function Platform() {
                 },
                 {
                   icon: '▲',
-                  title: 'Skin progression narratives',
-                  body: 'Halite generates an AI-written skin progress summary for each consumer — visible in the widget. They see their journey; you see the structured trend data behind it.',
+                  title: 'Progress narratives',
+                  body: 'Halite generates an AI-written progress summary for each consumer — visible in the widget. They see their journey; you see the structured trend data behind it.',
                 },
               ].map(item => (
                 <div
@@ -352,7 +352,7 @@ export default function Platform() {
                 Brand Dashboard
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: '#8B6575' }}>
-                Your aggregated intelligence layer. Every routine, check-in, and reaction feeds into a brand-level view of who your consumers are, what their skin needs, and what's actually working.
+                Your aggregated intelligence layer. Every recommendation, check-in, and reaction feeds into a brand-level view of who your consumers are, what they need, and what's actually working.
               </p>
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function Platform() {
               >
                 {[
                   { label: 'Active consumers', value: '4,218', delta: '+12%', up: true },
-                  { label: 'Avg skin score', value: '7.4 / 10', delta: '+0.8', up: true },
+                  { label: 'Avg sat. score', value: '7.4 / 10', delta: '+0.8', up: true },
                   { label: 'Top concern', value: 'Dryness', delta: '38% of base', up: null },
                   { label: 'Churn risk', value: '6.2%', delta: '-1.4%', up: false },
                 ].map(card => (
@@ -384,7 +384,7 @@ export default function Platform() {
                 ))}
                 {/* Mini bar chart */}
                 <div className="col-span-2 rounded-xl p-3" style={{ background: '#F2EBE0' }}>
-                  <p className="text-[9px] font-semibold tracking-wide uppercase mb-2" style={{ color: '#8B6575' }}>Top skin concerns by tone group</p>
+                  <p className="text-[9px] font-semibold tracking-wide uppercase mb-2" style={{ color: '#8B6575' }}>Top concerns by consumer segment</p>
                   <div className="flex items-end gap-1.5 h-10">
                     {[62, 45, 38, 71, 55, 48, 65, 52].map((v, i) => (
                       <div
@@ -402,8 +402,8 @@ export default function Platform() {
               {[
                 {
                   title: 'Consumer intelligence overview',
-                  body: 'Total active consumers, skin score averages, concern distributions, Monk tone breakdowns, and routine compliance — all in one command center. Updated in real time as consumers check in.',
-                  tags: ['Active profiles', 'Skin score trends', 'Concern maps', 'Compliance rates'],
+                  body: 'Total active consumers, satisfaction score averages, concern distributions, demographic breakdowns, and engagement rates — all in one command center. Updated in real time as consumers check in.',
+                  tags: ['Active profiles', 'Satisfaction trends', 'Concern maps', 'Engagement rates'],
                 },
                 {
                   title: 'Ingredient lab & product performance',
@@ -412,12 +412,12 @@ export default function Platform() {
                 },
                 {
                   title: 'Retention & churn intelligence',
-                  body: 'Compliance drop-offs, declining skin scores, and reduced check-in frequency are early warning signs. Halite surfaces high-risk consumers so your team can re-engage with the right offer before they leave.',
+                  body: 'Engagement drop-offs, declining satisfaction scores, and reduced check-in frequency are early warning signs. Halite surfaces high-risk consumers so your team can re-engage with the right offer before they leave.',
                   tags: ['Churn risk scoring', 'Re-engagement list', 'Compliance alerts', 'Win-back timing'],
                 },
                 {
                   title: 'Market benchmarking',
-                  body: 'Compare your consumer skin concern distribution against anonymized market-level trends. Understand where your product mix is well-matched and where you have white space.',
+                  body: 'Compare your consumer concern distribution against anonymized market-level trends. Understand where your product mix is well-matched and where you have white space.',
                   tags: ['Market trends', 'Concern benchmarks', 'Demographic gaps', 'Portfolio fit'],
                 },
               ].map((item, i) => (
@@ -552,14 +552,14 @@ export default function Platform() {
               {[
                 {
                   icon: '◎',
-                  title: 'Skin quiz & routine generation',
-                  body: 'Consumers complete a 2-minute skin quiz directly on your storefront. Halite instantly generates a personalized routine from your catalogue, displayed in the widget. Zero redirects.',
-                  detail: '2 min quiz · Catalogue-native · Monk Skin Tone-aware',
+                  title: 'Consumer quiz & recommendations',
+                  body: 'Consumers complete a 2-minute quiz directly on your storefront. Halite instantly generates a personalized recommendation from your catalogue, displayed in the widget. Zero redirects.',
+                  detail: '2 min quiz · Catalogue-native · Inclusive by design',
                 },
                 {
                   icon: '⬡',
-                  title: 'Weekly check-in prompts',
-                  body: 'Smart cadence-based nudges prompt returning consumers to log their skin progress. Ratings and reactions are captured and pushed to the Outcome Tracker automatically.',
+                  title: 'Regular check-in prompts',
+                  body: 'Smart cadence-based nudges prompt returning consumers to log their product experience. Satisfaction scores and reactions are captured and pushed to the Outcome Tracker automatically.',
                   detail: 'Smart timing · No app needed · Feeds outcome data',
                 },
                 {
@@ -570,8 +570,8 @@ export default function Platform() {
                 },
                 {
                   icon: '▲',
-                  title: 'Progress view & skin narrative',
-                  body: 'Returning consumers see a visual summary of their skin journey — scores over time, milestone alerts, and an AI-generated progress narrative. Drives engagement and reinforces product value.',
+                  title: 'Progress view & narrative',
+                  body: 'Returning consumers see a visual summary of their product journey — scores over time, milestone alerts, and an AI-generated progress narrative. Drives engagement and reinforces product value.',
                   detail: 'AI-written · Personalised milestones · Drives repeat visits',
                 },
                 {
@@ -710,7 +710,7 @@ export default function Platform() {
                 <span className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5" style={{ color: 'rgba(250,246,240,0.4)' }}>Intelligence</span>
               </div>
               <p className="text-[13px] leading-relaxed max-w-xs" style={{ color: 'rgba(250,246,240,0.45)' }}>
-                Predictive consumer intelligence for modern beauty brands. Know your customer. Personalize deeper. Retain longer.
+                Predictive consumer intelligence for CPG brands. Know your customer. Personalize deeper. Retain longer.
               </p>
             </div>
             <div>

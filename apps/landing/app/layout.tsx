@@ -17,21 +17,21 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL('https://haliteintelligence.com'),
   title: {
-    default: 'Halite Intelligence — Predictive Consumer Intelligence for Beauty Brands',
+    default: 'Halite Intelligence — Predictive Consumer Intelligence for CPG Brands',
     template: '%s — Halite Intelligence',
   },
-  description: 'Halite Intelligence is the predictive consumer intelligence platform for beauty brands. Know your customer, personalize at scale, and retain longer with AI-powered skin routines and real outcome data.',
+  description: 'Halite Intelligence is the predictive consumer intelligence platform for CPG brands. Know your customer, personalize at scale, and retain longer with AI-powered recommendations and real outcome data.',
   keywords: [
+    'CPG consumer intelligence',
+    'predictive intelligence platform',
+    'consumer intelligence platform',
+    'CPG brand analytics',
+    'AI product personalization',
+    'customer retention CPG',
     'beauty brand intelligence',
     'AI skincare personalization',
-    'consumer intelligence platform',
-    'beauty tech B2B',
-    'skin routine AI',
-    'customer retention beauty',
-    'beauty brand dashboard',
-    'personalized skincare platform',
+    'consumer packaged goods intelligence',
     'Monk Skin Tone AI',
-    'beauty brand analytics',
   ],
   authors: [{ name: 'Halite Intelligence', url: 'https://haliteintelligence.com' }],
   creator: 'Halite Intelligence',
@@ -52,8 +52,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haliteintelligence.com',
     siteName: 'Halite Intelligence',
-    title: 'Halite Intelligence — Predictive Consumer Intelligence for Beauty Brands',
-    description: 'Know your customer. Personalize deeper. Retain longer. The AI platform that turns every skin interaction into retention leverage for beauty brands.',
+    title: 'Halite Intelligence — Predictive Consumer Intelligence for CPG Brands',
+    description: 'Know your customer. Personalize deeper. Retain longer. The AI platform that turns every consumer interaction into retention leverage for CPG brands.',
     images: [
       {
         url: '/og-image.png',
@@ -65,8 +65,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Halite Intelligence — Predictive Consumer Intelligence for Beauty Brands',
-    description: 'Know your customer. Personalize deeper. Retain longer. The AI platform built for beauty brands.',
+    title: 'Halite Intelligence — Predictive Consumer Intelligence for CPG Brands',
+    description: 'Know your customer. Personalize deeper. Retain longer. The AI platform built for CPG brands.',
     images: ['/og-image.png'],
   },
   alternates: {

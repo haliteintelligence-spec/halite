@@ -93,7 +93,7 @@ export default function Landing() {
               className="text-lg leading-relaxed mb-10 max-w-md"
               style={{ color: 'rgba(250,246,240,0.72)' }}
             >
-              Halite turns every skin interaction into a signal — building a living consumer profile that gets smarter with every check-in, so your brand can personalize deeper and retain longer.
+              Halite turns every consumer interaction into a signal — building a living profile that gets smarter with every check-in, so your brand can personalize deeper and retain longer.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
@@ -158,9 +158,9 @@ export default function Landing() {
       <section style={{ background: '#FAF6F0', borderBottom: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { n: '30%',    label: 'Increase in customer retention via personalized routines' },
+            { n: '30%',    label: 'Increase in customer retention via personalized recommendations' },
             { n: '15–18%', label: 'Higher conversion driven by predictive AI personalization' },
-            { n: '39%',    label: 'Higher basket value from AI-matched recommendations' },
+            { n: '39%',    label: 'Higher basket value from AI-matched product recommendations' },
             { n: '50%',    label: 'Reduction in customer acquisition costs over time' },
           ].map(item => (
             <div key={item.label} className="text-center">
@@ -190,17 +190,17 @@ export default function Landing() {
               {
                 icon: '◎',
                 title: 'Profiles frozen at purchase.',
-                body: 'A customer buys once. Their skin changes. Their concerns evolve. But your data stays exactly where it started — a snapshot, not a story.',
+                body: 'A customer buys once. Their needs change. Their preferences evolve. But your data stays exactly where it started — a snapshot, not a story.',
               },
               {
                 icon: '⬡',
                 title: 'Personalization with no feedback loop.',
-                body: 'You recommend. They close the tab. You never know if it worked, if their skin changed, or why they didn\'t reorder.',
+                body: 'You recommend. They close the tab. You never know if it worked, if their needs changed, or why they didn\'t reorder.',
               },
               {
                 icon: '◈',
                 title: 'Retention guesswork.',
-                body: 'You can\'t predict who\'s about to churn without knowing how their routine is going. Real signals require real check-ins.',
+                body: 'You can\'t predict who\'s about to churn without knowing how their experience is going. Real signals require real check-ins.',
               },
             ].map(p => (
               <div
@@ -239,22 +239,22 @@ export default function Landing() {
               {
                 n: '01',
                 title: 'Profile',
-                body: 'AI-powered quiz builds a complete skin profile in under 2 minutes. Skin type, concerns, climate, Monk tone, budget — everything your recommendation engine needs.',
+                body: 'AI-powered quiz builds a complete consumer profile in under 2 minutes. Needs, preferences, lifestyle signals, and budget — everything your recommendation engine needs.',
               },
               {
                 n: '02',
                 title: 'Personalize',
-                body: 'Our AI generates a bespoke routine from your catalogue — inclusive by design, ingredient-matched, and price-filtered. No generic picks, ever.',
+                body: 'Our AI generates a bespoke recommendation from your catalogue — inclusive by design, need-matched, and price-filtered. No generic picks, ever.',
               },
               {
                 n: '03',
                 title: 'Track',
-                body: 'Weekly check-ins capture skin ratings, product reactions, and compliance. Each response updates the consumer\'s profile and your brand analytics.',
+                body: 'Regular check-ins capture satisfaction scores, product reactions, and engagement. Each response updates the consumer\'s profile and your brand analytics.',
               },
               {
                 n: '04',
                 title: 'Predict',
-                body: 'Halite surfaces churn risk, reorder intent, and skin progression trends — giving your team the signals to act before a customer leaves.',
+                body: 'Halite surfaces churn risk, reorder intent, and satisfaction trends — giving your team the signals to act before a customer leaves.',
               },
             ].map(step => (
               <div
@@ -315,8 +315,8 @@ export default function Landing() {
                 <p className="text-[10px] font-semibold tracking-wide uppercase mb-2" style={{ color: '#8B6575' }}>Consumer profile depth</p>
                 <div className="flex items-center gap-3">
                   {[
-                    { label: 'Skin data', pct: 94 },
-                    { label: 'Routine compliance', pct: 83 },
+                    { label: 'Usage data', pct: 94 },
+                    { label: 'Engagement', pct: 83 },
                     { label: 'Product reactions', pct: 71 },
                   ].map(s => (
                     <div key={s.label} className="flex-1">
@@ -340,10 +340,10 @@ export default function Landing() {
                 Profiles that evolve with your customer.
               </h3>
               <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Every quiz answer, weekly check-in, and product reaction updates the consumer's profile in real time. Halite builds a longitudinal picture of each customer — their skin journey, concerns over time, and what's actually working — so you're never personalizing from stale data.
+                Every quiz answer, check-in, and product reaction updates the consumer's profile in real time. Halite builds a longitudinal picture of each customer — their product journey, preferences over time, and what's actually working — so you're never personalizing from stale data.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Longitudinal skin data', 'Routine compliance', 'Product reactions', 'Churn risk signals'].map(tag => (
+                {['Longitudinal usage data', 'Engagement tracking', 'Product reactions', 'Churn risk signals'].map(tag => (
                   <span
                     key={tag}
                     className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
@@ -366,10 +366,10 @@ export default function Landing() {
                 Know who's at risk before they leave.
               </h3>
               <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Routine compliance drops. Check-in frequency falls. Skin ratings decline. Halite reads these signals and surfaces retention risk so your team can intervene with the right offer at the right moment — before the customer cancels or ghosts.
+                Engagement drops. Check-in frequency falls. Satisfaction scores decline. Halite reads these signals and surfaces retention risk so your team can intervene with the right offer at the right moment — before the customer cancels or ghosts.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Churn prediction', 'Re-engagement triggers', 'Compliance monitoring', 'Smart reorder timing'].map(tag => (
+                {['Churn prediction', 'Re-engagement triggers', 'Engagement monitoring', 'Smart reorder timing'].map(tag => (
                   <span
                     key={tag}
                     className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
@@ -397,8 +397,8 @@ export default function Landing() {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-semibold tracking-wide uppercase mb-0.5" style={{ color: '#8B6575' }}>Hyperpigmentation prevalence</p>
-                    <p className="font-display text-xl font-semibold" style={{ color: '#450F2A' }}>65% of tones 07–10</p>
+                    <p className="text-[10px] font-semibold tracking-wide uppercase mb-0.5" style={{ color: '#8B6575' }}>Top concern by segment</p>
+                    <p className="font-display text-xl font-semibold" style={{ color: '#450F2A' }}>Dryness · 65% of base</p>
                   </div>
                   <div className="h-12 w-24 flex items-end gap-0.5">
                     {[30, 45, 38, 55, 67, 58, 72].map((v, i) => (
@@ -416,10 +416,10 @@ export default function Landing() {
                 Consumer intelligence that compounds.
               </h3>
               <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Aggregate skin concern trends, ingredient performance, and demographic breakdowns — across your entire consumer base. The more routines run, the more precisely you know what's working, who it's working for, and what to build next.
+                Aggregate usage patterns, product performance, and demographic breakdowns — across your entire consumer base. The more interactions you capture, the more precisely you know what's working, who it's working for, and what to build next.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Concern trend maps', 'Ingredient efficacy', 'Product performance', 'Demographic insights'].map(tag => (
+                {['Category trend maps', 'Product efficacy', 'Portfolio performance', 'Demographic insights'].map(tag => (
                   <span
                     key={tag}
                     className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
@@ -442,10 +442,10 @@ export default function Landing() {
                 Personalization that actually fits.
               </h3>
               <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Claude generates a bespoke regimen from your catalogue — Monk Skin Tone-aware, ingredient-matched, climate-adjusted, and budget-filtered. Every routine is a data point that makes the next one better.
+                Our AI generates a bespoke recommendation from your catalogue — need-matched, preference-aware, and budget-filtered. Every recommendation is a data point that makes the next one better.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Inclusive AI', 'Catalogue-native', 'Climate-aware', 'Budget-filtered'].map(tag => (
+                {['Inclusive AI', 'Catalogue-native', 'Need-matched', 'Budget-filtered'].map(tag => (
                   <span
                     key={tag}
                     className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
@@ -532,10 +532,10 @@ export default function Landing() {
 
           <div className="space-y-4">
             {[
-              { icon: '✦', title: 'Quiz + routine', body: 'Embedded skin quiz builds a profile and generates a personalized routine in real time. Every answer is a new data point.' },
-              { icon: '◉', title: 'Weekly check-ins', body: 'Consumers log skin ratings and product reactions directly from the widget. Each response sharpens their profile.' },
-              { icon: '⟳', title: 'Smart reorder nudges', body: 'Reorder prompts timed to each product\'s run-rate — triggered by compliance data, not arbitrary schedules.' },
-              { icon: '▲', title: 'Progress narrative', body: 'AI-generated skin progress summary. Consumers see their journey; your brand gets the trend data behind it.' },
+              { icon: '✦', title: 'Quiz + recommendation', body: 'Embedded consumer quiz builds a profile and generates a personalized product recommendation in real time. Every answer is a new data point.' },
+              { icon: '◉', title: 'Regular check-ins', body: 'Consumers log satisfaction scores and product reactions directly from the widget. Each response sharpens their profile.' },
+              { icon: '⟳', title: 'Smart reorder nudges', body: 'Reorder prompts timed to each product\'s run-rate — triggered by engagement data, not arbitrary schedules.' },
+              { icon: '▲', title: 'Progress narrative', body: 'AI-generated progress summary. Consumers see their journey; your brand gets the trend data behind it.' },
             ].map(item => (
               <div
                 key={item.title}
@@ -566,10 +566,10 @@ export default function Landing() {
               Why Halite
             </p>
             <h2 className="font-display text-4xl font-semibold" style={{ color: '#1A0A12' }}>
-              The only platform built for predictive intelligence.
+              The only platform built for predictive CPG intelligence.
             </h2>
             <p className="text-base mt-3 max-w-lg mx-auto" style={{ color: '#8B6575' }}>
-              Others stop at the recommendation. Halite turns every interaction into retention leverage.
+              Others stop at the recommendation. Halite turns every consumer interaction into retention leverage.
             </p>
           </div>
 
@@ -638,10 +638,10 @@ export default function Landing() {
               Inclusive by design
             </p>
             <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
-              Intelligence built for every skin.
+              Intelligence built for every consumer.
             </h2>
             <p className="text-base leading-relaxed" style={{ color: 'rgba(250,246,240,0.72)' }}>
-              Most beauty AI was trained on narrow datasets. Halite uses the Monk Skin Tone Scale — all 10 tones — so your personalization is accurate for every one of your customers, not just some of them. Better data. Better recommendations. Better retention.
+              Most beauty and personal care AI was trained on narrow datasets. Halite uses the Monk Skin Tone Scale — all 10 tones — so your personalization is accurate for every one of your customers, not just some of them. Inclusion isn't a feature. It's the foundation.
             </p>
           </div>
 
@@ -824,7 +824,7 @@ export default function Landing() {
                 <span className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5" style={{ color: 'rgba(250,246,240,0.4)' }}>Intelligence</span>
               </div>
               <p className="text-[13px] leading-relaxed max-w-xs" style={{ color: 'rgba(250,246,240,0.45)' }}>
-                Predictive consumer intelligence for modern beauty brands. Know your customer. Personalize deeper. Retain longer.
+                Predictive consumer intelligence for CPG brands. Know your customer. Personalize deeper. Retain longer.
               </p>
             </div>
             <div>
