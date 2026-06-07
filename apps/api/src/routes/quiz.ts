@@ -387,7 +387,7 @@ export async function quizRoutes(server: FastifyInstance) {
 
       // Already has routines — return them immediately
       const existingRoutines = await prisma.routine.findMany({
-        where: { endUserId: userId, brandId },
+        where: { endUserId: userId },
         include: { steps: { include: { product: { select: { id: true, name: true } } } } },
       })
       if (existingRoutines.length > 0) {
