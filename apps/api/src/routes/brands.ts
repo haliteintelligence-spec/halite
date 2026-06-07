@@ -241,6 +241,20 @@ export async function brandRoutes(server: FastifyInstance) {
       if (!uid && resolvedConsumerId) uid = `consumer-${resolvedConsumerId}`
       if (!uid) uid = `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
+      // Pull name from a sibling EndUser as fallback when the client didn't send one
+      let resolvedFirstName = firstName ?? null
+      let resolvedLastName = lastName ?? null
+      if (resolvedConsumerId && !resolvedFirstName) {
+        const sibling = await prisma.endUser.findFirst({
+          where: { consumerId: resolvedConsumerId, firstName: { not: null } },
+          select: { firstName: true, lastName: true },
+        })
+        if (sibling?.firstName) {
+          resolvedFirstName = sibling.firstName
+          resolvedLastName = resolvedLastName ?? sibling.lastName ?? null
+        }
+      }
+
       const endUser = await prisma.endUser.upsert({
         where: { brandId_externalId: { brandId: brand.id, externalId: uid } },
         update: {
@@ -253,8 +267,8 @@ export async function brandRoutes(server: FastifyInstance) {
           brandId: brand.id,
           externalId: uid,
           email: email ?? null,
-          firstName: firstName ?? null,
-          lastName: lastName ?? null,
+          firstName: resolvedFirstName,
+          lastName: resolvedLastName,
           consumerId: resolvedConsumerId,
         },
       })

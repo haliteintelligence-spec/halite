@@ -118,10 +118,10 @@ function filterQuestionsForPrefill(
 ): QuizQuestion[] {
   const doneAreas = new Set(completedAreas)
   return questions.filter(q => {
-    // Keep questions for brand focus areas that aren't yet completed
+    // Always skip shared questions that are already answered in prefill
+    if (q.area === 'SHARED' && SHARED_QUESTION_IDS.has(q.id) && prefillAnswers[q.id] !== undefined) return false
+    // Keep questions for areas not yet completed
     if (!doneAreas.has(q.area)) return true
-    // For shared questions: keep if not already answered in prefill
-    if (SHARED_QUESTION_IDS.has(q.id) && prefillAnswers[q.id] === undefined) return true
     return false
   })
 }
@@ -178,16 +178,36 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
       const result: LookupResult = await res.json()
       setLookupResult(result)
 
-      if (result.found && result.prefillToken && (result.completedAreas?.length ?? 0) > 0) {
-        // Check if any of the consumer's completed areas overlap with this brand's focus areas
+      if (result.found && result.prefillToken) {
         const overlap = (result.completedAreas ?? []).filter(a => brand.focusAreas.includes(a))
-        if (overlap.length > 0) {
+        if ((result.completedAreas?.length ?? 0) > 0 && overlap.length > 0) {
+          // Areas overlap — show returning-consumer screen (full prefill with option to skip)
           setPhase('returning')
           return
         }
+        // Consumer found but no area overlap — silently apply shared question prefill
+        try {
+          const pRes = await fetch(`${apiUrl}/brands/slug/${slug}/quiz/prefill`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefillToken: result.prefillToken }),
+          })
+          if (pRes.ok) {
+            const pData = await pRes.json() as { prefillAnswers: Record<string, unknown>; completedAreas: string[]; firstName?: string | null; lastName?: string | null }
+            if (pData.firstName && !contact.firstName) {
+              setContact(c => ({ ...c, firstName: pData.firstName!, lastName: pData.lastName ?? c.lastName }))
+            }
+            if (Object.keys(pData.prefillAnswers).length > 0) {
+              setPrefillAnswers(pData.prefillAnswers)
+              setCompletedAreas([]) // areas not completed at THIS brand — still show area questions
+              await handleStart(pData.prefillAnswers, [])
+              return
+            }
+          }
+        } catch { /* fall through to fresh quiz */ }
       }
 
-      // No relevant prior profile — go straight to quiz
+      // No prior profile — go straight to quiz
       await handleStart(null)
     } catch {
       // Lookup failed — proceed without pre-fill
@@ -301,7 +321,7 @@ export function QuizClient({ brand, slug }: { brand: BrandInfo; slug: string }) 
         setPhase('area_select')
       } else {
         let questions = flattenFlow(flow)
-        if (existingAnswers && existingAreas.length > 0) {
+        if (existingAnswers && Object.keys(existingAnswers).length > 0) {
           questions = filterQuestionsForPrefill(questions, existingAreas, existingAnswers)
         }
         if (questions.length === 0) {

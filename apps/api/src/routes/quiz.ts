@@ -228,15 +228,32 @@ export async function quizRoutes(server: FastifyInstance) {
       const answers = session.answers as Record<string, unknown>
       const selectedAreas = session.selectedAreas as string[]
 
+      // Enrich session answers with Consumer.prefillAnswers to fill profile gaps
+      // (session answers win — Consumer data only fills fields the consumer didn't re-answer here)
+      const euWithConsumer = await prisma.endUser.findUnique({
+        where: { id: userId },
+        select: { consumerId: true },
+      })
+      let effectiveAnswers = answers
+      if (euWithConsumer?.consumerId) {
+        const consumerPrefill = await prisma.consumer.findUnique({
+          where: { id: euWithConsumer.consumerId },
+          select: { prefillAnswers: true },
+        })
+        if (consumerPrefill?.prefillAnswers) {
+          effectiveAnswers = { ...(consumerPrefill.prefillAnswers as Record<string, unknown>), ...answers }
+        }
+      }
+
       // Persist beauty profile
-      const locationData = answers['SH1_location'] as Record<string, string> | undefined
-      const climateData = answers['SH1_climate'] as Record<string, unknown> | undefined
-      const budgetRange = ((answers['SH3'] as string) ?? '').split(',')
+      const locationData = effectiveAnswers['SH1_location'] as Record<string, string> | undefined
+      const climateData = effectiveAnswers['SH1_climate'] as Record<string, unknown> | undefined
+      const budgetRange = ((effectiveAnswers['SH3'] as string) ?? '').split(',')
 
       await prisma.userBeautyProfile.upsert({
         where: { endUserId: userId },
         update: {
-          ageRange: answers['SH0'] ? birthdayToAgeRange(answers['SH0'] as string) : null,
+          ageRange: effectiveAnswers['SH0'] ? birthdayToAgeRange(effectiveAnswers['SH0'] as string) : null,
           completedAreas: selectedAreas as any,
           city: locationData?.city ?? null,
           country: locationData?.country ?? null,
@@ -247,30 +264,30 @@ export async function quizRoutes(server: FastifyInstance) {
           detectedCurrency: locationData?.currency ?? null,
           climateTag: (climateData?.climateTag as any) ?? undefined,
           climateSnapshot: (climateData ?? Prisma.JsonNull) as any,
-          routineFormat: (answers['SH2A'] as any) ?? undefined,
-          selectedCategories: (answers['SH2B'] as any) ?? [],
+          routineFormat: (effectiveAnswers['SH2A'] as any) ?? undefined,
+          selectedCategories: (effectiveAnswers['SH2B'] as any) ?? [],
           spendMin: budgetRange[0] ? parseFloat(budgetRange[0]) : null,
           spendMax: budgetRange[1] ? parseFloat(budgetRange[1]) : null,
           spendCurrency: locationData?.currency ?? 'USD',
-          waterIntakeMl: answers['SH4'] ? (WATER_LABELS[answers['SH4'] as string] ?? String(answers['SH4'])) : null,
-          sleepHours: answers['SH5'] ? (SLEEP_LABELS[answers['SH5'] as string] ?? String(answers['SH5'])) : null,
-          stressLevel: answers['SH6'] ? parseInt(answers['SH6'] as string) : null,
-          monkSkinTone: answers['S5'] ? parseInt(answers['S5'] as string) : null,
-          skinType: mapSkinType(answers['S1'] as string | undefined),
-          skinConcerns: (answers['S4'] as any) ?? [],
-          bodyProfile: (extractAreaAnswers(answers, 'B') ?? Prisma.JsonNull) as any,
-          hairProfile: (extractAreaAnswers(answers, 'H') ?? Prisma.JsonNull) as any,
-          makeupProfile: (extractAreaAnswers(answers, 'M') ?? Prisma.JsonNull) as any,
-          fragranceProfile: (extractAreaAnswers(answers, 'F') ?? Prisma.JsonNull) as any,
-          nailsProfile: (extractAreaAnswers(answers, 'N') ?? Prisma.JsonNull) as any,
-          wellnessProfile: (extractAreaAnswers(answers, 'W') ?? Prisma.JsonNull) as any,
-          sunCareProfile: (extractAreaAnswers(answers, 'SC') ?? Prisma.JsonNull) as any,
-          lipProfile: (extractAreaAnswers(answers, 'L') ?? Prisma.JsonNull) as any,
-          eyeProfile: (extractAreaAnswers(answers, 'E') ?? Prisma.JsonNull) as any,
+          waterIntakeMl: effectiveAnswers['SH4'] ? (WATER_LABELS[effectiveAnswers['SH4'] as string] ?? String(effectiveAnswers['SH4'])) : null,
+          sleepHours: effectiveAnswers['SH5'] ? (SLEEP_LABELS[effectiveAnswers['SH5'] as string] ?? String(effectiveAnswers['SH5'])) : null,
+          stressLevel: effectiveAnswers['SH6'] ? parseInt(effectiveAnswers['SH6'] as string) : null,
+          monkSkinTone: effectiveAnswers['S5'] ? parseInt(effectiveAnswers['S5'] as string) : null,
+          skinType: mapSkinType(effectiveAnswers['S1'] as string | undefined),
+          skinConcerns: (effectiveAnswers['S4'] as any) ?? [],
+          bodyProfile: (extractAreaAnswers(effectiveAnswers, 'B') ?? Prisma.JsonNull) as any,
+          hairProfile: (extractAreaAnswers(effectiveAnswers, 'H') ?? Prisma.JsonNull) as any,
+          makeupProfile: (extractAreaAnswers(effectiveAnswers, 'M') ?? Prisma.JsonNull) as any,
+          fragranceProfile: (extractAreaAnswers(effectiveAnswers, 'F') ?? Prisma.JsonNull) as any,
+          nailsProfile: (extractAreaAnswers(effectiveAnswers, 'N') ?? Prisma.JsonNull) as any,
+          wellnessProfile: (extractAreaAnswers(effectiveAnswers, 'W') ?? Prisma.JsonNull) as any,
+          sunCareProfile: (extractAreaAnswers(effectiveAnswers, 'SC') ?? Prisma.JsonNull) as any,
+          lipProfile: (extractAreaAnswers(effectiveAnswers, 'L') ?? Prisma.JsonNull) as any,
+          eyeProfile: (extractAreaAnswers(effectiveAnswers, 'E') ?? Prisma.JsonNull) as any,
         },
         create: {
           endUserId: userId,
-          ageRange: answers['SH0'] ? birthdayToAgeRange(answers['SH0'] as string) : null,
+          ageRange: effectiveAnswers['SH0'] ? birthdayToAgeRange(effectiveAnswers['SH0'] as string) : null,
           completedAreas: selectedAreas as any,
           city: locationData?.city ?? null,
           country: locationData?.country ?? null,
@@ -281,26 +298,26 @@ export async function quizRoutes(server: FastifyInstance) {
           detectedCurrency: locationData?.currency ?? 'USD',
           climateTag: (climateData?.climateTag as any) ?? undefined,
           climateSnapshot: (climateData ?? Prisma.JsonNull) as any,
-          routineFormat: (answers['SH2A'] as any) ?? 'ROUTINE',
-          selectedCategories: (answers['SH2B'] as any) ?? [],
+          routineFormat: (effectiveAnswers['SH2A'] as any) ?? 'ROUTINE',
+          selectedCategories: (effectiveAnswers['SH2B'] as any) ?? [],
           spendMin: budgetRange[0] ? parseFloat(budgetRange[0]) : null,
           spendMax: budgetRange[1] ? parseFloat(budgetRange[1]) : null,
           spendCurrency: locationData?.currency ?? 'USD',
-          waterIntakeMl: answers['SH4'] ? (WATER_LABELS[answers['SH4'] as string] ?? String(answers['SH4'])) : null,
-          sleepHours: answers['SH5'] ? (SLEEP_LABELS[answers['SH5'] as string] ?? String(answers['SH5'])) : null,
-          stressLevel: answers['SH6'] ? parseInt(answers['SH6'] as string) : null,
-          monkSkinTone: answers['S5'] ? parseInt(answers['S5'] as string) : null,
-          skinType: mapSkinType(answers['S1'] as string | undefined),
-          skinConcerns: (answers['S4'] as any) ?? [],
-          bodyProfile: (extractAreaAnswers(answers, 'B') ?? Prisma.JsonNull) as any,
-          hairProfile: (extractAreaAnswers(answers, 'H') ?? Prisma.JsonNull) as any,
-          makeupProfile: (extractAreaAnswers(answers, 'M') ?? Prisma.JsonNull) as any,
-          fragranceProfile: (extractAreaAnswers(answers, 'F') ?? Prisma.JsonNull) as any,
-          nailsProfile: (extractAreaAnswers(answers, 'N') ?? Prisma.JsonNull) as any,
-          wellnessProfile: (extractAreaAnswers(answers, 'W') ?? Prisma.JsonNull) as any,
-          sunCareProfile: (extractAreaAnswers(answers, 'SC') ?? Prisma.JsonNull) as any,
-          lipProfile: (extractAreaAnswers(answers, 'L') ?? Prisma.JsonNull) as any,
-          eyeProfile: (extractAreaAnswers(answers, 'E') ?? Prisma.JsonNull) as any,
+          waterIntakeMl: effectiveAnswers['SH4'] ? (WATER_LABELS[effectiveAnswers['SH4'] as string] ?? String(effectiveAnswers['SH4'])) : null,
+          sleepHours: effectiveAnswers['SH5'] ? (SLEEP_LABELS[effectiveAnswers['SH5'] as string] ?? String(effectiveAnswers['SH5'])) : null,
+          stressLevel: effectiveAnswers['SH6'] ? parseInt(effectiveAnswers['SH6'] as string) : null,
+          monkSkinTone: effectiveAnswers['S5'] ? parseInt(effectiveAnswers['S5'] as string) : null,
+          skinType: mapSkinType(effectiveAnswers['S1'] as string | undefined),
+          skinConcerns: (effectiveAnswers['S4'] as any) ?? [],
+          bodyProfile: (extractAreaAnswers(effectiveAnswers, 'B') ?? Prisma.JsonNull) as any,
+          hairProfile: (extractAreaAnswers(effectiveAnswers, 'H') ?? Prisma.JsonNull) as any,
+          makeupProfile: (extractAreaAnswers(effectiveAnswers, 'M') ?? Prisma.JsonNull) as any,
+          fragranceProfile: (extractAreaAnswers(effectiveAnswers, 'F') ?? Prisma.JsonNull) as any,
+          nailsProfile: (extractAreaAnswers(effectiveAnswers, 'N') ?? Prisma.JsonNull) as any,
+          wellnessProfile: (extractAreaAnswers(effectiveAnswers, 'W') ?? Prisma.JsonNull) as any,
+          sunCareProfile: (extractAreaAnswers(effectiveAnswers, 'SC') ?? Prisma.JsonNull) as any,
+          lipProfile: (extractAreaAnswers(effectiveAnswers, 'L') ?? Prisma.JsonNull) as any,
+          eyeProfile: (extractAreaAnswers(effectiveAnswers, 'E') ?? Prisma.JsonNull) as any,
         },
       })
 
@@ -358,7 +375,7 @@ export async function quizRoutes(server: FastifyInstance) {
         ? selectedAreas
         : (await prisma.brand.findUnique({ where: { id: brandId } }))?.focusAreas ?? []
 
-      generateRoutinesAsync(userId, brandId, sessionId, areasToGenerate as string[], answers)
+      generateRoutinesAsync(userId, brandId, sessionId, areasToGenerate as string[], effectiveAnswers)
 
       return reply.status(202).send({
         message: 'Quiz complete. Your personalized routine is being prepared.',
