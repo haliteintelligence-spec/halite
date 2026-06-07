@@ -12,42 +12,18 @@ function getToken() {
     : undefined
 }
 
-function deterministicPhone(id: string) {
-  let h = 5381
-  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) ^ id.charCodeAt(i)) >>> 0
-  const n = (h % 9000000000) + 1000000000
-  const s = String(n)
-  return `(${s.slice(0, 3)}) ${s.slice(3, 6)}-${s.slice(6, 10)}`
-}
-
-function ageFromRange(ageRange: string | null, id: string) {
-  const ranges: Record<string, [number, number]> = {
-    under_18: [14, 17], '18_24': [18, 24], '25_34': [25, 34],
-    '35_44': [35, 44], '45_54': [45, 54], '55_64': [55, 64], '65_plus': [65, 75],
-  }
-  const [min, max] = ranges[ageRange ?? '25_34'] ?? [25, 34]
-  let h = 5381
-  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) ^ id.charCodeAt(i)) >>> 0
-  return min + (h % (max - min + 1))
-}
-
-function birthdayFromAge(age: number, id: string) {
-  let h = 5381
-  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 33) ^ id.charCodeAt(i)) >>> 0
-  const year = new Date().getFullYear() - age
-  const month = (h % 12) + 1
-  const day = ((h >> 4) % 28) + 1
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+function calcAge(birthday: string): number {
+  const dob = new Date(birthday)
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const m = today.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  return age
 }
 
 function fmt(s: string | null | undefined) {
   if (!s) return '—'
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-const AGE_LABELS: Record<string, string> = {
-  under_18: 'Under 18', '18_24': '18–24', '25_34': '25–34',
-  '35_44': '35–44', '45_54': '45–54', '55_64': '55–64', '65_plus': '65+',
 }
 
 interface Props {
@@ -83,9 +59,9 @@ export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
   const bp = c.beautyProfile
   const quiz = data.quizSession
   const quizAnswers = quiz?.answers as Record<string, unknown> ?? {}
-  const age = bp ? ageFromRange(bp.ageRange, c.id) : null
-  const birthday = age ? birthdayFromAge(age, c.id) : null
-  const phone = deterministicPhone(c.id)
+  const realBirthday: string | null = c.consumer?.birthday ?? null
+  const realPhone: string | null = c.consumer?.phone ?? c.phone ?? null
+  const realAge = realBirthday ? calcAge(realBirthday) : null
   const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown'
   const allBrands: Array<{ id: string; brandId: string; brand: { name: string; slug: string; demoLinkExpiresAt: string | null } }> = c.consumer?.endUsers ?? []
   const crossBrandCount = allBrands.length
@@ -146,12 +122,11 @@ export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
         <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Contact & Identity</h2>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Consumer ID" value={c.id} />
-          <Field label="Phone" value={phone} />
-          {age && <Field label="Age" value={age} />}
-          {birthday && <Field label="Birthday" value={birthday} />}
+          <Field label="Phone" value={realPhone} />
+          {realBirthday && <Field label="Birthday" value={new Date(realBirthday).toLocaleDateString()} />}
+          {realAge !== null && <Field label="Age" value={realAge} />}
           <Field label="City" value={bp?.city} />
-          <Field label="Country" value={bp?.country ?? 'United States'} />
-          <Field label="Age Range" value={bp?.ageRange ? AGE_LABELS[bp.ageRange] ?? bp.ageRange : null} />
+          <Field label="Country" value={bp?.country} />
           <Field label="Joined" value={new Date(c.createdAt).toLocaleDateString()} />
         </div>
       </div>
@@ -193,7 +168,7 @@ export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {quizAnswers['SH0'] && <Field label="Age Range" value={AGE_LABELS[String(quizAnswers['SH0'])] ?? String(quizAnswers['SH0'])} />}
+            {quizAnswers['SH0'] && <Field label="Birthday" value={new Date(String(quizAnswers['SH0'])).toLocaleDateString()} />}
             {quizAnswers['S1'] && <Field label="Skin Type" value={fmt(String(quizAnswers['S1']))} />}
             {quizAnswers['S5'] && <Field label="Monk Skin Tone" value={String(quizAnswers['S5'])} />}
             {quizAnswers['S2'] && <Field label="Breakout Frequency" value={fmt(String(quizAnswers['S2']))} />}
@@ -221,10 +196,11 @@ export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
             )}
             {quizAnswers['H3'] && <Field label="Scalp Type" value={fmt(String(quizAnswers['H3']))} />}
             {quizAnswers['H4'] && <Field label="Hair Porosity" value={fmt(String(quizAnswers['H4']))} />}
-            {quizAnswers['SH1'] && <Field label="Routine Preference" value={fmt(String(quizAnswers['SH1']))} />}
-            {quizAnswers['SH2'] && <Field label="Water Intake" value={fmt(String(quizAnswers['SH2']))} />}
-            {quizAnswers['SH3'] && <Field label="Sleep Hours" value={fmt(String(quizAnswers['SH3']))} />}
-            {quizAnswers['SH4'] && <Field label="Stress Level" value={fmt(String(quizAnswers['SH4']))} />}
+            {quizAnswers['SH1'] && <Field label="Location" value={fmt(String(quizAnswers['SH1']))} />}
+            {quizAnswers['SH2A'] && <Field label="Routine Format" value={fmt(String(quizAnswers['SH2A']))} />}
+            {quizAnswers['SH4'] && <Field label="Water Intake" value={String(quizAnswers['SH4'])} />}
+            {quizAnswers['SH5'] && <Field label="Sleep Hours" value={String(quizAnswers['SH5'])} />}
+            {quizAnswers['SH6'] && <Field label="Stress Level" value={fmt(String(quizAnswers['SH6']))} />}
           </div>
         </div>
       )}

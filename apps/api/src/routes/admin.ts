@@ -1022,7 +1022,10 @@ export async function adminRoutes(server: FastifyInstance) {
         include: {
           beautyProfile: true,
           consumer: {
-            include: {
+            select: {
+              id: true,
+              phone: true,
+              birthday: true,
               endUsers: {
                 select: {
                   id: true,
