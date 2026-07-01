@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "pnpm install && pnpm --filter @halite/db db:generate && pnpm --filter @halite/db build && pnpm --filter @halite/api build"
 
 [deploy]
-startCommand = "pnpm --filter @halite/db db:push && node apps/api/dist/server.js"
+startCommand = "pnpm --filter @halite/db db:migrate-deploy && node apps/api/dist/server.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
