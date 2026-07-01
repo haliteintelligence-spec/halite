@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { prisma } from '@halite/db'
+import { prisma, Prisma } from '@halite/db'
 
 const eventSchema = z.object({
   userId: z.string(),
@@ -26,7 +26,7 @@ export async function internalRoutes(server: FastifyInstance) {
         auraUserId: event.userId,
         brandId: event.brandId,
         type: event.type,
-        data: event.data,
+        data: event.data as Prisma.InputJsonValue,
         occurredAt: event.occurredAt ? new Date(event.occurredAt) : new Date(),
         source: 'AURA',
       },
