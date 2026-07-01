@@ -17,6 +17,7 @@ import { crystalRoutes, adminCrystalRoutes } from './routes/crystal.js'
 import { consumerRoutes } from './routes/consumers.js'
 import { agentRoutes } from './routes/agents.js'
 import { insightsRoutes } from './routes/insights.js'
+import { internalRoutes } from './routes/internal.js'
 import { errorHandler } from './lib/errors.js'
 import { prisma } from '@halite/db'
 
@@ -76,6 +77,7 @@ async function bootstrap() {
   await server.register(consumerRoutes)
   await server.register(agentRoutes, { prefix: '/brands' })
   await server.register(insightsRoutes, { prefix: '/brands' })
+  await server.register(internalRoutes)
 
   server.setErrorHandler(errorHandler)
 

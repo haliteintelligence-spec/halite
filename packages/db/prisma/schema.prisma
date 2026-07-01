@@ -74,6 +74,7 @@ model Brand {
   crystalConversations CrystalConversation[]
   agentWorkflows       AgentWorkflow[]
   loginEvents          LoginEvent[]
+  consumerEvents       ConsumerEvent[]
 
   @@map("brands")
 }
@@ -352,7 +353,8 @@ model Consumer {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  endUsers EndUser[]
+  endUsers       EndUser[]
+  consumerEvents ConsumerEvent[]
 
   @@map("consumers")
 }
@@ -669,6 +671,42 @@ model Invoice {
   updatedAt DateTime      @updatedAt
 
   @@map("invoices")
+}
+
+// ─────────────────────────────────────────────
+// AURA CONSUMER EVENTS
+// ─────────────────────────────────────────────
+
+enum ConsumerEventType {
+  OUTCOME_LOGGED
+  TRANSACTION_COMPLETED
+  PREFERENCE_UPDATED
+  PRODUCT_TRACKED
+}
+
+enum ConsumerEventSource {
+  AURA
+  SHOPIFY
+  ECOMM_INTEGRATION
+}
+
+model ConsumerEvent {
+  id          String              @id @default(cuid())
+  brandId     String
+  consumerId  String?
+  auraUserId  String
+  type        ConsumerEventType
+  source      ConsumerEventSource @default(AURA)
+  data        Json
+  occurredAt  DateTime
+  createdAt   DateTime            @default(now())
+
+  brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  consumer Consumer? @relation(fields: [consumerId], references: [id])
+
+  @@index([brandId, type, occurredAt(sort: Desc)])
+  @@index([consumerId, occurredAt(sort: Desc)])
+  @@map("consumer_events")
 }
 
 // ─────────────────────────────────────────────

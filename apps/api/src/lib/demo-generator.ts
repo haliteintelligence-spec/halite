@@ -1018,7 +1018,7 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
   if (freshIds.length === 0) return
 
   const shuffled = shuffle(freshIds)
-  const identifiedCount = Math.round(shuffled.length * 0.65)
+  const identifiedCount = Math.round(shuffled.length * 0.95)
   const identifiedIds = shuffled.slice(0, identifiedCount)
 
   const otherDemoBrands = await prisma.brand.findMany({
@@ -1028,7 +1028,7 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
   })
 
   // Guarantee at least 25–35% of identified consumers appear at other demo brands
-  const crossBrandCount = otherDemoBrands.length > 0 ? Math.round(identifiedCount * 0.30) : 0
+  const crossBrandCount = otherDemoBrands.length > 0 ? Math.round(identifiedCount * 0.50) : 0
   const crossBrandSet = new Set(shuffle(identifiedIds).slice(0, crossBrandCount))
 
   const profiles = await prisma.userBeautyProfile.findMany({
@@ -1083,8 +1083,8 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
     })
 
     if (crossBrandSet.has(endUserId)) {
-      // Seed to 1–3 other demo brands for richer cross-brand signals
-      const brandsToSeed = shuffle(otherDemoBrands).slice(0, randomInt(1, Math.min(3, otherDemoBrands.length)))
+      // Seed to 2–4 other demo brands for richer cross-brand signals
+      const brandsToSeed = shuffle(otherDemoBrands).slice(0, randomInt(2, Math.min(4, otherDemoBrands.length)))
       for (const otherBrand of brandsToSeed) {
         await prisma.endUser.create({
           data: { brandId: otherBrand.id, consumerId: consumer.id, email: email ?? null },
