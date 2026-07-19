@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LayoutGrid, Play, Building2, LogOut, X } from 'lucide-react'
+import { LayoutGrid, Play, Building2, FlaskConical, LogOut, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const nav = [
-  { href: '/admin',        label: 'Overview',  icon: LayoutGrid },
-  { href: '/admin/demos',  label: 'Demos',     icon: Play },
-  { href: '/admin/brands', label: 'Onboarded', icon: Building2 },
+  { href: '/admin',            label: 'Overview',    icon: LayoutGrid },
+  { href: '/admin/demos',      label: 'Demos',       icon: Play },
+  { href: '/admin/brands',     label: 'Onboarded',   icon: Building2 },
+  { href: '/admin/hallie-test', label: 'Hallie Test', icon: FlaskConical },
 ]
 
 export function AdminNav() {
