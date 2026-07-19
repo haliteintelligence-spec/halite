@@ -45,12 +45,29 @@ export async function consumerRoutes(server: FastifyInstance) {
         if (email && !consumer.email) updates.email = email
         if (phone && !consumer.phone) updates.phone = phone
         if (Object.keys(updates).length > 0) {
-          consumer = await prisma.consumer.update({ where: { id: consumer.id }, data: updates })
+          try {
+            consumer = await prisma.consumer.update({ where: { id: consumer.id }, data: updates })
+          } catch (err) {
+            // The newly-provided email/phone belongs to a different existing
+            // consumer (email and phone matched two separate profiles) —
+            // don't let the unique constraint surface as a 500.
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+              throw new ApiError(409, 'This email or phone number is already associated with a different profile.')
+            }
+            throw err
+          }
         }
       } else {
-        consumer = await prisma.consumer.create({
-          data: { email: email ?? null, phone: phone ?? null },
-        })
+        try {
+          consumer = await prisma.consumer.create({
+            data: { email: email ?? null, phone: phone ?? null },
+          })
+        } catch (err) {
+          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+            throw new ApiError(409, 'This email or phone number is already associated with a different profile.')
+          }
+          throw err
+        }
       }
 
       const token = server.jwt.sign(

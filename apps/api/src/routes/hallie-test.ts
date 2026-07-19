@@ -103,6 +103,15 @@ export async function hallieTestRoutes(server: FastifyInstance) {
       FROM hallie_testing.hallie_testing_reward_requests
     `
 
+    const [repurchaseTotals] = await prisma.$queryRaw<
+      Array<{ answeredCount: bigint; yesCount: bigint }>
+    >`
+      SELECT
+        COUNT(*) FILTER (WHERE "wouldRepurchase" IS NOT NULL)::bigint AS "answeredCount",
+        COUNT(*) FILTER (WHERE "wouldRepurchase" = true)::bigint AS "yesCount"
+      FROM hallie_testing.hallie_testing_log_items
+    `
+
     const toNum = (v: bigint | number) => Number(v)
 
     return {
@@ -124,6 +133,11 @@ export async function hallieTestRoutes(server: FastifyInstance) {
       pointsAwarded: toNum(pointsTotals?.pointsAwarded ?? 0n),
       payoutCount: toNum(payoutTotals?.payoutCount ?? 0n),
       payoutCentsRequested: toNum(payoutTotals?.payoutCentsRequested ?? 0n),
+      repurchaseAnsweredCount: toNum(repurchaseTotals?.answeredCount ?? 0n),
+      repurchaseRate:
+        toNum(repurchaseTotals?.answeredCount ?? 0n) > 0
+          ? Math.round((toNum(repurchaseTotals!.yesCount) / toNum(repurchaseTotals!.answeredCount)) * 100)
+          : null,
     }
   })
 
@@ -216,7 +230,8 @@ export async function hallieTestRoutes(server: FastifyInstance) {
           json_agg(
             json_build_object(
               'id', li.id, 'productId', li."productId", 'productBrand', pr.brand, 'productName', pr.name,
-              'rating', li.rating, 'outcomeTags', li."outcomeTags", 'wearDuration', li."wearDuration", 'endOfDayLook', li."endOfDayLook"
+              'rating', li.rating, 'outcomeTags', li."outcomeTags", 'wearDuration', li."wearDuration", 'endOfDayLook', li."endOfDayLook",
+              'wouldRepurchase', li."wouldRepurchase"
             ) ORDER BY li.id
           ) FILTER (WHERE li.id IS NOT NULL),
           '[]'
@@ -289,7 +304,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
   // ── Product-type usage insights ────────────────────────────────────────
   server.get('/insights/products', { preHandler: requireHaliteAdmin }, async () => {
     const products = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT id, "userId", category, "productType", brand, name, rating, "currentLevel",
+      SELECT id, "userId", category, "productType", brand, name, rating, "initialLevel",
         "routineTags", "occasionTags", "createdAt"
       FROM hallie_testing.hallie_testing_products
       ORDER BY "createdAt" DESC
@@ -301,7 +316,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
   server.get('/insights/usage', { preHandler: requireHaliteAdmin }, async () => {
     const usage = await prisma.$queryRaw<Array<Record<string, unknown>>>`
       SELECT
-        li.id, li.rating, li."outcomeTags", li."wearDuration",
+        li.id, li.rating, li."outcomeTags", li."wearDuration", li."wouldRepurchase",
         le.date, le.category,
         pr.id AS "productId", pr.brand AS "productBrand", pr.name AS "productName", pr."productType",
         u.id AS "userId", u.city, u.country, u.timezone
@@ -327,7 +342,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
           WHEN 'makeup'    THEN pref.answers::jsonb -> 'undertone' ->> 0
           WHEN 'perfume'   THEN pref.answers::jsonb -> 'intensity' ->> 0
         END AS classifier,
-        pr.id AS "productId", pr.category AS "productCategory", pr.brand, pr.name, pr.rating, pr."currentLevel"
+        pr.id AS "productId", pr.category AS "productCategory", pr.brand, pr.name, pr.rating, pr."initialLevel"
       FROM hallie_testing.hallie_testing_preference_responses pref
       JOIN hallie_testing.hallie_testing_users u ON u.id = pref."userId"
       LEFT JOIN hallie_testing.hallie_testing_products pr

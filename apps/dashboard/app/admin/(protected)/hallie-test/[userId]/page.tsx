@@ -106,7 +106,7 @@ export default function HallieTestUserPage() {
           <table className="w-full">
             <thead>
               <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
-                {['Brand', 'Name', 'Category', 'Rating', 'Remaining'].map((h) => (
+                {['Brand', 'Name', 'Category', 'Rating', 'Initial level'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
                 ))}
               </tr>
@@ -120,7 +120,7 @@ export default function HallieTestUserPage() {
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.name}</td>
                   <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>{p.category.replace(/_/g, ' ')}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.rating} / 10</td>
-                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.currentLevel}%</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.initialLevel}%</td>
                 </tr>
               ))}
             </tbody>
@@ -140,9 +140,19 @@ export default function HallieTestUserPage() {
               </div>
               <div className="p-5 space-y-2">
                 {(log.items ?? []).map((item: any) => (
-                  <div key={item.id} className="text-[13px] flex items-center justify-between">
+                  <div key={item.id} className="text-[13px] flex items-center justify-between gap-2">
                     <span style={{ color: 'var(--ink)' }}>{item.productBrand} {item.productName}</span>
-                    {item.rating != null && <span style={{ color: 'var(--ink-3)' }}>{item.rating}/5</span>}
+                    <span className="flex items-center gap-2 shrink-0">
+                      {item.wouldRepurchase != null && (
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={item.wouldRepurchase ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fde2e2', color: '#a11f1f' }}
+                        >
+                          {item.wouldRepurchase ? 'Would repurchase' : "Won't repurchase"}
+                        </span>
+                      )}
+                      {item.rating != null && <span style={{ color: 'var(--ink-3)' }}>{item.rating}/5</span>}
+                    </span>
                   </div>
                 ))}
               </div>

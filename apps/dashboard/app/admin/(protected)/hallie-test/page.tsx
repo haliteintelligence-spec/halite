@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Users, LogIn, ClipboardList, ShieldCheck, Package, TrendingUp } from 'lucide-react'
+import { Users, LogIn, ClipboardList, ShieldCheck, Package, TrendingUp, RefreshCw } from 'lucide-react'
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -35,6 +35,7 @@ const STAT_CARDS = [
   { key: 'compliantUsers', label: 'Fully compliant', icon: ShieldCheck, color: '#f09118' },
   { key: 'totalProducts', label: 'Products entered', icon: Package, color: '#9333ea' },
   { key: 'haliteLinkedUsers', label: 'Synced to Halite', icon: TrendingUp, color: '#dc2626' },
+  { key: 'repurchaseRate', label: 'Repurchase intent', icon: RefreshCw, color: '#0d9488', suffix: '%' },
 ]
 
 const TABS = ['overview', 'users', 'products', 'usage', 'preferences', 'compliance'] as const
@@ -102,7 +103,7 @@ function OverviewTab({ summary }: { summary: any }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        {STAT_CARDS.map(({ key, label, icon: Icon, color }) => (
+        {STAT_CARDS.map(({ key, label, icon: Icon, color, suffix }) => (
           <div key={key} className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{label}</p>
@@ -111,8 +112,13 @@ function OverviewTab({ summary }: { summary: any }) {
               </div>
             </div>
             <p className="text-2xl font-semibold font-display" style={{ color: 'var(--ink)' }}>
-              {summary ? (summary[key] ?? 0).toLocaleString() : '—'}
+              {!summary ? '—' : summary[key] == null ? '—' : `${summary[key].toLocaleString()}${suffix ?? ''}`}
             </p>
+            {key === 'repurchaseRate' && summary?.repurchaseAnsweredCount != null && (
+              <p className="text-[11px] mt-1" style={{ color: 'var(--ink-3)' }}>
+                {summary.repurchaseAnsweredCount.toLocaleString()} responses
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -244,7 +250,7 @@ function ProductsTab({ products }: { products: any[] }) {
     const groups: Record<string, { count: number; avgRating: number; avgLevel: number }> = {}
     for (const p of products) {
       const g = (groups[p.category] ??= { count: 0, avgRating: 0, avgLevel: 0 })
-      g.count++; g.avgRating += p.rating; g.avgLevel += p.currentLevel
+      g.count++; g.avgRating += p.rating; g.avgLevel += p.initialLevel
     }
     for (const g of Object.values(groups)) { g.avgRating = g.count ? g.avgRating / g.count : 0; g.avgLevel = g.count ? g.avgLevel / g.count : 0 }
     return groups
@@ -258,7 +264,7 @@ function ProductsTab({ products }: { products: any[] }) {
       <table className="w-full">
         <thead>
           <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
-            {['Category', 'Count', 'Avg rating', 'Avg remaining'].map((h) => (
+            {['Category', 'Count', 'Avg rating', 'Avg initial level'].map((h) => (
               <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
             ))}
           </tr>
@@ -291,6 +297,17 @@ function UsageTab({ usage }: { usage: any[] }) {
     }
     return groups
   }, [usage, groupBy])
+
+  const repurchaseByCategory = useMemo(() => {
+    const groups: Record<string, { answered: number; yes: number }> = {}
+    for (const u of usage) {
+      if (u.wouldRepurchase == null) continue
+      const g = (groups[u.category] ??= { answered: 0, yes: 0 })
+      g.answered++
+      if (u.wouldRepurchase) g.yes++
+    }
+    return groups
+  }, [usage])
 
   return (
     <div className="space-y-3">
@@ -326,6 +343,35 @@ function UsageTab({ usage }: { usage: any[] }) {
                 <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-2)' }}>
                   {Object.entries(byCat).map(([cat, n]) => `${cat.replace(/_/g, ' ')}: ${n}`).join(' · ')}
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      <Card>
+        <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h2 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Repurchase intent by category</h2>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+            Asked when a product&apos;s estimated remaining level drops to 15% or below.
+          </p>
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+              {['Category', 'Responses', 'Would repurchase'].map((h) => (
+                <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(repurchaseByCategory).length === 0 ? (
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No repurchase responses yet.</td></tr>
+            ) : Object.entries(repurchaseByCategory).map(([cat, g]) => (
+              <tr key={cat} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td className="px-4 py-3 text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{cat.replace(/_/g, ' ')}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.answered}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{Math.round((g.yes / g.answered) * 100)}%</td>
               </tr>
             ))}
           </tbody>
