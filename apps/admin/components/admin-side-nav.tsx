@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LayoutDashboard, Store, BarChart2, MessageCircle, Settings } from 'lucide-react'
+import { LayoutDashboard, Store, BarChart2, MessageCircle, Settings, FlaskConical } from 'lucide-react'
 
 const nav = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/brands', label: 'Brands', icon: Store },
   { href: '/insights', label: 'Insights', icon: BarChart2 },
+  { href: '/hallie-test', label: 'Hallie Test', icon: FlaskConical },
   { href: '/crystal', label: 'Halite AI', icon: MessageCircle },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

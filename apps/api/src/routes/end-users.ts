@@ -6,6 +6,7 @@ import { ApiError } from '../lib/errors.js'
 import { generateProgressNarrative, shouldGenerateNarrative } from '../lib/narrative-generator.js'
 import { refineRoutine } from '../lib/routine-refiner.js'
 import { uploadToS3 } from '../lib/storage.js'
+import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
 
 export async function endUserRoutes(server: FastifyInstance) {
   // Brand admin: list end users
@@ -142,6 +143,18 @@ export async function endUserRoutes(server: FastifyInstance) {
 
       // Auto-refine: check if routine needs updating based on recent check-in trajectory
       autoRefineIfNeeded(userId, brandId).catch(console.error)
+
+      // Best-effort, non-blocking: reserve a matching Hallie Testing account
+      // for this consumer (any brand tier — demo or onboarded) so it's
+      // already there and claimable if they later visit Hallie Testing
+      // directly.
+      prisma.endUser.findUnique({ where: { id: userId }, select: { consumerId: true, firstName: true, lastName: true } })
+        .then((eu) => {
+          if (!eu?.consumerId) return null
+          return prisma.consumer.findUnique({ where: { id: eu.consumerId }, select: { email: true, phone: true } })
+            .then((c) => c && provisionHallieTestingAccount({ ...c, firstName: eu.firstName, lastName: eu.lastName }))
+        })
+        .catch(() => {})
 
       return reply.status(201).send({ checkIn })
     }

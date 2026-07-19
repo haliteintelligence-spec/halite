@@ -18,6 +18,7 @@ import { consumerRoutes } from './routes/consumers.js'
 import { agentRoutes } from './routes/agents.js'
 import { insightsRoutes } from './routes/insights.js'
 import { internalRoutes } from './routes/internal.js'
+import { hallieTestRoutes } from './routes/hallie-test.js'
 import { errorHandler } from './lib/errors.js'
 import { prisma } from '@halite/db'
 
@@ -78,6 +79,7 @@ async function bootstrap() {
   await server.register(agentRoutes, { prefix: '/brands' })
   await server.register(insightsRoutes, { prefix: '/brands' })
   await server.register(internalRoutes)
+  await server.register(hallieTestRoutes, { prefix: '/admin/hallie-test' })
 
   server.setErrorHandler(errorHandler)
 

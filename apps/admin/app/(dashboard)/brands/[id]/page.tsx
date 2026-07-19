@@ -8,6 +8,33 @@ import {
   Send, Plus, Trash2, CheckCircle,
 } from 'lucide-react'
 
+function DeleteBrandButton({ id, name }: { id: string; name: string }) {
+  const [deleting, setDeleting] = useState(false)
+  async function deleteBrand() {
+    if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      // Bypass adminFetch here — this endpoint returns 204 No Content on
+      // success, and calling .json() on an empty body throws.
+      const res = await fetch(`${API_URL}/admin/brands/${id}`, { method: 'DELETE', headers: adminHeaders() })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message ?? `Request failed: ${res.status}`)
+      }
+      window.location.href = '/brands'
+    } catch (e: any) {
+      alert(e.message ?? 'Failed to delete brand')
+      setDeleting(false)
+    }
+  }
+  return (
+    <button onClick={deleteBrand} disabled={deleting}
+      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-60">
+      {deleting ? <Loader2 size={12} className="animate-spin inline" /> : 'Delete brand'}
+    </button>
+  )
+}
+
 const fetcher = (url: string) => fetch(url, { headers: adminHeaders() }).then(r => r.json())
 
 const PLANS = ['STARTER', 'GROWTH', 'ENTERPRISE'] as const
@@ -196,6 +223,7 @@ export default function BrandDetailPage({ params }: { params: Promise<{ id: stri
               style={{ borderColor: 'var(--border)', color: 'var(--text-3)' }}>
               Dashboard <ExternalLink size={11} />
             </a>
+            <DeleteBrandButton id={id} name={brand.name} />
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { requireEndUser, requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { buildQuizFlow } from '../lib/quiz-engine.js'
 import { generateRoutine } from '../lib/routine-generator.js'
+import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
 
 const BeautyAreaEnum = z.enum([
   'SKINCARE', 'BODY', 'HAIR', 'MAKEUP', 'FRAGRANCE',
@@ -334,9 +335,18 @@ export async function quizRoutes(server: FastifyInstance) {
       if (endUserRecord?.consumerId) {
         const consumer = await prisma.consumer.findUnique({
           where: { id: endUserRecord.consumerId },
-          select: { prefillAnswers: true },
+          select: { prefillAnswers: true, email: true, phone: true },
         })
         if (consumer) {
+          // Best-effort, non-blocking: reserve a matching Hallie Testing
+          // account so it's already there and claimable if this person
+          // later visits Hallie Testing directly.
+          provisionHallieTestingAccount({
+            email: consumer.email,
+            phone: consumer.phone,
+            firstName: endUserRecord.firstName,
+            lastName: endUserRecord.lastName,
+          }).catch(() => {})
           // Brand-agnostic answers: everything except brand-specific preferences (SH2, SH3 budget/category)
           const BRAND_SPECIFIC = new Set(['SH2A', 'SH2B', 'SH3'])
           const merged: Record<string, unknown> = { ...(consumer.prefillAnswers as Record<string, unknown> ?? {}) }
