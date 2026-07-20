@@ -7,7 +7,8 @@
     "dev": "tsx watch --env-file=../../.env src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "backfill:demos": "tsx --env-file=../../.env scripts/backfill-demo-data.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

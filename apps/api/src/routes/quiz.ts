@@ -5,6 +5,7 @@ import { requireEndUser, requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { buildQuizFlow } from '../lib/quiz-engine.js'
 import { generateRoutine } from '../lib/routine-generator.js'
+import { withRetry } from '../lib/retry.js'
 import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
 
 const BeautyAreaEnum = z.enum([
@@ -560,9 +561,9 @@ async function generateRoutinesAsync(
 ) {
   for (const area of areas) {
     try {
-      await generateRoutine(userId, brandId, sessionId, area, answers)
+      await withRetry(() => generateRoutine(userId, brandId, sessionId, area, answers))
     } catch (err) {
-      console.error(`Routine generation failed for area ${area}:`, err)
+      console.error(`Routine generation failed for area ${area} after retries:`, err)
     }
   }
 }

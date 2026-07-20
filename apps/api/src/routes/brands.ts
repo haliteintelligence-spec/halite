@@ -5,6 +5,8 @@ import { prisma } from '@halite/db'
 import { requireHaliteAdmin, requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { embedBrandProducts, embedProduct, findSimilarProducts } from '../lib/embeddings.js'
+import { generateCheckInResult } from '../lib/checkin-result-generator.js'
+import { withRetry } from '../lib/retry.js'
 
 const createBrandSchema = z.object({
   name: z.string().min(2),
@@ -934,15 +936,41 @@ export async function brandRoutes(server: FastifyInstance) {
         ? Math.round((allCheckIns.reduce((s, c) => s + c.skinRating, 0) / allCheckIns.length) * 10) / 10
         : null
 
+      // Dedupe by brandId — a consumer can have more than one EndUser at the
+      // same brand in rare dedup edge cases, which would otherwise double-count.
+      const distinctBrandPresence = [...new Map(brandPresence.map(e => [e.brandId, e])).values()]
+
       return {
         consumer: {
           ...endUser,
           birthday: consumerRecord?.birthday ?? null,
           quizCompletedAt: quizSession?.completedAt ?? null,
-          brandPresence: brandPresence.map(e => ({ name: e.brand.name, slug: e.brand.slug, joinedAt: e.createdAt })),
+          brandPresence: distinctBrandPresence.map(e => ({ name: e.brand.name, slug: e.brand.slug, joinedAt: e.createdAt })),
           stats: { totalCheckIns: endUser._count.checkIns, complianceRate, avgSkinRating },
         },
       }
+    }
+  )
+
+  // ── Brand Admin: AI interpretation of a single check-in (lazy + cached) ──
+  server.get(
+    '/:brandId/consumers/:consumerId/check-ins/:checkInId/result',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId, consumerId, checkInId } = request.params as { brandId: string; consumerId: string; checkInId: string }
+
+      const checkIn = await prisma.checkIn.findFirst({
+        where: { id: checkInId, endUserId: consumerId, endUser: { brandId } },
+        select: { id: true, aiResult: true, aiResultGeneratedAt: true },
+      })
+      if (!checkIn) throw new ApiError(404, 'Check-in not found')
+
+      if (checkIn.aiResult) {
+        return { aiResult: checkIn.aiResult, generatedAt: checkIn.aiResultGeneratedAt }
+      }
+
+      const aiResult = await withRetry(() => generateCheckInResult(checkInId))
+      return { aiResult, generatedAt: new Date() }
     }
   )
 

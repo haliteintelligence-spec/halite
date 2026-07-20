@@ -22,11 +22,13 @@ export interface DemoSummary {
   prospectName: string | null
   converted: boolean
   plan: string
-  status: 'generating' | 'active' | 'expiring_soon' | 'access_expired' | 'converted'
+  status: 'generating' | 'active' | 'expiring_soon' | 'access_expired' | 'converted' | 'failed'
+  active: boolean
   loginUrl: string
   email: string | null
   password: string
   demoLinkExpiresAt: string | null
+  demoProvisioningError: { message: string; failedAt: string } | null
   focusAreas: string[]
   productCount: number
   consumerCount: number

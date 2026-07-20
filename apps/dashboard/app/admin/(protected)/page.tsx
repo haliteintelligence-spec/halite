@@ -6,6 +6,7 @@ export default async function AdminOverviewPage() {
 
   const activedemos = demos.filter(d => d.status === 'active' || d.status === 'expiring_soon').length
   const generatingDemos = demos.filter(d => d.status === 'generating').length
+  const failedDemos = demos.filter(d => d.status === 'failed').length
 
   const tiles = [
     { label: 'Active Brands', value: stats?.brands ?? '—', icon: Building2 },
@@ -68,6 +69,11 @@ export default async function AdminOverviewPage() {
                 {generatingDemos} generating
               </span>
             )}
+            {failedDemos > 0 && (
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+                {failedDemos} failed
+              </span>
+            )}
           </div>
         </div>
 
@@ -104,6 +110,7 @@ function StatusBadge({ status }: { status: string }) {
     active:        { label: 'Active',     bg: '#d4f4dd', color: '#1a7a3c' },
     expiring_soon: { label: 'Expiring',   bg: '#ffe4cc', color: '#9a3800' },
     access_expired:{ label: 'Expired',    bg: '#f3f4f6', color: '#6b7280' },
+    failed:        { label: 'Failed',     bg: '#fee2e2', color: '#b91c1c' },
   }
   const s = map[status] ?? map.access_expired
   return (

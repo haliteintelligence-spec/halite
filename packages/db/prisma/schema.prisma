@@ -51,10 +51,11 @@ model Brand {
   isDemo            Boolean   @default(false)
 
   // Demo environment
-  demoProspectName  String?
-  demoCreatedBy     String?
-  demoLinkExpiresAt DateTime?
-  demoConvertedAt   DateTime?
+  demoProspectName      String?
+  demoCreatedBy         String?
+  demoLinkExpiresAt     DateTime?
+  demoConvertedAt       DateTime?
+  demoProvisioningError Json?
 
   // White-label
   whiteLabelEnabled Boolean @default(false)
@@ -550,15 +551,17 @@ enum TimeOfDay {
 // ─────────────────────────────────────────────
 
 model CheckIn {
-  id         String       @id @default(cuid())
-  endUserId  String
-  date       DateTime     @default(now())
-  skinRating Int
-  photoUrl   String?
-  symptoms   SkinSymptom[]
-  notes      String?
-  compliant  Boolean      @default(true)
-  createdAt  DateTime     @default(now())
+  id                  String        @id @default(cuid())
+  endUserId           String
+  date                DateTime      @default(now())
+  skinRating          Int
+  photoUrl            String?
+  symptoms            SkinSymptom[]
+  notes               String?
+  compliant           Boolean       @default(true)
+  aiResult            String?
+  aiResultGeneratedAt DateTime?
+  createdAt           DateTime      @default(now())
 
   endUser  EndUser          @relation(fields: [endUserId], references: [id], onDelete: Cascade)
   products CheckInProduct[]

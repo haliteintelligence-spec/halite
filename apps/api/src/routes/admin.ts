@@ -446,6 +446,7 @@ export async function adminRoutes(server: FastifyInstance) {
           converted: !d.isDemo,
           plan: d.plan,
           status: d.isDemo ? demoBrandStatus(d) : ('converted' as const),
+          active: d.active,
           loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${d.slug}/login`,
           email: d.admins[0]?.email ?? null,
           password: `demo-${d.slug}`,
@@ -720,7 +721,7 @@ export async function adminRoutes(server: FastifyInstance) {
     { preHandler: requireHaliteAdmin },
     async (request, reply) => {
       const { demoId } = request.params as { demoId: string }
-      const brand = await prisma.brand.findFirst({ where: { id: demoId, isDemo: true } })
+      const brand = await prisma.brand.findFirst({ where: { id: demoId, demoProspectName: { not: null } } })
       if (!brand) throw new ApiError(404, 'Demo not found')
       await deleteBrandSafe(demoId)
       return reply.status(204).send()

@@ -15,6 +15,7 @@ export default function DemoDetailPage() {
   const [loading, setLoading] = useState(true)
   const [extending, setExtending] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [entering, setEntering] = useState(false)
   const [togglingActive, setTogglingActive] = useState(false)
@@ -39,6 +40,7 @@ export default function DemoDetailPage() {
   const [convertedBrandId, setConvertedBrandId] = useState<string | null>(null)
   const [seedingUploads, setSeedingUploads] = useState(false)
   const [uploadSeeded, setUploadSeeded] = useState(false)
+  const [retryingGeneration, setRetryingGeneration] = useState(false)
 
   const FOCUS_AREAS = ['SKINCARE', 'HAIR', 'BODY', 'MAKEUP', 'FRAGRANCE', 'WELLNESS']
   const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
@@ -70,6 +72,21 @@ export default function DemoDetailPage() {
     const t = setInterval(load, 5000)
     return () => clearInterval(t)
   }, [demo?.status])
+
+  async function handleRetryGeneration() {
+    setRetryingGeneration(true)
+    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({}),
+      })
+      await load()
+    } finally {
+      setRetryingGeneration(false)
+    }
+  }
 
   async function extendAccess() {
     setExtending(true)
@@ -118,12 +135,19 @@ export default function DemoDetailPage() {
   async function handleDelete() {
     if (!confirm(`Delete demo for "${demo?.prospectName}"? This cannot be undone.`)) return
     setDeleting(true)
+    setDeleteError('')
     const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    router.push('/admin/demos')
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/demos/${demoId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error(`Failed to delete demo (${res.status})`)
+      router.push('/admin/demos')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed')
+      setDeleting(false)
+    }
   }
 
   async function handleSaveBrandUrl() {
@@ -303,6 +327,31 @@ export default function DemoDetailPage() {
               Building synthetic consumers and routines — this takes 2–3 minutes. Auto-refreshing every 5 s.
             </p>
           </div>
+        </div>
+      )}
+
+      {demo.status === 'failed' && (
+        <div
+          className="rounded-xl p-5 mb-6 flex items-center justify-between gap-5"
+          style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}
+        >
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#b91c1c' }}>
+              Demo generation failed
+            </p>
+            <p className="text-[12px]" style={{ color: '#991b1b' }}>
+              {demo.demoProvisioningError?.message ?? 'Provisioning failed after 3 attempts.'}
+            </p>
+          </div>
+          <button
+            onClick={handleRetryGeneration}
+            disabled={retryingGeneration}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-50 flex-shrink-0"
+            style={{ background: '#b91c1c' }}
+          >
+            {retryingGeneration ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {retryingGeneration ? 'Retrying…' : 'Retry Generation'}
+          </button>
         </div>
       )}
 
@@ -688,7 +737,10 @@ export default function DemoDetailPage() {
         )}
       </div>
 
-      <div className="flex justify-end mt-2">
+      <div className="flex flex-col items-end gap-2 mt-2">
+        {deleteError && (
+          <p className="text-[12px] font-medium" style={{ color: '#b91c1c' }}>{deleteError}</p>
+        )}
         <button
           onClick={handleDelete}
           disabled={deleting}
@@ -725,6 +777,7 @@ function StatusBadge({ status }: { status: string }) {
     active:        { label: 'Active',     bg: '#d4f4dd', color: '#1a7a3c' },
     expiring_soon: { label: 'Expiring',   bg: '#ffe4cc', color: '#9a3800' },
     access_expired:{ label: 'Expired',    bg: '#f3f4f6', color: '#6b7280' },
+    failed:        { label: 'Failed',     bg: '#fee2e2', color: '#b91c1c' },
   }
   const s = map[status] ?? map.access_expired
   return (

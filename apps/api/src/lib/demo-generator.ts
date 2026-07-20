@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@halite/db'
 import { generateRoutine } from './routine-generator.js'
 import { runAgentWorkflow } from './agent-runner.js'
+import { withRetry } from './retry.js'
 import type { PurchaseMatrix } from './purchase-history-processor.js'
 
 // ── Pre-built workflow definitions ────────────────────────────────────────────
@@ -210,7 +211,7 @@ const COUNTRY_DIAL: Record<string, string> = {
   US: '+1', CA: '+1', GB: '+44', NG: '+234', GH: '+233', KE: '+254',
   ZA: '+27', FR: '+33', IN: '+91', AU: '+61', BR: '+55', SG: '+65', MA: '+212',
 }
-function generateDemoPhone(countryCode: string | null, seed: string): string {
+export function generateDemoPhone(countryCode: string | null, seed: string): string {
   const prefix = COUNTRY_DIAL[countryCode ?? 'US'] ?? '+1'
   let h = 5381
   for (let i = 0; i < seed.length; i++) h = (Math.imul(h, 31) ^ seed.charCodeAt(i)) >>> 0
@@ -631,7 +632,7 @@ function generateSyntheticPurchaseMatrix(
 //   Pass 1 — Consumers already linked via consumerId (recent demos)
 //   Pass 2 — Raw EndUsers at older demos with no Consumer record yet (retroactively links them)
 
-const BP_SELECT = {
+export const BP_SELECT = {
   city: true, country: true, countryCode: true,
   ageRange: true, skinType: true, skinConcerns: true, monkSkinTone: true,
   sleepHours: true, stressLevel: true, waterIntakeMl: true,
@@ -687,12 +688,12 @@ async function importSharedConsumers(
         data: {
           endUserId: endUser.id, ageRange: bp.ageRange,
           skinType: bp.skinType as any, skinConcerns: (bp.skinConcerns ?? []) as any,
-          monkSkinTone: bp.monkSkinTone ?? randomInt(1, 10),
+          monkSkinTone: bp.monkSkinTone ?? null,
           completedAreas: completedAreas as any,
           city: bp.city ?? null, country: bp.country ?? null, countryCode: bp.countryCode ?? null,
-          sleepHours: bp.sleepHours ?? randomItem(['Under 5 hours', '5–7 hours', '7–9 hours', 'Over 9 hours']),
-          stressLevel: bp.stressLevel ?? randomInt(1, 5),
-          waterIntakeMl: bp.waterIntakeMl ?? randomItem(['Under 1L', '1–1.5L', '1.5–2L', '2–2.5L', 'Over 2.5L']),
+          sleepHours: bp.sleepHours ?? null,
+          stressLevel: bp.stressLevel ?? null,
+          waterIntakeMl: bp.waterIntakeMl ?? null,
           ...(hasHair && bp.hairProfile ? { hairProfile: bp.hairProfile as any } : {}),
         },
       })
@@ -743,12 +744,12 @@ async function importSharedConsumers(
           data: {
             endUserId: endUser.id, ageRange: bp.ageRange,
             skinType: bp.skinType as any, skinConcerns: (bp.skinConcerns ?? []) as any,
-            monkSkinTone: bp.monkSkinTone ?? randomInt(1, 10),
+            monkSkinTone: bp.monkSkinTone ?? null,
             completedAreas: completedAreas as any,
             city: bp.city ?? null, country: bp.country ?? null, countryCode: bp.countryCode ?? null,
-            sleepHours: bp.sleepHours ?? randomItem(['Under 5 hours', '5–7 hours', '7–9 hours', 'Over 9 hours']),
-            stressLevel: bp.stressLevel ?? randomInt(1, 5),
-            waterIntakeMl: bp.waterIntakeMl ?? randomItem(['Under 1L', '1–1.5L', '1.5–2L', '2–2.5L', 'Over 2.5L']),
+            sleepHours: bp.sleepHours ?? null,
+            stressLevel: bp.stressLevel ?? null,
+            waterIntakeMl: bp.waterIntakeMl ?? null,
             ...(hasHair && bp.hairProfile ? { hairProfile: bp.hairProfile as any } : {}),
           },
         })
@@ -842,8 +843,8 @@ async function generateRoutines(
 ): Promise<number> {
   const sessionMap: Record<string, string> = {}
 
-  // Only generate routines for up to 200 consumers (Claude calls are expensive)
-  const routineConsumers = consumerIds.slice(0, 200)
+  // Every demo consumer gets a routine — no cap.
+  const routineConsumers = consumerIds
 
   for (const userId of routineConsumers) {
     try {
@@ -898,9 +899,9 @@ async function generateRoutines(
 
         for (const area of focusAreas) {
           try {
-            await generateRoutine(userId, brandId, sessionId, area, answers)
+            await withRetry(() => generateRoutine(userId, brandId, sessionId, area, answers))
             routineCount++
-          } catch { /* skip if product catalog too sparse for this area */ }
+          } catch { /* skip if product catalog too sparse for this area, even after retries */ }
         }
       })
     )
@@ -1017,13 +1018,14 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
   const freshIds = endUserIds.filter(id => !linkedSet.has(id))
   if (freshIds.length === 0) return
 
-  const shuffled = shuffle(freshIds)
-  const identifiedCount = Math.round(shuffled.length * 0.95)
+  const shuffled = freshIds
+  // Every fresh consumer gets a Consumer record + phone/email — none are skipped.
+  const identifiedCount = shuffled.length
   const identifiedIds = shuffled.slice(0, identifiedCount)
 
   const otherDemoBrands = await prisma.brand.findMany({
     where: { isDemo: true, active: true, id: { not: brandId } },
-    select: { id: true },
+    select: { id: true, focusAreas: true },
     take: 5,
   })
 
@@ -1033,18 +1035,20 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
 
   const profiles = await prisma.userBeautyProfile.findMany({
     where: { endUserId: { in: identifiedIds } },
-    select: { endUserId: true, skinType: true, skinConcerns: true, ageRange: true, monkSkinTone: true, countryCode: true },
+    select: { ...BP_SELECT, endUserId: true },
   })
   const profileMap = new Map(profiles.map(p => [p.endUserId, p]))
 
   const endUsers = await prisma.endUser.findMany({
     where: { id: { in: identifiedIds } },
-    select: { id: true, email: true },
+    select: { id: true, email: true, firstName: true, lastName: true },
   })
-  const emailMap = new Map(endUsers.map(u => [u.id, u.email]))
+  const endUserMap = new Map(endUsers.map(u => [u.id, u]))
 
   for (const endUserId of identifiedIds) {
-    const email = emailMap.get(endUserId) ?? null
+    const email = endUserMap.get(endUserId)?.email ?? null
+    const firstName = endUserMap.get(endUserId)?.firstName ?? null
+    const lastName = endUserMap.get(endUserId)?.lastName ?? null
     const profile = profileMap.get(endUserId)
     const phone = generateDemoPhone(profile?.countryCode ?? null, endUserId)
 
@@ -1083,12 +1087,67 @@ async function seedConsumerIdentities(brandId: string, endUserIds: string[]): Pr
     })
 
     if (crossBrandSet.has(endUserId)) {
-      // Seed to 2–4 other demo brands for richer cross-brand signals
+      // Seed to 2–4 other demo brands for richer cross-brand signals — same profile,
+      // same Consumer.id, and its own routine, so the identity is uniform everywhere.
       const brandsToSeed = shuffle(otherDemoBrands).slice(0, randomInt(2, Math.min(4, otherDemoBrands.length)))
       for (const otherBrand of brandsToSeed) {
-        await prisma.endUser.create({
-          data: { brandId: otherBrand.id, consumerId: consumer.id, email: email ?? null },
-        }).catch(() => {})
+        try {
+          const newEndUser = await prisma.endUser.create({
+            data: { brandId: otherBrand.id, consumerId: consumer.id, email: email ?? null, firstName, lastName },
+          })
+
+          if (profile) {
+            const completedAreas = [...new Set([
+              ...((profile.completedAreas ?? []) as string[]),
+              ...(profile.skinType ? ['SKINCARE'] : []),
+              ...(profile.hairProfile && otherBrand.focusAreas.includes('HAIR' as any) ? ['HAIR'] : []),
+            ])]
+            await prisma.userBeautyProfile.create({
+              data: {
+                endUserId: newEndUser.id,
+                ageRange: profile.ageRange,
+                skinType: profile.skinType as any,
+                skinConcerns: (profile.skinConcerns ?? []) as any,
+                monkSkinTone: profile.monkSkinTone ?? null,
+                completedAreas: completedAreas as any,
+                city: profile.city ?? null, country: profile.country ?? null, countryCode: profile.countryCode ?? null,
+                sleepHours: profile.sleepHours ?? null,
+                stressLevel: profile.stressLevel ?? null,
+                waterIntakeMl: profile.waterIntakeMl ?? null,
+                ...(profile.hairProfile ? { hairProfile: profile.hairProfile as any } : {}),
+              },
+            })
+          }
+
+          const session = await prisma.quizSession.create({
+            data: {
+              brandId: otherBrand.id,
+              endUserId: newEndUser.id,
+              selectedAreas: otherBrand.focusAreas as any,
+              answers: {
+                __area_select: otherBrand.focusAreas,
+                SH0: profile?.ageRange ?? '25_34',
+                S1: profile?.skinType?.toLowerCase() ?? 'combination',
+                S4: profile?.skinConcerns ?? [],
+                S5: String(profile?.monkSkinTone ?? 5),
+              } as any,
+              completed: true,
+              completedAt: new Date(Date.now() - randomInt(7, 60) * 24 * 60 * 60 * 1000),
+            },
+          })
+
+          for (const area of otherBrand.focusAreas) {
+            await withRetry(() =>
+              generateRoutine(newEndUser.id, otherBrand.id, session.id, area, {
+                __area_select: otherBrand.focusAreas,
+                SH0: profile?.ageRange ?? '25_34',
+                S1: profile?.skinType?.toLowerCase() ?? 'combination',
+                S4: profile?.skinConcerns ?? [],
+                S5: String(profile?.monkSkinTone ?? 5),
+              })
+            ).catch(() => { /* skip if catalog too sparse for this area, even after retries */ })
+          }
+        } catch { /* skip this brand on any failure — identity linking for others continues */ }
       }
     }
   }

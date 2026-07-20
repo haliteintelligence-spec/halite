@@ -6,6 +6,8 @@ import { ApiError } from '../lib/errors.js'
 import { generateProgressNarrative, shouldGenerateNarrative } from '../lib/narrative-generator.js'
 import { refineRoutine } from '../lib/routine-refiner.js'
 import { uploadToS3 } from '../lib/storage.js'
+import { generateCheckInResult } from '../lib/checkin-result-generator.js'
+import { withRetry } from '../lib/retry.js'
 import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
 
 export async function endUserRoutes(server: FastifyInstance) {
@@ -194,6 +196,30 @@ export async function endUserRoutes(server: FastifyInstance) {
       })
 
       return { checkIns }
+    }
+  )
+
+  // End user: get (lazily generating + caching) the AI interpretation of a
+  // single check-in. Returns the cached result if already generated.
+  server.get(
+    '/:brandId/me/check-ins/:checkInId/result',
+    { preHandler: requireEndUser },
+    async (request) => {
+      const userId = request.endUser!.userId
+      const { checkInId } = request.params as { checkInId: string }
+
+      const checkIn = await prisma.checkIn.findFirst({
+        where: { id: checkInId, endUserId: userId },
+        select: { id: true, aiResult: true, aiResultGeneratedAt: true },
+      })
+      if (!checkIn) throw new ApiError(404, 'Check-in not found')
+
+      if (checkIn.aiResult) {
+        return { aiResult: checkIn.aiResult, generatedAt: checkIn.aiResultGeneratedAt }
+      }
+
+      const aiResult = await withRetry(() => generateCheckInResult(checkInId))
+      return { aiResult, generatedAt: new Date() }
     }
   )
 

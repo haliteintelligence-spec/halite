@@ -1,19 +1,16 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { AdminConsumerDetail } from '@/components/admin/AdminConsumerDetail'
 import { BrandDetailTabs } from '../../_tabs'
 
 export default function BrandConsumerDetailPage() {
   const { brandId, userId } = useParams<{ brandId: string; userId: string }>()
   return (
-    <div className="max-w-2xl">
-      <Link href="/admin/brands" className="flex items-center gap-1 text-[12px] mb-6 hover:underline" style={{ color: 'var(--ink-3)' }}>
-        <ArrowLeft size={12} /> Brands
-      </Link>
-      <BrandDetailTabs brandId={brandId} />
+    <div>
+      <div className="px-4 pt-5 md:px-7 md:pt-6">
+        <BrandDetailTabs brandId={brandId} />
+      </div>
       <AdminConsumerDetail
         brandId={brandId}
         userId={userId}

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Loader2, Users, Activity, Package, Sparkles } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { ConsumerDetail, type BeautyProfile, type CheckInGroup, type RoutineStepRow } from '@/components/consumers/ConsumerDetail'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -12,18 +12,22 @@ function getToken() {
     : undefined
 }
 
-function calcAge(birthday: string): number {
-  const dob = new Date(birthday)
-  const today = new Date()
-  let age = today.getFullYear() - dob.getFullYear()
-  const m = today.getMonth() - dob.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
-  return age
-}
-
-function fmt(s: string | null | undefined) {
-  if (!s) return '—'
-  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+interface AdminConsumerResponse {
+  consumer: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    email: string | null
+    createdAt: string
+    birthday: string | null
+    quizCompletedAt: string | null
+    brandPresence: Array<{ brandId: string; name: string; slug: string; joinedAt: string; isDemo: boolean }>
+    crossBrandCount: number
+    beautyProfile: BeautyProfile | null
+    routines: Array<{ id: string; focusArea: string; steps: RoutineStepRow[] }>
+    stats: { totalCheckIns: number; complianceRate: number | null; avgSkinRating: number | null }
+  }
+  checkInGroups: CheckInGroup[]
 }
 
 interface Props {
@@ -33,7 +37,7 @@ interface Props {
 }
 
 export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<AdminConsumerResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -42,7 +46,7 @@ export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
       headers: t ? { Authorization: `Bearer ${t}` } : {},
     })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { setData(d); setLoading(false) })
+      .then((d: AdminConsumerResponse | null) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [brandId, userId])
 
@@ -56,241 +60,42 @@ export function AdminConsumerDetail({ brandId, userId, backHref }: Props) {
   )
 
   const c = data.consumer
-  const bp = c.beautyProfile
-  const quiz = data.quizSession
-  const quizAnswers = quiz?.answers as Record<string, unknown> ?? {}
-  const realBirthday: string | null = c.consumer?.birthday ?? null
-  const realPhone: string | null = c.consumer?.phone ?? c.phone ?? null
-  const realAge = realBirthday ? calcAge(realBirthday) : null
-  const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown'
-  const allBrands: Array<{ id: string; brandId: string; brand: { name: string; slug: string; demoLinkExpiresAt: string | null } }> = c.consumer?.endUsers ?? []
-  const crossBrandCount = allBrands.length
+  const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || 'Anonymous'
+  const activeRoutine = c.routines[0] ?? null
+  const crossBrandCount = c.crossBrandCount
 
-  const cardCls = 'rounded-xl p-5 mb-4'
-  const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)' }
-  const labelCls = 'text-[10px] font-semibold tracking-wide uppercase mb-0.5'
-  const labelStyle = { color: 'var(--ink-3)' }
-  const valCls = 'text-[13px]'
-  const valStyle = { color: 'var(--ink)' }
-
-  function Field({ label, value }: { label: string; value: string | number | null | undefined }) {
-    return (
-      <div>
-        <p className={labelCls} style={labelStyle}>{label}</p>
-        <p className={valCls} style={valStyle}>{value ?? '—'}</p>
-      </div>
-    )
+  async function fetchCheckInResult(checkInId: string) {
+    const t = getToken()
+    const res = await fetch(`${API_URL}/admin/consumers/${c.id}/check-ins/${checkInId}/result`, {
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+    })
+    if (!res.ok) throw new Error('Failed to load AI result')
+    return res.json() as Promise<{ aiResult: string; generatedAt: string }>
   }
 
   return (
-    <div className="max-w-2xl">
-      <Link href={backHref} className="flex items-center gap-1 text-[12px] mb-6 hover:underline" style={{ color: 'var(--ink-3)' }}>
-        <ArrowLeft size={12} /> Back to Consumers
-      </Link>
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold font-display" style={{ color: 'var(--ink)' }}>{name}</h1>
-          <p className="text-sm mt-0.5 font-mono" style={{ color: 'var(--ink-3)' }}>{c.email ?? '—'}</p>
-        </div>
-        <span className="text-[11px] font-semibold px-3 py-1 rounded-full"
-          style={{ background: crossBrandCount > 1 ? '#eff6ff' : 'var(--sand-1)', color: crossBrandCount > 1 ? '#2563eb' : 'var(--ink-3)' }}>
+    <ConsumerDetail
+      backHref={backHref}
+      backLabel="Back to Consumers"
+      name={name}
+      email={c.email}
+      createdAt={c.createdAt}
+      birthday={c.birthday}
+      quizCompletedAt={c.quizCompletedAt}
+      brandPresence={c.brandPresence}
+      beautyProfile={c.beautyProfile}
+      activeRoutine={activeRoutine}
+      stats={c.stats}
+      checkInGroups={data.checkInGroups.map(g => ({ ...g, brandId: g.brandId || brandId }))}
+      onFetchCheckInResult={fetchCheckInResult}
+      crossBrandBadge={
+        <span
+          className="text-[11px] font-semibold px-3 py-1 rounded-full"
+          style={{ background: crossBrandCount > 1 ? '#eff6ff' : 'var(--sand-1)', color: crossBrandCount > 1 ? '#2563eb' : 'var(--ink-3)' }}
+        >
           {crossBrandCount} {crossBrandCount === 1 ? 'brand' : 'brands'}
         </span>
-      </div>
-
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {[
-          { label: 'Brands', value: crossBrandCount, icon: Users },
-          { label: 'Check-ins', value: c._count?.checkIns ?? c.checkIns?.length ?? 0, icon: Activity },
-          { label: 'Routines', value: c._count?.routines ?? c.routines?.length ?? 0, icon: Package },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-xl p-4" style={cardStyle}>
-            <div className="flex items-center gap-2 mb-1">
-              <Icon size={13} style={{ color: 'var(--ink-3)' }} />
-              <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>{label}</p>
-            </div>
-            <p className="text-xl font-semibold font-display" style={{ color: 'var(--ink)' }}>{value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Contact & Identity */}
-      <div className={cardCls} style={cardStyle}>
-        <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Contact & Identity</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Consumer ID" value={c.id} />
-          <Field label="Phone" value={realPhone} />
-          {realBirthday && <Field label="Birthday" value={new Date(realBirthday).toLocaleDateString()} />}
-          {realAge !== null && <Field label="Age" value={realAge} />}
-          <Field label="City" value={bp?.city} />
-          <Field label="Country" value={bp?.country} />
-          <Field label="Joined" value={new Date(c.createdAt).toLocaleDateString()} />
-        </div>
-      </div>
-
-      {/* Skin & Beauty Profile */}
-      {bp && (
-        <div className={cardCls} style={cardStyle}>
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Beauty Profile</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Skin Type" value={bp.skinType ? fmt(bp.skinType) : null} />
-            <Field label="Monk Skin Tone" value={bp.monkSkinTone ?? null} />
-            <div className="col-span-2">
-              <p className={labelCls} style={labelStyle}>Skin Concerns</p>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {(bp.skinConcerns ?? []).length > 0
-                  ? (bp.skinConcerns as string[]).map((s: string) => (
-                    <span key={s} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: 'var(--sand-1)', color: 'var(--ink-3)', border: '1px solid var(--border)' }}>
-                      {fmt(s)}
-                    </span>
-                  ))
-                  : <span className={valCls} style={valStyle}>—</span>}
-              </div>
-            </div>
-            {bp.hairType && <Field label="Hair Type" value={fmt(bp.hairType)} />}
-            {bp.climateTag && <Field label="Climate" value={fmt(bp.climateTag)} />}
-          </div>
-        </div>
-      )}
-
-      {/* Quiz Results */}
-      {quiz && (
-        <div className={cardCls} style={cardStyle}>
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles size={13} style={{ color: 'var(--clay)' }} />
-            <h2 className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Quiz Results</h2>
-            <span className="text-[10px] ml-auto" style={{ color: 'var(--ink-3)' }}>
-              {quiz.completedAt ? new Date(quiz.completedAt).toLocaleDateString() : ''}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {quizAnswers['SH0'] && <Field label="Birthday" value={new Date(String(quizAnswers['SH0'])).toLocaleDateString()} />}
-            {quizAnswers['S1'] && <Field label="Skin Type" value={fmt(String(quizAnswers['S1']))} />}
-            {quizAnswers['S5'] && <Field label="Monk Skin Tone" value={String(quizAnswers['S5'])} />}
-            {quizAnswers['S2'] && <Field label="Breakout Frequency" value={fmt(String(quizAnswers['S2']))} />}
-            {quizAnswers['S3'] && <Field label="Sensitivity" value={fmt(String(quizAnswers['S3']))} />}
-            {quizAnswers['S4'] && (
-              <div className="col-span-2">
-                <p className={labelCls} style={labelStyle}>Skin Concerns</p>
-                <p className={valCls} style={valStyle}>
-                  {Array.isArray(quizAnswers['S4'])
-                    ? (quizAnswers['S4'] as string[]).map(fmt).join(', ')
-                    : fmt(String(quizAnswers['S4']))}
-                </p>
-              </div>
-            )}
-            {quizAnswers['H1'] && <Field label="Hair Type" value={fmt(String(quizAnswers['H1']))} />}
-            {quizAnswers['H2'] && (
-              <div>
-                <p className={labelCls} style={labelStyle}>Hair Concerns</p>
-                <p className={valCls} style={valStyle}>
-                  {Array.isArray(quizAnswers['H2'])
-                    ? (quizAnswers['H2'] as string[]).map(fmt).join(', ')
-                    : fmt(String(quizAnswers['H2']))}
-                </p>
-              </div>
-            )}
-            {quizAnswers['H3'] && <Field label="Scalp Type" value={fmt(String(quizAnswers['H3']))} />}
-            {quizAnswers['H4'] && <Field label="Hair Porosity" value={fmt(String(quizAnswers['H4']))} />}
-            {quizAnswers['SH1'] && <Field label="Location" value={fmt(String(quizAnswers['SH1']))} />}
-            {quizAnswers['SH2A'] && <Field label="Routine Format" value={fmt(String(quizAnswers['SH2A']))} />}
-            {quizAnswers['SH4'] && <Field label="Water Intake" value={String(quizAnswers['SH4'])} />}
-            {quizAnswers['SH5'] && <Field label="Sleep Hours" value={String(quizAnswers['SH5'])} />}
-            {quizAnswers['SH6'] && <Field label="Stress Level" value={fmt(String(quizAnswers['SH6']))} />}
-          </div>
-        </div>
-      )}
-
-      {/* Routines */}
-      {(c.routines ?? []).length > 0 && (
-        <div className={cardCls} style={cardStyle}>
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Active Routines</h2>
-          <div className="space-y-3">
-            {(c.routines as any[]).map((r: any) => (
-              <div key={r.id} className="rounded-lg p-3" style={{ background: 'var(--sand-1)', border: '1px solid var(--border)' }}>
-                <p className="text-[11px] font-semibold mb-2" style={{ color: 'var(--clay)' }}>{fmt(r.focusArea)}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['AM', 'PM'] as const).map(tod => {
-                    const steps = (r.steps as any[]).filter((s: any) => s.timeOfDay === tod || s.timeOfDay === 'BOTH')
-                    if (steps.length === 0) return null
-                    return (
-                      <div key={tod}>
-                        <p className="text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--ink-3)' }}>{tod}</p>
-                        <ul className="space-y-0.5">
-                          {steps.map((s: any) => (
-                            <li key={s.id} className="text-[11px]" style={{ color: 'var(--ink)' }}>
-                              {s.product.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Check-ins */}
-      {(c.checkIns ?? []).length > 0 && (
-        <div className={cardCls} style={cardStyle}>
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Recent Check-ins</h2>
-          <div className="space-y-2">
-            {(c.checkIns as any[]).map((ci: any) => (
-              <div key={ci.id} className="flex items-start justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-                <div>
-                  <p className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>
-                    {ci.symptoms?.length > 0 ? ci.symptoms.join(', ') : 'No symptoms'}
-                  </p>
-                  {ci.notes && <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>{ci.notes}</p>}
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--ink-3)' }}>
-                    {new Date(ci.createdAt).toLocaleDateString()} · {ci.compliant ? 'Compliant' : 'Not compliant'}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 ml-4">
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{
-                      background: ci.skinRating >= 4 ? '#ecfdf5' : ci.skinRating >= 3 ? '#fef9c3' : '#fef2f2',
-                      color: ci.skinRating >= 4 ? '#059669' : ci.skinRating >= 3 ? '#854d0e' : '#dc2626',
-                    }}>
-                    {ci.skinRating}/5
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Cross-brand presence */}
-      {allBrands.length > 0 && (
-        <div className={cardCls} style={cardStyle}>
-          <h2 className="text-[11px] font-semibold tracking-wide uppercase mb-4" style={{ color: 'var(--ink-3)' }}>Brand Presence</h2>
-          <div className="space-y-2">
-            {allBrands.map((eu: any) => (
-              <div key={eu.id} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-                <div>
-                  <p className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{eu.brand.name}</p>
-                  <p className="text-[11px] font-mono" style={{ color: 'var(--ink-3)' }}>{eu.brand.slug}</p>
-                </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: eu.brand.demoLinkExpiresAt ? '#fef3c7' : '#ecfdf5',
-                    color: eu.brand.demoLinkExpiresAt ? '#92400e' : '#059669',
-                  }}>
-                  {eu.brand.demoLinkExpiresAt ? 'Demo' : 'Brand'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      }
+    />
   )
 }
