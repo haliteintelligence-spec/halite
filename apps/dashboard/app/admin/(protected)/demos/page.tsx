@@ -4,10 +4,11 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Plus, Clock, ArrowUpDown, SlidersHorizontal, X } from 'lucide-react'
 import type { DemoSummary } from '@/lib/admin-api'
+import { isOldDemo } from '@/lib/brand-status'
 
 type SortKey = 'prospect' | 'created' | 'expiry' | 'consumers'
 type SortDir = 'asc' | 'desc'
-type StatusFilter = '' | 'generating' | 'active' | 'expiring_soon' | 'access_expired' | 'converted' | 'failed'
+type StatusFilter = '' | 'generating' | 'active' | 'expiring_soon' | 'converted' | 'failed'
 
 export default function DemosPage() {
   const [demos, setDemos] = useState<DemoSummary[]>([])
@@ -24,7 +25,7 @@ export default function DemosPage() {
       cache: 'no-store',
     })
       .then(r => r.ok ? r.json() : { demos: [] })
-      .then((d: { demos: DemoSummary[] }) => setDemos(d.demos ?? []))
+      .then((d: { demos: DemoSummary[] }) => setDemos((d.demos ?? []).filter(demo => !isOldDemo(demo))))
       .finally(() => setLoading(false))
   }, [])
 
@@ -106,7 +107,7 @@ export default function DemosPage() {
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>Status</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {(['', 'generating', 'active', 'expiring_soon', 'access_expired', 'converted', 'failed'] as StatusFilter[]).map(s => (
+                    {(['', 'generating', 'active', 'expiring_soon', 'converted', 'failed'] as StatusFilter[]).map(s => (
                       <button
                         key={s || 'all'}
                         onClick={() => setFilterStatus(s)}

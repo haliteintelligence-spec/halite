@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Building2, Users, Package, Plus, ArrowUpDown, SlidersHorizontal, Check, X } from 'lucide-react'
 import type { BrandSummary } from '@/lib/admin-api'
+import { isOldBrand } from '@/lib/brand-status'
 
 type SortKey = 'name' | 'plan' | 'consumers' | 'products' | 'joined'
 type SortDir = 'asc' | 'desc'
@@ -16,7 +17,6 @@ export default function BrandsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('joined')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [filterPlan, setFilterPlan] = useState<string>('')
-  const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'inactive'>('')
   const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function BrandsPage() {
       cache: 'no-store',
     })
       .then(r => r.ok ? r.json() : { brands: [] })
-      .then((d: { brands: BrandSummary[] }) => setBrands(d.brands ?? []))
+      .then((d: { brands: BrandSummary[] }) => setBrands((d.brands ?? []).filter(b => !isOldBrand(b))))
       .finally(() => setLoading(false))
   }, [])
 
@@ -42,8 +42,6 @@ export default function BrandsPage() {
   const filtered = useMemo(() => {
     let out = brands
     if (filterPlan) out = out.filter(b => b.plan === filterPlan)
-    if (filterStatus === 'active') out = out.filter(b => b.active)
-    if (filterStatus === 'inactive') out = out.filter(b => !b.active)
     return [...out].sort((a, b) => {
       let cmp = 0
       if (sortKey === 'name') cmp = a.name.localeCompare(b.name)
@@ -53,9 +51,9 @@ export default function BrandsPage() {
       else if (sortKey === 'joined') cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [brands, sortKey, sortDir, filterPlan, filterStatus])
+  }, [brands, sortKey, sortDir, filterPlan])
 
-  const activeFilterCount = (filterPlan ? 1 : 0) + (filterStatus ? 1 : 0)
+  const activeFilterCount = filterPlan ? 1 : 0
 
   function SortBtn({ col, label }: { col: SortKey; label: string }) {
     const active = sortKey === col
@@ -126,28 +124,9 @@ export default function BrandsPage() {
                     ))}
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>Status</p>
-                  <div className="flex gap-1.5">
-                    {(['', 'active', 'inactive'] as const).map(s => (
-                      <button
-                        key={s || 'all'}
-                        onClick={() => setFilterStatus(s)}
-                        className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                        style={{
-                          background: filterStatus === s ? 'var(--clay)' : 'var(--sand-1)',
-                          color: filterStatus === s ? 'white' : 'var(--ink)',
-                          border: '1px solid var(--border)',
-                        }}
-                      >
-                        {s || 'All'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setFilterPlan(''); setFilterStatus('') }}
+                    onClick={() => setFilterPlan('')}
                     className="flex items-center gap-1 text-[11px]"
                     style={{ color: 'var(--ink-3)' }}
                   >
@@ -197,9 +176,6 @@ export default function BrandsPage() {
                   <SortBtn col="products" label="Products" />
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>
                   <SortBtn col="joined" label="Joined" />
                 </th>
                 <th className="px-4 py-3" />
@@ -242,12 +218,6 @@ export default function BrandsPage() {
                       <Package size={11} style={{ color: 'var(--ink-3)' }} />
                       {brand._count.products.toLocaleString()}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={brand.active ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#f3f4f6', color: '#6b7280' }}>
-                      {brand.active ? 'Active' : 'Inactive'}
-                    </span>
                   </td>
                   <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>
                     {new Date(brand.createdAt).toLocaleDateString()}

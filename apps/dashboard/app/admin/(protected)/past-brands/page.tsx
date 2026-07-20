@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Building2, Play, Users, Package, Clock } from 'lucide-react'
 import type { BrandSummary, DemoSummary } from '@/lib/admin-api'
+import { isOldDemo, isOldBrand } from '@/lib/brand-status'
 
 export default function PastBrandsPage() {
   const [demos, setDemos] = useState<DemoSummary[]>([])
@@ -27,14 +28,11 @@ export default function PastBrandsPage() {
   }, [])
 
   // Old demo brands: never converted, and either their access link expired or they were deactivated.
-  const oldDemos = useMemo(
-    () => demos.filter(d => !d.converted && (d.status === 'access_expired' || !d.active)),
-    [demos]
-  )
+  const oldDemos = useMemo(() => demos.filter(isOldDemo), [demos])
 
   // Old onboarded brands: real (non-demo) brands that were deactivated. Converted demos live here too
   // once they're deactivated, since converting turns them into a normal Brand row.
-  const oldBrands = useMemo(() => brands.filter(b => !b.active), [brands])
+  const oldBrands = useMemo(() => brands.filter(isOldBrand), [brands])
 
   return (
     <div className="max-w-5xl">
