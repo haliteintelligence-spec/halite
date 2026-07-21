@@ -1,45 +1,5 @@
-import Image from 'next/image'
 import { Nav } from '@/components/Nav'
 import { DemoForm } from '@/components/DemoForm'
-
-const PHOTOS = {
-  hero:       'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=900&q=85',
-  routine:    'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=85',
-  tracking:   'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=800&q=85',
-  dashboard:  'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=800&q=85',
-  inclusion:  'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=1200&q=85',
-  data:       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=85',
-}
-
-function Check() {
-  return <span className="text-[15px]" style={{ color: '#450F2A' }}>✓</span>
-}
-function Cross() {
-  return <span className="text-[15px]" style={{ color: '#C4B5BD' }}>✕</span>
-}
-function Partial() {
-  return <span className="text-[11px] font-medium" style={{ color: '#8B6575' }}>Partial</span>
-}
-
-const COMPARE_ROWS = [
-  { feature: 'Predictive consumer intelligence',  halite: 'check', revieve: 'cross', haut: 'cross', proven: 'cross' },
-  { feature: 'Closed-loop outcome tracking',       halite: 'check', revieve: 'cross', haut: 'cross', proven: 'cross' },
-  { feature: 'Brand intelligence dashboard',       halite: 'check', revieve: 'partial', haut: 'cross', proven: 'cross' },
-  { feature: 'Retention & churn signals',          halite: 'check', revieve: 'cross', haut: 'cross', proven: 'cross' },
-  { feature: 'Embeddable on any platform',         halite: 'check', revieve: 'partial', haut: 'check', proven: 'cross' },
-  { feature: 'Shopify native integration',         halite: 'check', revieve: 'cross', haut: 'cross', proven: 'cross' },
-  { feature: 'Monk Skin Tone-inclusive AI',        halite: 'check', revieve: 'partial', haut: 'check', proven: 'cross' },
-  { feature: 'Weekly check-in tracking',           halite: 'check', revieve: 'cross', haut: 'cross', proven: 'cross' },
-  { feature: 'Per-product reaction data',          halite: 'check', revieve: 'cross', haut: 'cross', proven: 'cross' },
-  { feature: 'AI routine generation',              halite: 'check', revieve: 'check', haut: 'partial', proven: 'check' },
-] as const
-
-type Cell = 'check' | 'cross' | 'partial'
-function Cell({ v }: { v: Cell }) {
-  if (v === 'check')   return <Check />
-  if (v === 'partial') return <Partial />
-  return <Cross />
-}
 
 const MONK_TONES = [
   { hex: '#f6ede4', label: '01' },
@@ -53,6 +13,62 @@ const MONK_TONES = [
   { hex: '#3a312a', label: '09' },
   { hex: '#292420', label: '10' },
 ]
+
+type Cell = 'yes' | 'partial' | 'no'
+const COMPARE_ROWS: { feature: string; halite: Cell; revieve: Cell; klaviyo: Cell; outersignal: Cell }[] = [
+  { feature: 'Personalized recs from your real catalog',                halite: 'yes', revieve: 'yes',     klaviyo: 'partial', outersignal: 'no' },
+  { feature: 'Learns and gets sharper with every check-in',              halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no' },
+  { feature: 'Warns you before a customer leaves',                       halite: 'yes', revieve: 'no',      klaviyo: 'partial', outersignal: 'no' },
+  { feature: 'Easy-to-read dashboard, no data team needed',              halite: 'yes', revieve: 'partial', klaviyo: 'partial', outersignal: 'no' },
+  { feature: 'Built to work well for every skin tone',                   halite: 'yes', revieve: 'partial', klaviyo: 'no',      outersignal: 'no' },
+  { feature: 'One-click Shopify setup',                                  halite: 'yes', revieve: 'no',      klaviyo: 'yes',     outersignal: 'no' },
+  { feature: 'Works on any website — no developer needed',               halite: 'yes', revieve: 'partial', klaviyo: 'partial', outersignal: 'partial' },
+  { feature: "Know which products customers love (and which they don't)", halite: 'yes', revieve: 'no',      klaviyo: 'partial', outersignal: 'no' },
+  { feature: 'Regular, automatic check-ins with customers',              halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no' },
+]
+
+function Mark({ v, lead }: { v: Cell; lead?: boolean }) {
+  if (v === 'yes') {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full font-bold"
+        style={
+          lead
+            ? { width: 22, height: 22, fontSize: 12, background: '#450F2A', color: '#FAF6F0', boxShadow: '0 1px 3px rgba(69,15,42,0.35)' }
+            : { width: 20, height: 20, fontSize: 11, background: 'rgba(45,122,58,0.14)', color: '#2D7A3A' }
+        }
+      >
+        ✓
+      </span>
+    )
+  }
+  if (v === 'partial') {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full font-bold px-2"
+        style={
+          lead
+            ? { height: 20, fontSize: 9, background: '#C17A47', color: '#2A1206' }
+            : { height: 20, fontSize: 9, background: 'rgba(193,122,71,0.14)', color: '#C17A47' }
+        }
+      >
+        Some
+      </span>
+    )
+  }
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-full font-bold"
+      style={
+        lead
+          ? { width: 20, height: 20, fontSize: 11, background: 'rgba(69,15,42,0.12)', color: '#450F2A', opacity: 0.7 }
+          : { width: 20, height: 20, fontSize: 11, background: '#E8DDD0', color: '#8B6575', opacity: 0.55 }
+      }
+    >
+      ✕
+    </span>
+  )
+}
 
 export default function Landing() {
   return (
@@ -68,6 +84,10 @@ export default function Landing() {
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' opacity=\'1\'/%3E%3C/svg%3E")' }}
         />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(560px 420px at 88% -8%, rgba(193,122,71,0.18), transparent 60%), radial-gradient(420px 420px at 6% 110%, rgba(193,122,71,0.12), transparent 60%)' }}
+        />
 
         <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
           <div>
@@ -75,7 +95,7 @@ export default function Landing() {
               className="text-[11px] font-semibold tracking-[0.28em] uppercase mb-6"
               style={{ color: 'rgba(250,246,240,0.5)' }}
             >
-              Predictive Consumer Intelligence
+              Built for beauty &amp; CPG brands
             </p>
             <h1
               className="font-display text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.05] mb-6"
@@ -83,17 +103,17 @@ export default function Landing() {
             >
               Know your
               <br />
-              customer.
+              customers.
               <br />
               <span style={{ color: '#C17A47' }}>Keep them</span>
               <br />
-              longer.
+              coming back.
             </h1>
             <p
               className="text-lg leading-relaxed mb-10 max-w-md"
               style={{ color: 'rgba(250,246,240,0.72)' }}
             >
-              Halite turns every consumer interaction into a signal — building a living profile that gets smarter with every check-in, so your brand can personalize deeper and retain longer.
+              Every quiz, check-in, and review your customers give you turns into one simple, up-to-date picture of what they need — so you can recommend the right product, catch problems early, and stop losing customers to guesswork.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
@@ -101,52 +121,72 @@ export default function Landing() {
                 className="inline-flex items-center justify-center px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:opacity-90"
                 style={{ background: '#FAF6F0', color: '#450F2A' }}
               >
-                Book a demo
+                Book a free demo
               </a>
               <a
-                href="/platform"
+                href="#how"
                 className="inline-flex items-center justify-center px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:bg-white/10"
                 style={{ border: '1px solid rgba(250,246,240,0.3)', color: '#FAF6F0' }}
               >
-                Explore the platform ↗
+                See how it works ↓
               </a>
             </div>
           </div>
 
+          {/* Customer profile card illustration */}
           <div className="relative hidden lg:block">
             <div
-              className="relative rounded-3xl overflow-hidden"
-              style={{ aspectRatio: '4/5', maxHeight: 580 }}
+              className="relative rounded-3xl p-7 mx-auto"
+              style={{ background: '#FAF6F0', maxWidth: 400, boxShadow: '0 24px 60px -20px rgba(26,10,18,0.35)' }}
             >
-              <Image
-                src={PHOTOS.hero}
-                alt="Editorial beauty portrait"
-                fill
-                sizes="(max-width: 1024px) 0vw, 45vw"
-                className="object-cover object-top"
-                priority
-              />
-              <div
-                className="absolute inset-x-0 bottom-0 h-32"
-                style={{ background: 'linear-gradient(to top, #450F2A, transparent)' }}
-              />
+              <div className="flex items-center gap-3.5 mb-5">
+                <div
+                  className="w-13 h-13 rounded-full flex-shrink-0"
+                  style={{ width: 52, height: 52, background: 'conic-gradient(from 210deg, #D7BD96, #A07D52, #604134, #D7BD96)' }}
+                />
+                <div>
+                  <p className="font-display text-[17px] font-semibold" style={{ color: '#1A0A12' }}>Jamie&rsquo;s profile</p>
+                  <p className="text-[12.5px]" style={{ color: '#8B6575' }}>Customer since March · 3 orders</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-5">
+                {['Combination skin', 'Loves lightweight textures', 'Sensitive to fragrance'].map(tag => (
+                  <span key={tag} className="text-[12px] font-bold px-3 py-1.5 rounded-full" style={{ background: 'rgba(193,122,71,0.14)', color: '#450F2A' }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <div className="flex justify-between mb-1.5">
+                <span className="text-[12px]" style={{ color: '#8B6575' }}>How well we know Jamie</span>
+                <span className="text-[12px] font-bold" style={{ color: '#1A0A12' }}>92%</span>
+              </div>
+              <div className="h-[7px] rounded-full mb-5 overflow-hidden" style={{ background: '#E8DDD0' }}>
+                <div className="h-full rounded-full" style={{ width: '92%', background: 'linear-gradient(90deg, #450F2A, #C17A47)' }} />
+              </div>
+              <div className="rounded-2xl p-3.5 flex items-center justify-between" style={{ background: '#F2EBE0' }}>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide font-bold mb-0.5" style={{ color: '#8B6575' }}>Next recommendation</p>
+                  <p className="font-display text-[15px] font-semibold" style={{ color: '#1A0A12' }}>Barrier Repair Cream</p>
+                </div>
+                <span className="text-[13px] font-bold" style={{ color: '#2D7A3A' }}>97% match</span>
+              </div>
             </div>
-            {/* Floating stat cards */}
+            {/* Floating stat tags */}
             <div
               className="absolute -bottom-4 -left-6 rounded-2xl px-5 py-4 shadow-xl"
-              style={{ background: '#FAF6F0' }}
+              style={{ background: '#450F2A' }}
             >
-              <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1" style={{ color: '#8B6575' }}>
-                Avg retention lift
+              <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1" style={{ color: 'rgba(250,246,240,0.6)' }}>
+                More customers stay
               </p>
-              <p className="font-display text-2xl font-semibold" style={{ color: '#450F2A' }}>30%</p>
+              <p className="font-display text-2xl font-semibold" style={{ color: '#FAF6F0' }}>30%</p>
             </div>
             <div
               className="absolute -top-4 -right-4 rounded-2xl px-5 py-4 shadow-xl"
               style={{ background: '#C17A47' }}
             >
               <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1 text-white/70">
-                Personalization accuracy
+                Recommendation accuracy
               </p>
               <p className="font-display text-2xl font-semibold text-white">94%</p>
             </div>
@@ -158,30 +198,30 @@ export default function Landing() {
       <section style={{ background: '#FAF6F0', borderBottom: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { n: '30%',    label: 'Increase in customer retention via personalized recommendations' },
-            { n: '15–18%', label: 'Higher conversion driven by predictive AI personalization' },
-            { n: '39%',    label: 'Higher basket value from AI-matched product recommendations' },
-            { n: '50%',    label: 'Reduction in customer acquisition costs over time' },
+            { n: '30%',    label: 'More customers come back and buy again after a personalized recommendation.' },
+            { n: '15–18%', label: 'More people buy when they get a match built for them, instead of browsing alone.' },
+            { n: '39%',    label: 'Bigger orders when the recommendation actually fits what someone needs.' },
+            { n: '50%',    label: "Lower cost to win new customers — because you're keeping more of the ones you have." },
           ].map(item => (
-            <div key={item.label} className="text-center">
+            <div key={item.label}>
               <p className="font-display text-3xl md:text-4xl font-semibold" style={{ color: '#450F2A' }}>
                 {item.n}
               </p>
-              <p className="text-[12px] mt-2 leading-relaxed" style={{ color: '#8B6575' }}>{item.label}</p>
+              <p className="text-[12px] mt-2 leading-relaxed max-w-[24ch]" style={{ color: '#8B6575' }}>{item.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── THE INTELLIGENCE GAP (Problem) ────────────────────────────────── */}
+      {/* ── THE PROBLEM ──────────────────────────────────────────────────── */}
       <section className="py-24 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-2xl mb-14">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              The intelligence gap
+              Where most beauty &amp; CPG brands get stuck
             </p>
             <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
-              You know what you sold.<br />You don't know your customer.
+              You know what you sold.<br />You don&rsquo;t know who bought it.
             </h2>
           </div>
 
@@ -189,18 +229,18 @@ export default function Landing() {
             {[
               {
                 icon: '◎',
-                title: 'Profiles frozen at purchase.',
-                body: 'A customer buys once. Their needs change. Their preferences evolve. But your data stays exactly where it started — a snapshot, not a story.',
+                title: 'You only know them on day one.',
+                body: "A customer takes your quiz or makes a purchase, and that's the last real information you get. Their needs change, but your picture of them never does.",
               },
               {
                 icon: '⬡',
-                title: 'Personalization with no feedback loop.',
-                body: 'You recommend. They close the tab. You never know if it worked, if their needs changed, or why they didn\'t reorder.',
+                title: "You recommend, then you're in the dark.",
+                body: "You suggest a product. They buy it, or they don't. Either way, you rarely find out if it worked for them — or why they never came back for more.",
               },
               {
                 icon: '◈',
-                title: 'Retention guesswork.',
-                body: 'You can\'t predict who\'s about to churn without knowing how their experience is going. Real signals require real check-ins.',
+                title: 'You find out too late.',
+                body: "By the time a customer stops ordering, they've usually been unhappy for weeks. Without regular check-ins, there's no early warning — just a lost customer.",
               },
             ].map(p => (
               <div
@@ -208,7 +248,12 @@ export default function Landing() {
                 className="rounded-2xl p-8"
                 style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}
               >
-                <div className="text-2xl mb-5" style={{ color: '#450F2A' }}>{p.icon}</div>
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-5"
+                  style={{ background: 'rgba(193,122,71,0.14)', color: '#450F2A' }}
+                >
+                  {p.icon}
+                </div>
                 <h3 className="font-display text-lg font-semibold mb-3" style={{ color: '#1A0A12' }}>
                   {p.title}
                 </h3>
@@ -219,55 +264,39 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── HOW HALITE BUILDS INTELLIGENCE ────────────────────────────────── */}
+      {/* ── HOW HALITE WORKS ─────────────────────────────────────────────── */}
       <section id="how" className="py-24 px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
-              How it works
+              How Halite works
             </p>
             <h2 className="font-display text-4xl font-semibold" style={{ color: '#FAF6F0' }}>
-              Every touchpoint becomes a signal.
+              Four simple steps. No spreadsheets, no guesswork.
             </h2>
             <p className="text-base mt-4 max-w-lg mx-auto" style={{ color: 'rgba(250,246,240,0.55)' }}>
-              Halite layers consumer data over time — turning each quiz, check-in, and product reaction into a richer profile that makes your next recommendation sharper.
+              Every quiz, check-in, and product reaction builds a fuller picture of each customer — so your next recommendation is a little sharper than the last.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              {
-                n: '01',
-                title: 'Profile',
-                body: 'AI-powered quiz builds a complete consumer profile in under 2 minutes. Needs, preferences, lifestyle signals, and budget — everything your recommendation engine needs.',
-              },
-              {
-                n: '02',
-                title: 'Personalize',
-                body: 'Our AI generates a bespoke recommendation from your catalogue — inclusive by design, need-matched, and price-filtered. No generic picks, ever.',
-              },
-              {
-                n: '03',
-                title: 'Track',
-                body: 'Regular check-ins capture satisfaction scores, product reactions, and engagement. Each response updates the consumer\'s profile and your brand analytics.',
-              },
-              {
-                n: '04',
-                title: 'Predict',
-                body: 'Halite surfaces churn risk, reorder intent, and satisfaction trends — giving your team the signals to act before a customer leaves.',
-              },
+              { n: '1', title: 'Get to know them', body: 'A short, friendly quiz — under 2 minutes — learns what each customer needs, prefers, and can afford. No forms, no friction.' },
+              { n: '2', title: 'Recommend the right fit', body: "We match them to real products from your own catalog. Never a generic pick, never something you don't actually sell." },
+              { n: '3', title: 'Check in, automatically', body: "We follow up on a regular cadence to ask how it's going. Customers tell us what's working, right from your site." },
+              { n: '4', title: 'Catch problems early', body: "When satisfaction drops or someone goes quiet, you'll know — in time to actually do something about it." },
             ].map(step => (
               <div
                 key={step.n}
                 className="rounded-2xl p-8"
                 style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.1)' }}
               >
-                <p
-                  className="font-display text-4xl font-semibold mb-5"
-                  style={{ color: 'rgba(193,122,71,0.6)' }}
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold mb-5"
+                  style={{ background: '#C17A47', color: '#2A1206' }}
                 >
                   {step.n}
-                </p>
+                </div>
                 <h3 className="font-display text-xl font-semibold mb-3" style={{ color: '#FAF6F0' }}>
                   {step.title}
                 </h3>
@@ -284,71 +313,143 @@ export default function Landing() {
               className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:opacity-90"
               style={{ background: '#FAF6F0', color: '#450F2A' }}
             >
-              Explore the full platform ↗
+              See the full picture ↗
             </a>
           </div>
         </div>
       </section>
 
-      {/* ── FEATURES ──────────────────────────────────────────────────────── */}
-      <section id="features" className="py-24" style={{ background: '#FAF6F0' }}>
+      {/* ── WHAT YOU ACTUALLY GET ────────────────────────────────────────── */}
+      <section id="get" className="py-24" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-xl mb-16">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              Platform
+              What you actually get
             </p>
             <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
-              Built to know your customer deeper every day.
+              Everything you need to actually know your customers.
             </h2>
           </div>
 
-          {/* Feature 1: Living Consumer Profiles */}
+          {/* Feature 1: A profile that keeps learning */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.data} alt="Consumer intelligence data" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.15)' }} />
-              {/* Overlay card */}
-              <div
-                className="absolute bottom-6 left-6 right-6 rounded-2xl p-4"
-                style={{ background: 'rgba(250,246,240,0.96)', backdropFilter: 'blur(8px)' }}
-              >
-                <p className="text-[10px] font-semibold tracking-wide uppercase mb-2" style={{ color: '#8B6575' }}>Consumer profile depth</p>
-                <div className="flex items-center gap-3">
-                  {[
-                    { label: 'Usage data', pct: 94 },
-                    { label: 'Engagement', pct: 83 },
-                    { label: 'Product reactions', pct: 71 },
-                  ].map(s => (
-                    <div key={s.label} className="flex-1">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-[10px]" style={{ color: '#8B6575' }}>{s.label}</span>
-                        <span className="text-[10px] font-semibold" style={{ color: '#450F2A' }}>{s.pct}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full" style={{ background: '#E8DDD0' }}>
-                        <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: '#450F2A' }} />
-                      </div>
-                    </div>
+            <div className="rounded-3xl p-8 flex flex-col justify-center gap-4" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8B6575' }}>How well we know each customer</p>
+              {[
+                { label: 'Purchase & usage history', pct: 94 },
+                { label: 'How engaged they are', pct: 83 },
+                { label: "What they've told us about products", pct: 71 },
+              ].map(s => (
+                <div key={s.label}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-[12px]" style={{ color: '#8B6575' }}>{s.label}</span>
+                    <span className="text-[12px] font-bold" style={{ color: '#1A0A12' }}>{s.pct}%</span>
+                  </div>
+                  <div className="h-[7px] rounded-full" style={{ background: '#E8DDD0' }}>
+                    <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: 'linear-gradient(90deg, #450F2A, #C17A47)' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: '#C17A47' }}>
+                A profile that keeps learning
+              </p>
+              <h3 className="font-display text-3xl font-semibold leading-snug mb-4" style={{ color: '#1A0A12' }}>
+                The picture of your customer never goes stale.
+              </h3>
+              <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
+                Every quiz answer, check-in, and product reaction adds to a simple, current picture of each customer — what they like, what&rsquo;s working, and what they might need next. You&rsquo;re never personalizing off information from six months ago.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['Grows over time', 'Always current', 'One view per customer', 'No manual data entry'].map(tag => (
+                  <span key={tag} className="text-[11px] font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 2: A heads-up before someone leaves */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: '#C17A47' }}>
+                A heads-up before someone leaves
+              </p>
+              <h3 className="font-display text-3xl font-semibold leading-snug mb-4" style={{ color: '#1A0A12' }}>
+                Know who&rsquo;s about to go quiet — before they do.
+              </h3>
+              <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
+                When a customer&rsquo;s check-ins slow down, satisfaction drops, or they simply go quiet, we flag it. Your team gets a heads-up in time to reach out with the right offer — before they cancel or just stop ordering.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['Early warning flags', 'Know who to reach out to', 'Fewer surprise cancellations'].map(tag => (
+                  <span key={tag} className="text-[11px] font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="order-1 lg:order-2 rounded-3xl p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
+              {[
+                { who: 'Alicia M.', status: 'Reach out soon', risk: true },
+                { who: 'Devon P.', status: 'Doing great', risk: false },
+                { who: 'Sam R.', status: 'Going quiet', risk: true },
+                { who: 'Priya K.', status: 'Doing great', risk: false },
+              ].map(r => (
+                <div key={r.who} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                  <span className="text-[14px] font-semibold" style={{ color: '#1A0A12' }}>{r.who}</span>
+                  <span
+                    className="text-[11.5px] font-bold px-2.5 py-1 rounded-full"
+                    style={r.risk ? { background: 'rgba(193,122,71,0.18)', color: '#A85B2A' } : { background: 'rgba(45,122,58,0.14)', color: '#2D7A3A' }}
+                  >
+                    {r.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Feature 3: One dashboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="rounded-3xl p-6" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}>
+              <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+                {[
+                  { l: 'Active customers', v: '4,218', d: '↑ 12%', up: true },
+                  { l: 'Happiness score', v: '7.4 / 10', d: '↑ 0.8', up: true },
+                  { l: 'Top concern', v: 'Dryness', d: '38% of customers', up: null },
+                  { l: 'At risk of leaving', v: '6.2%', d: '↓ 1.4%', up: true },
+                ].map(t => (
+                  <div key={t.l} className="rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                    <p className="text-[10.5px] uppercase tracking-wide font-bold mb-1" style={{ color: '#8B6575' }}>{t.l}</p>
+                    <p className="font-display text-lg font-semibold" style={{ color: '#1A0A12' }}>{t.v}</p>
+                    <p className="text-[11px] mt-0.5 font-semibold" style={{ color: t.up === true ? '#2D7A3A' : '#C17A47' }}>{t.d}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                <p className="text-[10.5px] uppercase tracking-wide font-bold mb-2.5" style={{ color: '#8B6575' }}>What customers care about most</p>
+                <div className="flex items-end gap-1" style={{ height: 44 }}>
+                  {[62, 45, 38, 80, 55, 48, 65, 58].map((v, i) => (
+                    <div key={i} className="flex-1 rounded-sm" style={{ height: `${v}%`, background: i === 3 ? '#450F2A' : '#E8DDD0' }} />
                   ))}
                 </div>
               </div>
             </div>
             <div>
               <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: '#C17A47' }}>
-                Living Consumer Profiles
+                One dashboard, the whole picture
               </p>
               <h3 className="font-display text-3xl font-semibold leading-snug mb-4" style={{ color: '#1A0A12' }}>
-                Profiles that evolve with your customer.
+                See what&rsquo;s working, without needing a data team.
               </h3>
               <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Every quiz answer, check-in, and product reaction updates the consumer's profile in real time. Halite builds a longitudinal picture of each customer — their product journey, preferences over time, and what's actually working — so you're never personalizing from stale data.
+                See what your customers care about most, which products are winning, and where you&rsquo;re missing the mark — all in one place, in plain language. Built for a marketing or ops team to read in five minutes, not a data analyst.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Longitudinal usage data', 'Engagement tracking', 'Product reactions', 'Churn risk signals'].map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                    style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}
-                  >
+                {['Plain-language reports', "See what's working", 'Spot trends early'].map(tag => (
+                  <span key={tag} className="text-[11px] font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}>
                     {tag}
                   </span>
                 ))}
@@ -356,123 +457,52 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Feature 2: Predictive Retention */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="order-2 lg:order-1">
-              <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: '#C17A47' }}>
-                Predictive Retention
-              </p>
-              <h3 className="font-display text-3xl font-semibold leading-snug mb-4" style={{ color: '#1A0A12' }}>
-                Know who's at risk before they leave.
-              </h3>
-              <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Engagement drops. Check-in frequency falls. Satisfaction scores decline. Halite reads these signals and surfaces retention risk so your team can intervene with the right offer at the right moment — before the customer cancels or ghosts.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['Churn prediction', 'Re-engagement triggers', 'Engagement monitoring', 'Smart reorder timing'].map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                    style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="order-1 lg:order-2 relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.tracking} alt="Outcome tracking on mobile" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.1)' }} />
-            </div>
-          </div>
-
-          {/* Feature 3: Brand Intelligence */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.dashboard} alt="Brand intelligence dashboard" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.2)' }} />
-              <div
-                className="absolute bottom-6 left-6 right-6 rounded-2xl p-4"
-                style={{ background: 'rgba(250,246,240,0.95)', backdropFilter: 'blur(8px)' }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-semibold tracking-wide uppercase mb-0.5" style={{ color: '#8B6575' }}>Top concern by segment</p>
-                    <p className="font-display text-xl font-semibold" style={{ color: '#450F2A' }}>Dryness · 65% of base</p>
-                  </div>
-                  <div className="h-12 w-24 flex items-end gap-0.5">
-                    {[30, 45, 38, 55, 67, 58, 72].map((v, i) => (
-                      <div key={i} className="flex-1 rounded-sm" style={{ height: `${(v / 72) * 100}%`, background: i === 6 ? '#450F2A' : '#E8DDD0' }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: '#C17A47' }}>
-                Brand Intelligence Dashboard
-              </p>
-              <h3 className="font-display text-3xl font-semibold leading-snug mb-4" style={{ color: '#1A0A12' }}>
-                Consumer intelligence that compounds.
-              </h3>
-              <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Aggregate usage patterns, product performance, and demographic breakdowns — across your entire consumer base. The more interactions you capture, the more precisely you know what's working, who it's working for, and what to build next.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['Category trend maps', 'Product efficacy', 'Portfolio performance', 'Demographic insights'].map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                    style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Feature 4: Routine Engine */}
+          {/* Feature 4: Recommendations that actually fit */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
               <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: '#C17A47' }}>
-                Routine Engine
+                Recommendations that actually fit
               </p>
               <h3 className="font-display text-3xl font-semibold leading-snug mb-4" style={{ color: '#1A0A12' }}>
-                Personalization that actually fits.
+                Never a generic pick. Never something you don&rsquo;t sell.
               </h3>
               <p className="text-base leading-relaxed mb-6" style={{ color: '#8B6575' }}>
-                Our AI generates a bespoke recommendation from your catalogue — need-matched, preference-aware, and budget-filtered. Every recommendation is a data point that makes the next one better.
+                Every recommendation comes from your own product catalog — matched to what each customer actually needs and can afford. The more we hear from a customer, the better the next recommendation gets.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Inclusive AI', 'Catalogue-native', 'Need-matched', 'Budget-filtered'].map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                    style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}
-                  >
+                {['Only your products', 'Matched to real needs', 'Fits their budget'].map(tag => (
+                  <span key={tag} className="text-[11px] font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}>
                     {tag}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="order-1 lg:order-2 relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.routine} alt="Personalized skin routine" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.1)' }} />
+            <div className="order-1 lg:order-2 rounded-3xl p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8B6575' }}>Recommended for Tone 08 · dry &amp; uneven tone</p>
+              {[
+                { step: 'AM Cleanser — Gentle Milk Cleanser', match: '98%' },
+                { step: 'Serum — Niacinamide 10%', match: '95%' },
+                { step: 'Moisturizer — Barrier Repair Cream', match: '97%' },
+              ].map(r => (
+                <div key={r.step} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                  <span className="text-[13.5px] font-semibold" style={{ color: '#1A0A12' }}>{r.step}</span>
+                  <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(45,122,58,0.14)', color: '#2D7A3A' }}>{r.match} match</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── PLATFORM CTA BANNER ───────────────────────────────────────────── */}
+      {/* ── CTA BANNER ────────────────────────────────────────────────────── */}
       <section className="py-16 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0', borderBottom: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <p className="font-display text-2xl font-semibold mb-1" style={{ color: '#1A0A12' }}>
-              Want the full product walkthrough?
+              Want to see it all in action?
             </p>
             <p className="text-[14px]" style={{ color: '#8B6575' }}>
-              Routine Engine, Outcome Tracker, Brand Dashboard, and Embedded Widget — all in one place.
+              We&rsquo;ll walk you through the whole thing — using your own products, not a generic demo.
             </p>
           </div>
           <a
@@ -480,62 +510,65 @@ export default function Landing() {
             className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:opacity-90"
             style={{ background: '#450F2A', color: '#FAF6F0' }}
           >
-            Explore the platform ↗
+            See how it works ↗
           </a>
         </div>
       </section>
 
-      {/* ── WIDGET INTEGRATION ───────────────────────────────────────────── */}
-      <section className="py-24 px-6" style={{ background: '#1A0A12' }}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      {/* ── GETTING STARTED (setup, no code required) ───────────────────── */}
+      <section className="py-24 px-6" style={{ background: '#2D0A1C' }}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           <div>
-            <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              Embedded widget
+            <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
+              Getting started
             </p>
             <h2 className="font-display text-4xl font-semibold mb-4" style={{ color: '#FAF6F0' }}>
-              Live in 5 minutes.
+              Live on your site in about a week. We do the setup.
             </h2>
-            <p className="text-base leading-relaxed mb-10" style={{ color: 'rgba(250,246,240,0.6)' }}>
-              One script tag. Works with Shopify, Webflow, custom storefronts — any platform. Consumers never leave your site. Every interaction feeds your brand intelligence layer.
+            <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(250,246,240,0.6)' }}>
+              No developers, no code, no IT ticket. Send us your product list, tell us about your brand, and we build and install everything for you. On Shopify, it&rsquo;s even faster.
             </p>
 
-            <div className="rounded-2xl overflow-hidden">
-              <div
-                className="flex items-center gap-2 px-5 py-3"
-                style={{ background: 'rgba(250,246,240,0.06)', borderBottom: '1px solid rgba(250,246,240,0.08)' }}
-              >
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#8B6575' }} />
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#8B6575' }} />
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#8B6575' }} />
-                <span className="text-[11px] ml-2" style={{ color: 'rgba(250,246,240,0.3)' }}>index.html</span>
-              </div>
-              <div
-                className="p-6 font-mono text-[13px] leading-loose overflow-x-auto"
-                style={{ background: 'rgba(250,246,240,0.04)' }}
-              >
-                <span style={{ color: 'rgba(250,246,240,0.4)' }}>{'<'}</span>
-                <span style={{ color: '#C17A47' }}>script</span>
-                <br />
-                <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> src=</span>
-                <span style={{ color: '#c8e6a0' }}>"https://cdn.haliteintelligence.com/widget.js"</span>
-                <br />
-                <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> data-api-key=</span>
-                <span style={{ color: '#c8e6a0' }}>"<span style={{ color: '#f0b27a' }}>your_api_key</span>"</span>
-                <br />
-                <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> data-accent=</span>
-                <span style={{ color: '#c8e6a0' }}>"#C17A47"</span>
-                <br />
-                <span style={{ color: 'rgba(250,246,240,0.4)' }}>{'/>'}</span>
-              </div>
+            <div className="space-y-4 mb-8">
+              {[
+                { n: '1', title: 'Send us your product list', body: 'A spreadsheet works just fine — no special format required.' },
+                { n: '2', title: 'We build and install your quiz', body: "Matched to your brand's look and feel. You review it before it goes live." },
+                { n: '3', title: 'Customers start checking in', body: "You start seeing real answers — what's working, and what isn't." },
+              ].map(s => (
+                <div key={s.n} className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0" style={{ background: '#C17A47', color: '#2A1206' }}>
+                    {s.n}
+                  </div>
+                  <div>
+                    <p className="text-[14.5px] font-semibold mb-0.5" style={{ color: '#FAF6F0' }}>{s.title}</p>
+                    <p className="text-[13px]" style={{ color: 'rgba(250,246,240,0.55)' }}>{s.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {['Works with Shopify', 'Works with Webflow', 'Works with WordPress', 'Works with any website'].map(p => (
+                <span key={p} className="text-[12px] font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(250,246,240,0.07)', color: 'rgba(250,246,240,0.65)', border: '1px solid rgba(250,246,240,0.1)' }}>
+                  {p}
+                </span>
+              ))}
+            </div>
+
+            <div className="rounded-2xl p-5" style={{ background: 'rgba(193,122,71,0.1)', border: '1px solid rgba(193,122,71,0.2)' }}>
+              <p className="text-[12px] font-semibold mb-1" style={{ color: '#C17A47' }}>✦ One-click Shopify setup</p>
+              <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.6)' }}>
+                Already on Shopify? Install from the App Store and your product catalog syncs automatically — nothing to configure by hand.
+              </p>
             </div>
           </div>
 
           <div className="space-y-4">
             {[
-              { icon: '✦', title: 'Quiz + recommendation', body: 'Embedded consumer quiz builds a profile and generates a personalized product recommendation in real time. Every answer is a new data point.' },
-              { icon: '◉', title: 'Regular check-ins', body: 'Consumers log satisfaction scores and product reactions directly from the widget. Each response sharpens their profile.' },
-              { icon: '⟳', title: 'Smart reorder nudges', body: 'Reorder prompts timed to each product\'s run-rate — triggered by engagement data, not arbitrary schedules.' },
-              { icon: '▲', title: 'Progress narrative', body: 'AI-generated progress summary. Consumers see their journey; your brand gets the trend data behind it.' },
+              { icon: '◎', title: 'A quiz customers actually finish', detail: 'Under 2 minutes · feels like a conversation', body: 'A friendly, short quiz builds a real profile and hands back a personal recommendation instantly — right on your site.' },
+              { icon: '⬡', title: 'Check-ins that happen on their own', detail: 'Automatic · no extra work for your team', body: "Customers get a gentle nudge to share how a product is working out. Every answer sharpens their profile." },
+              { icon: '⟳', title: 'Reorder reminders, timed right', detail: 'Based on real usage · not a guess', body: 'Instead of a generic "reorder in 30 days" email, reminders are timed to how a customer is actually using the product.' },
+              { icon: '▲', title: 'A progress update customers love', detail: 'Written for them · builds loyalty', body: 'Customers see a simple summary of their own progress. You get the trend data behind it.' },
             ].map(item => (
               <div
                 key={item.title}
@@ -543,13 +576,14 @@ export default function Landing() {
                 style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}
               >
                 <div
-                  className="text-lg mt-0.5 flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center"
+                  className="text-lg mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
                   style={{ background: 'rgba(193,122,71,0.15)', color: '#C17A47' }}
                 >
                   {item.icon}
                 </div>
                 <div>
-                  <p className="text-[14px] font-semibold mb-1" style={{ color: '#FAF6F0' }}>{item.title}</p>
+                  <p className="text-[14px] font-semibold" style={{ color: '#FAF6F0' }}>{item.title}</p>
+                  <p className="text-[11px] mt-0.5 mb-1.5 font-semibold" style={{ color: 'rgba(193,122,71,0.8)' }}>{item.detail}</p>
                   <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.55)' }}>{item.body}</p>
                 </div>
               </div>
@@ -561,87 +595,115 @@ export default function Landing() {
       {/* ── COMPARISON TABLE ─────────────────────────────────────────────── */}
       <section id="compare" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              Why Halite
+              Why brands choose Halite
             </p>
             <h2 className="font-display text-4xl font-semibold" style={{ color: '#1A0A12' }}>
-              The only platform built for predictive CPG intelligence.
+              The only platform that follows through after the recommendation.
             </h2>
             <p className="text-base mt-3 max-w-lg mx-auto" style={{ color: '#8B6575' }}>
-              Others stop at the recommendation. Halite turns every consumer interaction into retention leverage.
+              Other tools stop once they&rsquo;ve suggested a product. Halite keeps listening — and helps you act on what it hears.
             </p>
           </div>
 
-          <div className="rounded-3xl overflow-hidden" style={{ border: '1px solid #E8DDD0' }}>
-            <div className="grid grid-cols-6 text-[12px] font-semibold">
-              <div className="col-span-2 px-6 py-5" style={{ background: '#F2EBE0' }} />
-              <div className="px-4 py-5 text-center" style={{ background: '#450F2A', color: '#FAF6F0' }}>Halite ✦</div>
-              <div className="px-4 py-5 text-center" style={{ background: '#F2EBE0', color: '#4A2A38' }}>Revieve</div>
-              <div className="px-4 py-5 text-center" style={{ background: '#F2EBE0', color: '#4A2A38' }}>Haut.AI</div>
-              <div className="px-4 py-5 text-center" style={{ background: '#F2EBE0', color: '#4A2A38' }}>Proven</div>
-            </div>
+          <p className="text-center text-[11.5px] mb-3.5 sm:hidden" style={{ color: '#8B6575' }}>← Scroll sideways to see every brand →</p>
 
-            {COMPARE_ROWS.map((row, i) => (
-              <div
-                key={row.feature}
-                className="grid grid-cols-6 text-[13px]"
-                style={{ borderTop: '1px solid #E8DDD0' }}
-              >
-                <div
-                  className="col-span-2 px-6 py-4 font-medium"
-                  style={{ color: '#4A2A38', background: i % 2 === 0 ? '#FAF6F0' : '#F8F3EE' }}
-                >
-                  {row.feature}
-                </div>
-                <div
-                  className="px-4 py-4 text-center"
-                  style={{ background: i % 2 === 0 ? 'rgba(69,15,42,0.04)' : 'rgba(69,15,42,0.07)' }}
-                >
-                  <Cell v={row.halite} />
-                </div>
-                <div className="px-4 py-4 text-center" style={{ background: i % 2 === 0 ? '#FAF6F0' : '#F8F3EE' }}>
-                  <Cell v={row.revieve} />
-                </div>
-                <div className="px-4 py-4 text-center" style={{ background: i % 2 === 0 ? '#FAF6F0' : '#F8F3EE' }}>
-                  <Cell v={row.haut} />
-                </div>
-                <div className="px-4 py-4 text-center" style={{ background: i % 2 === 0 ? '#FAF6F0' : '#F8F3EE' }}>
-                  <Cell v={row.proven} />
-                </div>
-              </div>
-            ))}
+          <div className="rounded-3xl overflow-hidden" style={{ border: '1px solid #E8DDD0' }}>
+            <div className="overflow-x-auto">
+              <table className="border-collapse w-full" style={{ minWidth: 660 }}>
+                <colgroup>
+                  <col style={{ width: 240 }} />
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 120 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th
+                      className="sticky left-0 z-[2] text-left px-6 py-5 text-[11px] font-bold uppercase tracking-[0.12em]"
+                      style={{ background: '#F2EBE0', color: '#8B6575', borderBottom: '1px solid #E8DDD0' }}
+                    >
+                      Compare features
+                    </th>
+                    <th
+                      className="sticky z-[2] text-center px-4 py-5"
+                      style={{ left: 240, background: '#450F2A', borderBottom: '1px solid #E8DDD0' }}
+                    >
+                      <span className="font-display text-[16px] font-semibold block" style={{ color: '#FAF6F0' }}>Halite ✦</span>
+                      <span className="text-[11.5px] block mt-0.5" style={{ color: 'rgba(250,246,240,0.68)' }}>Built for the whole customer journey</span>
+                    </th>
+                    <th className="text-center px-4 py-5" style={{ background: '#F2EBE0', borderBottom: '1px solid #E8DDD0' }}>
+                      <span className="font-display text-[16px] font-semibold block" style={{ color: '#1A0A12' }}>Revieve</span>
+                      <span className="text-[11.5px] block mt-0.5" style={{ color: '#8B6575' }}>Quiz &amp; recommendation tools</span>
+                    </th>
+                    <th className="text-center px-4 py-5" style={{ background: '#F2EBE0', borderBottom: '1px solid #E8DDD0' }}>
+                      <span className="font-display text-[16px] font-semibold block" style={{ color: '#1A0A12' }}>Klaviyo</span>
+                      <span className="text-[11.5px] block mt-0.5" style={{ color: '#8B6575' }}>Email &amp; SMS marketing platform</span>
+                    </th>
+                    <th className="text-center px-4 py-5" style={{ background: '#F2EBE0', borderBottom: '1px solid #E8DDD0' }}>
+                      <span className="font-display text-[16px] font-semibold block" style={{ color: '#1A0A12' }}>Outersignal</span>
+                      <span className="text-[11.5px] block mt-0.5" style={{ color: '#8B6575' }}>Customer data &amp; analytics tool</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARE_ROWS.map((row, i) => {
+                    const stripe = i % 2 === 0 ? '#FAF6F0' : '#F2EBE0'
+                    return (
+                      <tr key={row.feature}>
+                        <td
+                          className="sticky left-0 z-[2] text-left px-6 py-3.5 text-[13.5px] font-semibold"
+                          style={{ background: stripe, color: '#1A0A12', borderBottom: '1px solid #E8DDD0' }}
+                        >
+                          {row.feature}
+                        </td>
+                        <td
+                          className="sticky z-[2] text-center px-4 py-3.5"
+                          style={{ left: 240, background: 'rgba(69,15,42,0.06)', borderBottom: '1px solid #E8DDD0', boxShadow: '6px 0 10px -6px rgba(26,10,18,0.18)' }}
+                        >
+                          <Mark v={row.halite} lead />
+                        </td>
+                        <td className="text-center px-4 py-3.5" style={{ background: stripe, borderBottom: '1px solid #E8DDD0' }}>
+                          <Mark v={row.revieve} />
+                        </td>
+                        <td className="text-center px-4 py-3.5" style={{ background: stripe, borderBottom: '1px solid #E8DDD0' }}>
+                          <Mark v={row.klaviyo} />
+                        </td>
+                        <td className="text-center px-4 py-3.5" style={{ background: stripe, borderBottom: '1px solid #E8DDD0' }}>
+                          <Mark v={row.outersignal} />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <p className="text-center text-[11px] mt-4" style={{ color: '#C4B5BD' }}>
-            Partial = feature exists but limited in scope or availability tier
+            &ldquo;Some&rdquo; means the feature exists in a limited form, is bolted on from a different part of the product, or is only on higher-priced plans.
           </p>
         </div>
       </section>
 
-      {/* ── SKIN INCLUSION ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-0" style={{ minHeight: 520 }}>
-        <div className="absolute inset-0">
-          <Image
-            src={PHOTOS.inclusion}
-            alt="Diverse skin tones"
-            fill
-            sizes="100vw"
-            className="object-cover object-center"
-          />
-          <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.78)' }} />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* ── INCLUSIVE BY DESIGN ──────────────────────────────────────────── */}
+      <section className="relative overflow-hidden py-24 px-6" style={{ background: '#2D0A1C' }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(700px 500px at 100% 0%, rgba(193,122,71,0.16), transparent 60%)' }}
+        />
+        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
-              Inclusive by design
+              Built for every customer
             </p>
             <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
-              Intelligence built for every consumer.
+              Personalization that actually works for everyone.
             </h2>
             <p className="text-base leading-relaxed" style={{ color: 'rgba(250,246,240,0.72)' }}>
-              Most beauty and personal care AI was trained on narrow datasets. Halite uses the Monk Skin Tone Scale — all 10 tones — so your personalization is accurate for every one of your customers, not just some of them. Inclusion isn't a feature. It's the foundation.
+              A lot of beauty AI was built and tested mostly on lighter skin tones — so recommendations quietly work worse for everyone else. Halite is built on the Monk Skin Tone Scale, an industry-standard set of 10 tones used by dermatologists and researchers, so the match is just as accurate no matter who&rsquo;s asking.
             </p>
           </div>
 
@@ -662,16 +724,16 @@ export default function Landing() {
                 ))}
               </div>
               <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.4)' }}>
-                Monk Skin Tone Scale — all 10 tones, fully supported
+                The Monk Skin Tone Scale — all 10 tones, fully supported.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { n: '10', label: 'Monk tones supported' },
-                { n: '100%', label: 'Catalogue-matched routines' },
-                { n: '0', label: 'One-size-fits-all recs' },
-                { n: '✓', label: 'Melanin-aware formulation' },
+                { n: '10', label: 'Skin tones fully supported' },
+                { n: '100%', label: 'Recommendations from your real catalog' },
+                { n: '0', label: 'One-size-fits-all picks' },
+                { n: '✓', label: 'Same accuracy, every skin tone' },
               ].map(s => (
                 <div
                   key={s.label}
@@ -687,99 +749,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── PRICING ───────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              Pricing
-            </p>
-            <h2 className="font-display text-4xl font-semibold" style={{ color: '#1A0A12' }}>
-              Simple, brand-friendly pricing.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                name: 'Starter',
-                price: 'Custom',
-                period: '',
-                desc: 'For brands getting started with personalization intelligence.',
-                features: ['Up to 1,000 consumer profiles', 'Full widget (quiz, check-in, progress)', 'Brand intelligence dashboard', 'Email support'],
-                cta: 'Get started',
-                highlight: false,
-              },
-              {
-                name: 'Growth',
-                price: 'Custom',
-                period: '',
-                desc: 'For brands scaling their consumer intelligence layer.',
-                features: ['Up to 10,000 consumer profiles', 'Everything in Starter', 'Predictive churn signals', 'Shopify native sync', 'Advanced analytics & ingredient lab', 'Priority support'],
-                cta: 'Book a demo',
-                highlight: true,
-              },
-              {
-                name: 'Enterprise',
-                price: 'Custom',
-                period: '',
-                desc: 'For large teams with complex intelligence requirements.',
-                features: ['Unlimited consumer profiles', 'White-label widget', 'Dedicated customer success', 'SLA + data residency options', 'API access'],
-                cta: 'Talk to us',
-                highlight: false,
-              },
-            ].map(tier => (
-              <div
-                key={tier.name}
-                className="rounded-3xl p-8 flex flex-col"
-                style={{
-                  background: tier.highlight ? '#450F2A' : '#FAF6F0',
-                  border: tier.highlight ? 'none' : '1px solid #E8DDD0',
-                  boxShadow: tier.highlight ? '0 20px 60px rgba(69,15,42,0.25)' : 'none',
-                }}
-              >
-                <div className="mb-6">
-                  <p
-                    className="text-[11px] font-semibold tracking-[0.2em] uppercase mb-3"
-                    style={{ color: tier.highlight ? 'rgba(193,122,71,0.9)' : '#8B6575' }}
-                  >
-                    {tier.name}
-                  </p>
-                  <div className="flex items-end gap-1 mb-2">
-                    <span className="font-display text-4xl font-semibold" style={{ color: tier.highlight ? '#FAF6F0' : '#1A0A12' }}>
-                      {tier.price}
-                    </span>
-                  </div>
-                  <p className="text-[13px]" style={{ color: tier.highlight ? 'rgba(250,246,240,0.6)' : '#8B6575' }}>
-                    {tier.desc}
-                  </p>
-                </div>
-
-                <ul className="space-y-3 mb-8 flex-1">
-                  {tier.features.map(f => (
-                    <li key={f} className="flex items-start gap-2.5 text-[13px]">
-                      <span className="mt-0.5 flex-shrink-0" style={{ color: tier.highlight ? '#C17A47' : '#450F2A' }}>✓</span>
-                      <span style={{ color: tier.highlight ? 'rgba(250,246,240,0.8)' : '#4A2A38' }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <a
-                  href="#demo"
-                  className="block text-center rounded-full py-3 text-[13px] font-semibold transition-all hover:opacity-90"
-                  style={{
-                    background: tier.highlight ? '#FAF6F0' : '#450F2A',
-                    color: tier.highlight ? '#450F2A' : '#FAF6F0',
-                  }}
-                >
-                  {tier.cta}
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── DEMO CTA ─────────────────────────────────────────────────────── */}
       <section id="demo" className="py-24 px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
@@ -788,17 +757,17 @@ export default function Landing() {
               Get a demo
             </p>
             <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
-              See Halite in your brand's context.
+              See Halite with your own products.
             </h2>
             <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(250,246,240,0.65)' }}>
-              30 minutes. No slides — we walk through the platform with your catalogue and your use case. You'll leave with a clear picture of what predictive consumer intelligence looks like for your brand.
+              30 minutes. No slides — we&rsquo;ll walk through exactly how it would work for your brand and your customers. You&rsquo;ll leave knowing exactly what to expect.
             </p>
             <div className="space-y-4">
               {[
-                'Live product demo with your catalogue',
-                'Consumer intelligence walkthrough',
-                'Retention & churn signal preview',
-                'Technical integration Q&A',
+                'A live walkthrough using your own products',
+                'How the customer quiz looks and feels',
+                'How we’d flag customers at risk of leaving',
+                'Answers to any question you have — no pressure',
               ].map(item => (
                 <div key={item} className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(193,122,71,0.25)' }}>
@@ -824,19 +793,19 @@ export default function Landing() {
                 <span className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5" style={{ color: 'rgba(250,246,240,0.4)' }}>Intelligence</span>
               </div>
               <p className="text-[13px] leading-relaxed max-w-xs" style={{ color: 'rgba(250,246,240,0.45)' }}>
-                Predictive consumer intelligence for CPG brands. Know your customer. Personalize deeper. Retain longer.
+                Real customer intelligence for beauty &amp; CPG brands, in plain language. Know them. Personalize for them. Keep them.
               </p>
             </div>
             <div>
               <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-4" style={{ color: 'rgba(250,246,240,0.3)' }}>
-                Platform
+                What you get
               </p>
               <div className="space-y-2.5">
                 {[
-                  { label: 'Routine Engine', href: '/platform#routine-engine' },
-                  { label: 'Outcome Tracker', href: '/platform#outcome-tracker' },
-                  { label: 'Brand Dashboard', href: '/platform#brand-dashboard' },
-                  { label: 'Embeddable Widget', href: '/platform#widget' },
+                  { label: 'The customer quiz', href: '/platform#quiz' },
+                  { label: 'Regular check-ins', href: '/platform#checkins' },
+                  { label: 'Your dashboard', href: '/platform#dashboard' },
+                  { label: 'Getting set up', href: '/platform#setup' },
                 ].map(l => (
                   <a key={l.label} href={l.href} className="block text-[13px] transition-opacity hover:opacity-80" style={{ color: 'rgba(250,246,240,0.5)' }}>
                     {l.label}

@@ -13,10 +13,9 @@ export function Nav() {
   }, [])
 
   const links = [
-    { label: 'Platform', href: '/platform' },
-    { label: 'How it works', href: '/#how' },
+    { label: 'How it works', href: '/platform' },
+    { label: 'What you get', href: '/#get' },
     { label: 'Compare', href: '/#compare' },
-    { label: 'Pricing', href: '/#pricing' },
   ]
 
   return (

@@ -1,32 +1,16 @@
-import Image from 'next/image'
 import { Nav } from '@/components/Nav'
 import { DemoForm } from '@/components/DemoForm'
 
-const PHOTOS = {
-  routine:   'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
-  tracking:  'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=900&q=85',
-  dashboard: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85',
-  widget:    'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=900&q=85',
-  inclusion: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=85',
-}
-
-const PLATFORM_MODULES = [
-  { id: 'routine-engine',   label: 'Routine Engine' },
-  { id: 'outcome-tracker',  label: 'Outcome Tracker' },
-  { id: 'brand-dashboard',  label: 'Brand Dashboard' },
-  { id: 'widget',           label: 'Embedded Widget' },
-]
-
 export const metadata = {
-  title: 'Platform',
-  description: 'The complete Halite Intelligence platform: Routine Engine, Outcome Tracker, Brand Dashboard, and Embedded Widget — four connected modules that turn consumer product data into retention leverage.',
+  title: 'How It Works',
+  description: "How Halite works for beauty & CPG brands: a customer quiz that builds real recommendations, automatic check-ins, a plain-language dashboard, and white-glove setup — no developer required.",
   alternates: {
     canonical: 'https://haliteintelligence.com/platform',
   },
   openGraph: {
     url: 'https://haliteintelligence.com/platform',
-    title: 'The Platform — Halite Intelligence',
-    description: 'Four connected modules. One continuous intelligence loop — from first quiz answer to long-term retention signal.',
+    title: 'How It Works — Halite Intelligence',
+    description: 'Four simple pieces, working together — from the first quiz answer to knowing exactly when to check in on someone.',
   },
 }
 
@@ -50,23 +34,27 @@ export default function Platform() {
               Home
             </a>
             <span style={{ color: 'rgba(250,246,240,0.25)' }}>→</span>
-            <span className="text-[12px]" style={{ color: 'rgba(250,246,240,0.7)' }}>Platform</span>
+            <span className="text-[12px]" style={{ color: 'rgba(250,246,240,0.7)' }}>How it works</span>
           </div>
 
           <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mb-5" style={{ color: 'rgba(193,122,71,0.9)' }}>
-            The Platform
+            How it works, for beauty &amp; CPG brands
           </p>
           <h1 className="font-display text-5xl lg:text-6xl font-semibold leading-[1.05] mb-6" style={{ color: '#FAF6F0' }}>
-            Every layer of consumer intelligence,<br />
-            <span style={{ color: '#C17A47' }}>connected end-to-end.</span>
+            Everything that goes into<br />
+            <span style={{ color: '#C17A47' }}>knowing your customer.</span>
           </h1>
           <p className="text-lg leading-relaxed mb-10 max-w-2xl mx-auto" style={{ color: 'rgba(250,246,240,0.65)' }}>
-            Four integrated modules. One continuous intelligence loop — from first quiz answer to long-term retention signal.
+            Four simple pieces, working together — from the first quiz answer to knowing exactly when to check in on someone.
           </p>
 
-          {/* Module jump links */}
           <div className="flex flex-wrap justify-center gap-3">
-            {PLATFORM_MODULES.map(m => (
+            {[
+              { id: 'quiz', label: 'The Quiz' },
+              { id: 'checkins', label: 'Check-Ins' },
+              { id: 'dashboard', label: 'Your Dashboard' },
+              { id: 'setup', label: 'Getting Set Up' },
+            ].map(m => (
               <a
                 key={m.id}
                 href={`#${m.id}`}
@@ -80,111 +68,75 @@ export default function Platform() {
         </div>
       </section>
 
-      {/* ── HOW THE MODULES CONNECT ───────────────────────────────────────── */}
+      {/* ── HOW THE PIECES CONNECT ───────────────────────────────────────── */}
       <section className="py-16 px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row items-stretch gap-0 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(250,246,240,0.08)' }}>
             {[
-              { n: '01', label: 'Widget', sublabel: 'Captures data', icon: '◈', color: '#C17A47' },
-              { n: '02', label: 'Routine Engine', sublabel: 'Generates recs', icon: '✦', color: '#C17A47' },
-              { n: '03', label: 'Outcome Tracker', sublabel: 'Measures results', icon: '◉', color: '#C17A47' },
-              { n: '04', label: 'Brand Dashboard', sublabel: 'Surfaces intelligence', icon: '▲', color: '#C17A47' },
+              { label: 'The Quiz', sublabel: 'Learns what a customer needs', icon: '◈' },
+              { label: 'Recommendations', sublabel: 'Matches them to real products', icon: '✦' },
+              { label: 'Check-Ins', sublabel: 'Tells you if it actually worked', icon: '◉' },
+              { label: 'Your Dashboard', sublabel: 'Shows you everything at once', icon: '▲' },
             ].map((step, i) => (
               <div
-                key={step.n}
+                key={step.label}
                 className="flex-1 p-6 flex flex-col gap-3"
                 style={{
                   background: 'rgba(250,246,240,0.04)',
                   borderRight: i < 3 ? '1px solid rgba(250,246,240,0.08)' : 'none',
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-lg" style={{ color: step.color }}>{step.icon}</span>
-                  <span className="font-display text-[11px] font-semibold" style={{ color: 'rgba(193,122,71,0.6)' }}>{step.n}</span>
-                </div>
+                <span className="text-lg" style={{ color: '#C17A47' }}>{step.icon}</span>
                 <p className="font-display text-base font-semibold" style={{ color: '#FAF6F0' }}>{step.label}</p>
                 <p className="text-[12px]" style={{ color: 'rgba(250,246,240,0.4)' }}>{step.sublabel}</p>
               </div>
             ))}
           </div>
           <p className="text-center text-[12px] mt-5" style={{ color: 'rgba(250,246,240,0.3)' }}>
-            Each module feeds the next. Data compounds with every consumer interaction.
+            Each piece feeds the next — the longer a customer sticks around, the sharper their profile gets.
           </p>
         </div>
       </section>
 
-      {/* ── ROUTINE ENGINE ────────────────────────────────────────────────── */}
-      <section id="routine-engine" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
+      {/* ── MODULE 1: THE QUIZ ───────────────────────────────────────────── */}
+      <section id="quiz" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
-          {/* Section header */}
           <div className="flex items-start gap-6 mb-16">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1"
-              style={{ background: 'rgba(69,15,42,0.08)' }}
-            >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(69,15,42,0.08)' }}>
               <span className="text-lg" style={{ color: '#450F2A' }}>✦</span>
             </div>
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-2" style={{ color: '#C17A47' }}>
-                Module 01
-              </p>
+              <p className="text-[13px] font-semibold mb-2" style={{ color: '#8B6575' }}>Also known internally as the Routine Engine</p>
               <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
-                Routine Engine
+                The quiz that builds real recommendations.
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: '#8B6575' }}>
-                The brain behind your personalization. Our AI generates bespoke recommendations from your product catalogue — inclusive by design, need-matched, and updated as the consumer's preferences evolve.
+                A short, friendly quiz learns what a customer needs — then our system matches them to real products from your own catalog. Not a generic pick. Not a guess.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
-            <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.routine} alt="Routine Engine" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.12)' }} />
-              {/* Overlay: routine card mock */}
-              <div
-                className="absolute bottom-6 left-6 right-6 rounded-2xl p-5"
-                style={{ background: 'rgba(250,246,240,0.97)', backdropFilter: 'blur(12px)' }}
-              >
-                <p className="text-[10px] font-semibold tracking-wide uppercase mb-3" style={{ color: '#8B6575' }}>Generated routine — Tone 08, Dry + Hyperpigmentation</p>
-                <div className="space-y-2">
-                  {[
-                    { step: 'AM Cleanser', product: 'Gentle Milk Cleanser', match: '98%' },
-                    { step: 'Serum',       product: 'Niacinamide 10% Serum', match: '95%' },
-                    { step: 'Moisturizer', product: 'Barrier Repair Cream',  match: '97%' },
-                  ].map(r => (
-                    <div key={r.step} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-semibold" style={{ color: '#8B6575' }}>{r.step}</p>
-                        <p className="text-[12px] font-medium" style={{ color: '#1A0A12' }}>{r.product}</p>
-                      </div>
-                      <span className="text-[11px] font-semibold px-2 py-1 rounded-full" style={{ background: 'rgba(69,15,42,0.08)', color: '#450F2A' }}>
-                        {r.match} match
-                      </span>
-                    </div>
-                  ))}
+            <div className="rounded-3xl p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 260 }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8B6575' }}>A recommendation, right after the quiz</p>
+              {[
+                { step: 'AM Cleanser — Gentle Milk Cleanser', match: '98%' },
+                { step: 'Serum — Niacinamide 10%', match: '95%' },
+                { step: 'Moisturizer — Barrier Repair Cream', match: '97%' },
+              ].map(r => (
+                <div key={r.step} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                  <span className="text-[13.5px] font-semibold" style={{ color: '#1A0A12' }}>{r.step}</span>
+                  <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(45,122,58,0.14)', color: '#2D7A3A' }}>{r.match} match</span>
                 </div>
-              </div>
+              ))}
             </div>
 
             <div className="space-y-6">
               {[
-                {
-                  title: 'Catalogue-native recommendations',
-                  body: 'Every routine is built exclusively from your product catalogue — no generic picks, no competitor references. The AI learns your formulations and matches them to the right consumer profile.',
-                },
-                {
-                  title: 'Monk Skin Tone Scale-aware',
-                  body: 'All 10 Monk Skin Tone Scale tones are fully supported. Ingredient recommendations, formulation flags, and concern mapping are all calibrated per tone — because personalization has to be accurate for everyone.',
-                },
-                {
-                  title: 'Multi-signal matching',
-                  body: 'Skin type, primary concerns, climate zone, known sensitivities, budget range, and routine experience level all feed the recommendation. The more signals, the better the match.',
-                },
-                {
-                  title: 'Routine refinement loop',
-                  body: 'As a consumer\'s check-in data accumulates, their routine is automatically refined — swapping underperforming products, adjusting steps based on skin response, and escalating or de-escalating actives.',
-                },
+                { title: 'Only your products, never generic advice', body: "Every recommendation is built exclusively from your catalog — nothing you don't actually sell, ever." },
+                { title: 'Works well for every skin tone', body: 'Built on all 10 tones of the Monk Skin Tone Scale, so the match is accurate for every customer, not just some.' },
+                { title: 'Takes everything into account', body: 'Skin type, concerns, climate, sensitivities, budget, and experience level all shape the match.' },
+                { title: 'Gets better as check-ins come in', body: "As a customer shares more, their recommendation is automatically refined — swapping out anything that isn't working." },
               ].map(item => (
                 <div key={item.title} className="flex gap-4">
                   <div className="w-1 flex-shrink-0 rounded-full mt-1" style={{ background: '#450F2A', minHeight: 20 }} />
@@ -197,13 +149,12 @@ export default function Platform() {
             </div>
           </div>
 
-          {/* Routine Engine stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { n: '<2 min', label: 'Quiz to first routine' },
-              { n: '94%',   label: 'Consumer match accuracy' },
-              { n: '100%',  label: 'Catalogue-native picks' },
-              { n: '10',    label: 'Monk Skin Tone tones supported' },
+              { n: '<2 min', label: 'From quiz to first recommendation' },
+              { n: '94%', label: 'Customers say the match was right' },
+              { n: '100%', label: 'Picks are from your real catalog' },
+              { n: '10', label: 'Skin tones fully supported' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-6 text-center" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}>
                 <p className="font-display text-3xl font-semibold mb-2" style={{ color: '#450F2A' }}>{s.n}</p>
@@ -214,62 +165,34 @@ export default function Platform() {
         </div>
       </section>
 
-      {/* ── OUTCOME TRACKER ───────────────────────────────────────────────── */}
-      <section id="outcome-tracker" className="py-24 px-6" style={{ background: '#1A0A12' }}>
+      {/* ── MODULE 2: CHECK-INS ──────────────────────────────────────────── */}
+      <section id="checkins" className="py-24 px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1"
-              style={{ background: 'rgba(193,122,71,0.15)' }}
-            >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(193,122,71,0.15)' }}>
               <span className="text-lg" style={{ color: '#C17A47' }}>◉</span>
             </div>
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-2" style={{ color: '#C17A47' }}>
-                Module 02
-              </p>
+              <p className="text-[13px] font-semibold mb-2" style={{ color: 'rgba(250,246,240,0.45)' }}>Also known internally as the Outcome Tracker</p>
               <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#FAF6F0' }}>
-                Outcome Tracker
+                Regular check-ins that tell you what&rsquo;s actually happening.
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: 'rgba(250,246,240,0.6)' }}>
-                The real-world feedback loop. Regular consumer check-ins capture product satisfaction, reactions, and engagement — turning anecdotal results into structured, brand-level intelligence.
+                Instead of waiting for a review or a return, Halite checks in with customers on a regular cadence — turning &ldquo;I think it&rsquo;s working&rdquo; into real, structured feedback.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
-            <div className="space-y-5">
+            <div className="space-y-4">
               {[
-                {
-                  icon: '◎',
-                  title: 'Regular product check-ins',
-                  body: 'Consumers rate their product experience across key dimensions — satisfaction, efficacy, and concern-specific metrics. Each response updates their profile and aggregates into your brand analytics.',
-                },
-                {
-                  icon: '⬡',
-                  title: 'Per-product reaction logging',
-                  body: 'Good reactions and bad ones. Consumers log what worked and what didn\'t at the product level. This feeds your ingredient lab and future recommendation calibration.',
-                },
-                {
-                  icon: '◈',
-                  title: 'Compliance tracking',
-                  body: 'Routine adherence is tracked automatically. Drops in compliance are a leading signal for churn — Halite surfaces them before they become cancellations.',
-                },
-                {
-                  icon: '▲',
-                  title: 'Progress narratives',
-                  body: 'Halite generates an AI-written progress summary for each consumer — visible in the widget. They see their journey; you see the structured trend data behind it.',
-                },
+                { icon: '◎', title: 'Simple, regular check-ins', body: 'Customers rate how a product is working across a few key measures. Every answer updates their profile and your reports.' },
+                { icon: '⬡', title: "What worked, what didn't", body: 'Good reactions and bad ones — both get logged at the product level, so you know exactly what to fix or double down on.' },
+                { icon: '◈', title: 'Are they actually using it?', body: "We track whether customers are sticking with their routine. A drop-off is one of the earliest signs someone's about to leave." },
+                { icon: '▲', title: 'A progress update, written for them', body: 'Customers see a simple summary of their own progress. You see the trend data behind it.' },
               ].map(item => (
-                <div
-                  key={item.title}
-                  className="flex gap-4 p-5 rounded-2xl"
-                  style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(193,122,71,0.12)', color: '#C17A47' }}
-                  >
+                <div key={item.title} className="flex gap-4 p-5 rounded-2xl" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(193,122,71,0.12)', color: '#C17A47' }}>
                     {item.icon}
                   </div>
                   <div>
@@ -280,50 +203,39 @@ export default function Platform() {
               ))}
             </div>
 
-            <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.tracking} alt="Outcome tracking" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(26,10,18,0.5)' }} />
-              {/* Check-in mock overlay */}
-              <div
-                className="absolute inset-6 rounded-2xl p-5 flex flex-col gap-4"
-                style={{ background: 'rgba(26,10,18,0.88)', border: '1px solid rgba(250,246,240,0.1)' }}
-              >
-                <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'rgba(193,122,71,0.8)' }}>Week 6 check-in</p>
-                <div className="space-y-3">
-                  {[
-                    { label: 'Hydration', score: 8, prev: 5 },
-                    { label: 'Clarity',   score: 7, prev: 4 },
-                    { label: 'Texture',   score: 9, prev: 6 },
-                  ].map(m => (
-                    <div key={m.label}>
-                      <div className="flex justify-between mb-1.5">
-                        <span className="text-[12px] font-medium" style={{ color: 'rgba(250,246,240,0.7)' }}>{m.label}</span>
-                        <span className="text-[12px] font-semibold" style={{ color: '#C17A47' }}>
-                          {m.score}/10 <span className="text-[10px] font-normal" style={{ color: 'rgba(250,246,240,0.35)' }}>(was {m.prev})</span>
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full" style={{ background: 'rgba(250,246,240,0.1)' }}>
-                        <div className="h-full rounded-full transition-all" style={{ width: `${m.score * 10}%`, background: 'linear-gradient(to right, #C17A47, #e8a870)' }} />
-                      </div>
-                    </div>
-                  ))}
+            <div className="rounded-3xl p-6 flex flex-col gap-4" style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.1)' }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'rgba(250,246,240,0.4)' }}>Week 6 check-in</p>
+              {[
+                { label: 'Hydration', score: 8, prev: 5 },
+                { label: 'Clarity', score: 7, prev: 4 },
+                { label: 'Texture', score: 9, prev: 6 },
+              ].map(m => (
+                <div key={m.label}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-[12px] font-medium" style={{ color: 'rgba(250,246,240,0.7)' }}>{m.label}</span>
+                    <span className="text-[12px] font-semibold" style={{ color: '#C17A47' }}>
+                      {m.score}/10 <span className="text-[10px] font-normal" style={{ color: 'rgba(250,246,240,0.35)' }}>(was {m.prev})</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: 'rgba(250,246,240,0.1)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${m.score * 10}%`, background: 'linear-gradient(to right, #C17A47, #e8a870)' }} />
+                  </div>
                 </div>
-                <div className="mt-2 rounded-xl p-3" style={{ background: 'rgba(193,122,71,0.1)', border: '1px solid rgba(193,122,71,0.2)' }}>
-                  <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.7)' }}>
-                    "Your skin's hydration has improved significantly over the last 4 weeks. The Barrier Repair Cream appears to be driving the strongest response."
-                  </p>
-                </div>
+              ))}
+              <div className="mt-2 rounded-xl p-3" style={{ background: 'rgba(193,122,71,0.1)', border: '1px solid rgba(193,122,71,0.2)' }}>
+                <p className="text-[12px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.75)' }}>
+                  &ldquo;Jamie&rsquo;s hydration has improved a lot over the last 4 weeks — the Barrier Repair Cream looks like the strongest driver.&rdquo;
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Outcome Tracker stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { n: '83%',  label: 'Average routine compliance rate' },
-              { n: 'Wk 1', label: 'When first outcome data appears' },
-              { n: '↑64%', label: 'Skin score improvement avg, 8 weeks' },
-              { n: '3×',   label: 'More reorder conversion with check-ins' },
+              { n: '83%', label: 'Average check-in response rate' },
+              { n: 'Week 1', label: 'When you first see real outcome data' },
+              { n: '↑64%', label: 'Average improvement customers report, 8 weeks in' },
+              { n: '3×', label: 'More likely to reorder after checking in' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-6 text-center" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}>
                 <p className="font-display text-3xl font-semibold mb-2" style={{ color: '#C17A47' }}>{s.n}</p>
@@ -334,103 +246,63 @@ export default function Platform() {
         </div>
       </section>
 
-      {/* ── BRAND DASHBOARD ───────────────────────────────────────────────── */}
-      <section id="brand-dashboard" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
+      {/* ── MODULE 3: YOUR DASHBOARD ─────────────────────────────────────── */}
+      <section id="dashboard" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1"
-              style={{ background: 'rgba(69,15,42,0.08)' }}
-            >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(69,15,42,0.08)' }}>
               <span className="text-lg" style={{ color: '#450F2A' }}>▲</span>
             </div>
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-2" style={{ color: '#C17A47' }}>
-                Module 03
-              </p>
+              <p className="text-[13px] font-semibold mb-2" style={{ color: '#8B6575' }}>Also known internally as the Brand Dashboard</p>
               <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
-                Brand Dashboard
+                One dashboard, in plain language.
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: '#8B6575' }}>
-                Your aggregated intelligence layer. Every recommendation, check-in, and reaction feeds into a brand-level view of who your consumers are, what they need, and what's actually working.
+                Every recommendation, check-in, and reaction rolls up into one view of who your customers are, what they need, and what&rsquo;s actually working — built to be read by your team, not a data analyst.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start mb-16">
-            <div className="relative rounded-3xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
-              <Image src={PHOTOS.dashboard} alt="Brand Dashboard" fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(69,15,42,0.25)' }} />
-              {/* Dashboard mock overlay */}
-              <div
-                className="absolute inset-4 rounded-2xl p-5 grid grid-cols-2 gap-3"
-                style={{ background: 'rgba(250,246,240,0.97)', backdropFilter: 'blur(12px)' }}
-              >
+            <div className="rounded-3xl p-6" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}>
+              <div className="grid grid-cols-2 gap-2.5 mb-2.5">
                 {[
-                  { label: 'Active consumers', value: '4,218', delta: '+12%', up: true },
-                  { label: 'Avg sat. score', value: '7.4 / 10', delta: '+0.8', up: true },
-                  { label: 'Top concern', value: 'Dryness', delta: '38% of base', up: null },
-                  { label: 'Churn risk', value: '6.2%', delta: '-1.4%', up: false },
+                  { l: 'Active customers', v: '4,218', d: '↑ 12%' },
+                  { l: 'Happiness score', v: '7.4 / 10', d: '↑ 0.8' },
+                  { l: 'Top concern', v: 'Dryness', d: '38% of customers' },
+                  { l: 'At risk of leaving', v: '6.2%', d: '↓ 1.4%' },
                 ].map(card => (
-                  <div key={card.label} className="rounded-xl p-3" style={{ background: '#F2EBE0' }}>
-                    <p className="text-[9px] font-semibold tracking-wide uppercase mb-1" style={{ color: '#8B6575' }}>{card.label}</p>
-                    <p className="font-display text-lg font-semibold" style={{ color: '#1A0A12' }}>{card.value}</p>
-                    {card.delta && (
-                      <p className="text-[10px] font-medium mt-0.5" style={{ color: card.up === true ? '#2D7A3A' : card.up === false ? '#C17A47' : '#8B6575' }}>
-                        {card.up === true ? '↑' : card.up === false ? '↓' : ''} {card.delta}
-                      </p>
-                    )}
+                  <div key={card.l} className="rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                    <p className="text-[10.5px] uppercase tracking-wide font-bold mb-1" style={{ color: '#8B6575' }}>{card.l}</p>
+                    <p className="font-display text-lg font-semibold" style={{ color: '#1A0A12' }}>{card.v}</p>
+                    <p className="text-[11px] mt-0.5 font-semibold" style={{ color: '#2D7A3A' }}>{card.d}</p>
                   </div>
                 ))}
-                {/* Mini bar chart */}
-                <div className="col-span-2 rounded-xl p-3" style={{ background: '#F2EBE0' }}>
-                  <p className="text-[9px] font-semibold tracking-wide uppercase mb-2" style={{ color: '#8B6575' }}>Top concerns by consumer segment</p>
-                  <div className="flex items-end gap-1.5 h-10">
-                    {[62, 45, 38, 71, 55, 48, 65, 52].map((v, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 rounded-sm"
-                        style={{ height: `${(v / 71) * 100}%`, background: i === 3 ? '#450F2A' : '#C8B5BD' }}
-                      />
-                    ))}
-                  </div>
+              </div>
+              <div className="rounded-xl px-4 py-3.5" style={{ background: '#FAF6F0', border: '1px solid #E8DDD0' }}>
+                <p className="text-[10.5px] uppercase tracking-wide font-bold mb-2.5" style={{ color: '#8B6575' }}>Top concerns, by customer group</p>
+                <div className="flex items-end gap-1.5" style={{ height: 40 }}>
+                  {[62, 45, 38, 71, 55, 48, 65, 52].map((v, i) => (
+                    <div key={i} className="flex-1 rounded-sm" style={{ height: `${(v / 71) * 100}%`, background: i === 3 ? '#450F2A' : '#C8B5BD' }} />
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="space-y-8">
               {[
-                {
-                  title: 'Consumer intelligence overview',
-                  body: 'Total active consumers, satisfaction score averages, concern distributions, demographic breakdowns, and engagement rates — all in one command center. Updated in real time as consumers check in.',
-                  tags: ['Active profiles', 'Satisfaction trends', 'Concern maps', 'Engagement rates'],
-                },
-                {
-                  title: 'Ingredient lab & product performance',
-                  body: 'See which active ingredients are driving the strongest outcomes across your consumer base. Identify what\'s working, what\'s causing reactions, and where your formulation gaps are — before a competitor fills them.',
-                  tags: ['Ingredient efficacy', 'Reaction flags', 'Formulation gaps', 'Product rankings'],
-                },
-                {
-                  title: 'Retention & churn intelligence',
-                  body: 'Engagement drop-offs, declining satisfaction scores, and reduced check-in frequency are early warning signs. Halite surfaces high-risk consumers so your team can re-engage with the right offer before they leave.',
-                  tags: ['Churn risk scoring', 'Re-engagement list', 'Compliance alerts', 'Win-back timing'],
-                },
-                {
-                  title: 'Market benchmarking',
-                  body: 'Compare your consumer concern distribution against anonymized market-level trends. Understand where your product mix is well-matched and where you have white space.',
-                  tags: ['Market trends', 'Concern benchmarks', 'Demographic gaps', 'Portfolio fit'],
-                },
+                { title: 'A single view of your customers', body: 'Total active customers, happiness scores, top concerns, and how engaged people are — all updated automatically as customers check in.', tags: ['Active customers', 'Happiness trends', 'Top concerns', 'Engagement rates'] },
+                { title: "See what's actually working", body: 'Which products and ingredients are driving the best results across your customer base — and where you have a gap in your lineup, before a competitor fills it.', tags: ['Product performance', 'Reaction flags', 'Formulation gaps', 'Product rankings'] },
+                { title: 'A heads-up before customers leave', body: 'Dropping engagement and satisfaction are early warning signs. We surface who&rsquo;s at risk so your team can reach out first.', tags: ['Risk scoring', 'Who to reach out to', 'Compliance alerts', 'Win-back timing'] },
+                { title: 'How you compare to the market', body: 'See your concern distribution against anonymized market-level trends, so you know where your lineup fits and where you have white space.', tags: ['Market trends', 'Concern benchmarks', 'Portfolio fit'] },
               ].map((item, i) => (
                 <div key={i}>
                   <h3 className="font-display text-lg font-semibold mb-2" style={{ color: '#1A0A12' }}>{item.title}</h3>
                   <p className="text-[13px] leading-relaxed mb-3" style={{ color: '#8B6575' }}>{item.body}</p>
                   <div className="flex flex-wrap gap-2">
                     {item.tags.map(tag => (
-                      <span
-                        key={tag}
-                        className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                        style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}
-                      >
+                      <span key={tag} className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(69,15,42,0.07)', color: '#450F2A' }}>
                         {tag}
                       </span>
                     ))}
@@ -440,13 +312,12 @@ export default function Platform() {
             </div>
           </div>
 
-          {/* Dashboard stat row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { n: '10+',  label: 'Analytics charts, per-brand' },
-              { n: 'Live',  label: 'Dashboard refresh cadence' },
-              { n: 'CSV',   label: 'Data export for any chart' },
-              { n: 'All',   label: 'Monk tones segmented separately' },
+              { n: '10+', label: 'Easy-to-read reports, built for your brand' },
+              { n: 'Live', label: 'Updates as check-ins come in' },
+              { n: 'CSV', label: 'Export any report, anytime' },
+              { n: 'All', label: 'Skin tones reported on separately' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-6 text-center" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}>
                 <p className="font-display text-3xl font-semibold mb-2" style={{ color: '#450F2A' }}>{s.n}</p>
@@ -457,140 +328,70 @@ export default function Platform() {
         </div>
       </section>
 
-      {/* ── EMBEDDED WIDGET ───────────────────────────────────────────────── */}
-      <section id="widget" className="py-24 px-6" style={{ background: '#2D0A1C' }}>
+      {/* ── MODULE 4: GETTING SET UP ─────────────────────────────────────── */}
+      <section id="setup" className="py-24 px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1"
-              style={{ background: 'rgba(193,122,71,0.15)' }}
-            >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(193,122,71,0.15)' }}>
               <span className="text-lg" style={{ color: '#C17A47' }}>◈</span>
             </div>
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-2" style={{ color: '#C17A47' }}>
-                Module 04
-              </p>
+              <p className="text-[13px] font-semibold mb-2" style={{ color: 'rgba(250,246,240,0.45)' }}>Also known internally as the Embedded Widget</p>
               <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#FAF6F0' }}>
-                Embedded Widget
+                We set it up. No developer needed.
               </h2>
               <p className="text-base mt-3 max-w-2xl" style={{ color: 'rgba(250,246,240,0.6)' }}>
-                One script tag. The consumer-facing layer that makes all of Halite's intelligence visible — without sending your customers anywhere but your own storefront.
+                Everything above lives directly on your site — the quiz, the check-ins, the progress updates. Customers never leave your store, and you never touch a line of code.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-16">
-            {/* Left: code + capabilities */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start mb-16">
             <div>
-              {/* Code block */}
-              <div className="rounded-2xl overflow-hidden mb-8">
-                <div
-                  className="flex items-center gap-2 px-5 py-3"
-                  style={{ background: 'rgba(250,246,240,0.06)', borderBottom: '1px solid rgba(250,246,240,0.08)' }}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#8B6575' }} />
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#8B6575' }} />
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#8B6575' }} />
-                  <span className="text-[11px] ml-2" style={{ color: 'rgba(250,246,240,0.3)' }}>your-store/theme.liquid</span>
-                </div>
-                <div
-                  className="p-6 font-mono text-[13px] leading-loose overflow-x-auto"
-                  style={{ background: 'rgba(250,246,240,0.04)' }}
-                >
-                  <span style={{ color: 'rgba(250,246,240,0.4)' }}>{'<'}</span>
-                  <span style={{ color: '#C17A47' }}>script</span>
-                  <br />
-                  <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> src=</span>
-                  <span style={{ color: '#c8e6a0' }}>"https://cdn.haliteintelligence.com/widget.js"</span>
-                  <br />
-                  <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> data-api-key=</span>
-                  <span style={{ color: '#c8e6a0' }}>"<span style={{ color: '#f0b27a' }}>your_api_key</span>"</span>
-                  <br />
-                  <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> data-accent=</span>
-                  <span style={{ color: '#c8e6a0' }}>"#C17A47"</span>
-                  <br />
-                  <span className="ml-4" style={{ color: 'rgba(250,246,240,0.4)' }}> data-position=</span>
-                  <span style={{ color: '#c8e6a0' }}>"bottom-right"</span>
-                  <br />
-                  <span style={{ color: 'rgba(250,246,240,0.4)' }}>{'/>'}</span>
-                </div>
+              <div className="space-y-4 mb-8">
+                {[
+                  { n: '1', title: 'Send us your product list', body: 'A spreadsheet works just fine.' },
+                  { n: '2', title: 'We build & install it for you', body: "Matched to your brand's colors and voice — you approve it before launch." },
+                  { n: '3', title: "You're live", body: 'Typically about a week from your first call. Shopify brands can go live even faster.' },
+                ].map(s => (
+                  <div key={s.n} className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0" style={{ background: '#C17A47', color: '#2A1206' }}>
+                      {s.n}
+                    </div>
+                    <div>
+                      <p className="text-[14.5px] font-semibold mb-0.5" style={{ color: '#FAF6F0' }}>{s.title}</p>
+                      <p className="text-[13px]" style={{ color: 'rgba(250,246,240,0.55)' }}>{s.body}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Compatibility tags */}
-              <div className="mb-8">
-                <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-3" style={{ color: 'rgba(250,246,240,0.35)' }}>
-                  Works with
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {['Shopify', 'Webflow', 'WordPress', 'Squarespace', 'Custom React', 'Any HTML'].map(p => (
-                    <span
-                      key={p}
-                      className="text-[12px] font-semibold px-3 py-1.5 rounded-full"
-                      style={{ background: 'rgba(250,246,240,0.07)', color: 'rgba(250,246,240,0.65)', border: '1px solid rgba(250,246,240,0.1)' }}
-                    >
-                      {p}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {['Works with Shopify', 'Works with Webflow', 'Works with WordPress', 'Works with Squarespace', 'Works with any website'].map(p => (
+                  <span key={p} className="text-[12px] font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(250,246,240,0.07)', color: 'rgba(250,246,240,0.65)', border: '1px solid rgba(250,246,240,0.1)' }}>
+                    {p}
+                  </span>
+                ))}
               </div>
 
-              {/* Shopify callout */}
-              <div
-                className="rounded-2xl p-5"
-                style={{ background: 'rgba(193,122,71,0.1)', border: '1px solid rgba(193,122,71,0.2)' }}
-              >
-                <p className="text-[12px] font-semibold mb-1" style={{ color: '#C17A47' }}>✦ Shopify native integration</p>
+              <div className="rounded-2xl p-5" style={{ background: 'rgba(193,122,71,0.1)', border: '1px solid rgba(193,122,71,0.2)' }}>
+                <p className="text-[12px] font-semibold mb-1" style={{ color: '#C17A47' }}>✦ One-click Shopify setup</p>
                 <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.6)' }}>
-                  Install directly from the Shopify App Store. Automatic product catalogue sync, no manual API key setup, and native checkout integration for reorder prompts.
+                  Install from the Shopify App Store. Your product catalog syncs automatically, and reorder prompts connect right to checkout.
                 </p>
               </div>
             </div>
 
-            {/* Right: widget features */}
             <div className="space-y-4">
               {[
-                {
-                  icon: '◎',
-                  title: 'Consumer quiz & recommendations',
-                  body: 'Consumers complete a 2-minute quiz directly on your storefront. Halite instantly generates a personalized recommendation from your catalogue, displayed in the widget. Zero redirects.',
-                  detail: '2 min quiz · Catalogue-native · Inclusive by design',
-                },
-                {
-                  icon: '⬡',
-                  title: 'Regular check-in prompts',
-                  body: 'Smart cadence-based nudges prompt returning consumers to log their product experience. Satisfaction scores and reactions are captured and pushed to the Outcome Tracker automatically.',
-                  detail: 'Smart timing · No app needed · Feeds outcome data',
-                },
-                {
-                  icon: '◈',
-                  title: 'Smart reorder prompts',
-                  body: 'Halite calculates each product\'s expected run-rate based on routine steps and compliance frequency, then surfaces a reorder prompt timed to actual usage — not arbitrary 30-day cycles.',
-                  detail: 'Usage-based timing · Checkout-integrated · Reduces stockouts',
-                },
-                {
-                  icon: '▲',
-                  title: 'Progress view & narrative',
-                  body: 'Returning consumers see a visual summary of their product journey — scores over time, milestone alerts, and an AI-generated progress narrative. Drives engagement and reinforces product value.',
-                  detail: 'AI-written · Personalised milestones · Drives repeat visits',
-                },
-                {
-                  icon: '✦',
-                  title: 'White-label theming',
-                  body: 'Fully themeable to match your brand — accent colour, font weight, corner radius, and widget position. Available in all plans. Full white-label (your domain, no Halite branding) on Enterprise.',
-                  detail: 'CSS theming · Your brand · No Halite badge on Enterprise',
-                },
+                { icon: '◎', title: 'Quiz & instant recommendation', detail: 'Under 2 min · no page redirects', body: 'Customers complete the quiz on your storefront and get a personalized recommendation immediately.' },
+                { icon: '⬡', title: 'Automatic check-in prompts', detail: 'Timed well · no app required', body: 'Smart, well-timed nudges bring customers back to share how a product is working.' },
+                { icon: '◈', title: 'Smart reorder reminders', detail: 'Based on real usage', body: "Timed to how a product is actually being used — not an arbitrary 30-day cycle." },
+                { icon: '✦', title: 'Looks like your brand', detail: 'Fully customizable · your colors, your voice', body: 'Accent color, font weight, and placement all match your site. Full white-label available on Enterprise.' },
               ].map(item => (
-                <div
-                  key={item.title}
-                  className="rounded-2xl p-5"
-                  style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}
-                >
+                <div key={item.title} className="rounded-2xl p-5" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}>
                   <div className="flex gap-4 mb-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'rgba(193,122,71,0.12)', color: '#C17A47' }}
-                    >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(193,122,71,0.12)', color: '#C17A47' }}>
                       {item.icon}
                     </div>
                     <div>
@@ -598,19 +399,18 @@ export default function Platform() {
                       <p className="text-[11px] mt-0.5" style={{ color: 'rgba(193,122,71,0.7)' }}>{item.detail}</p>
                     </div>
                   </div>
-                  <p className="text-[13px] leading-relaxed ml-13" style={{ color: 'rgba(250,246,240,0.55)', marginLeft: '3.25rem' }}>{item.body}</p>
+                  <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.55)', marginLeft: '3.25rem' }}>{item.body}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Widget stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { n: '5 min', label: 'From signup to live widget' },
-              { n: '0',     label: 'Backend setup required' },
-              { n: '64%',   label: 'Consumer routine adoption rate' },
-              { n: '3×',    label: 'Reorder conversion vs baseline' },
+              { n: '~1 wk', label: 'From signup to live on your site' },
+              { n: '0', label: 'Lines of code required from you' },
+              { n: '64%', label: 'Of customers complete the quiz' },
+              { n: '3×', label: 'More reorders vs. no check-ins' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-6 text-center" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.08)' }}>
                 <p className="font-display text-3xl font-semibold mb-2" style={{ color: '#C17A47' }}>{s.n}</p>
@@ -621,32 +421,27 @@ export default function Platform() {
         </div>
       </section>
 
-      {/* ── INTELLIGENCE LOOP RECAP ───────────────────────────────────────── */}
+      {/* ── HOW IT ALL FITS TOGETHER ─────────────────────────────────────── */}
       <section className="py-24 px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto text-center">
           <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
-            The intelligence loop
+            How it all fits together
           </p>
           <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
-            Every module makes the others smarter.
+            Every piece makes the others smarter.
           </h2>
           <p className="text-base leading-relaxed mb-16 max-w-2xl mx-auto" style={{ color: 'rgba(250,246,240,0.6)' }}>
-            The widget captures data. The Routine Engine uses it. The Outcome Tracker validates it. The Brand Dashboard compounds it. The longer your brand runs on Halite, the sharper your consumer intelligence becomes.
+            The quiz captures what a customer needs. Check-ins tell you if the recommendation worked. Your dashboard rolls it all up. The longer a customer sticks around, the sharper their profile gets — automatically.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12 text-left">
             {[
-              { from: 'Widget', to: 'Routine Engine', signal: 'Skin profile data feeds recommendation calibration' },
-              { from: 'Outcome Tracker', to: 'Routine Engine', signal: 'Product reactions refine future routine generation' },
-              { from: 'Outcome Tracker', to: 'Brand Dashboard', signal: 'Check-in data builds brand-level analytics' },
-              { from: 'Brand Dashboard', to: 'Everything', signal: 'Intelligence insights inform catalogue and CRM strategy' },
+              { from: 'Quiz', to: 'Recommendation', signal: 'What a customer tells us shapes what we recommend.' },
+              { from: 'Check-Ins', to: 'Recommendation', signal: 'Real reactions refine future recommendations automatically.' },
+              { from: 'Check-Ins', to: 'Dashboard', signal: 'Every check-in becomes a data point in your brand-level reports.' },
             ].map((flow, i) => (
-              <div
-                key={i}
-                className="rounded-2xl p-5"
-                style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.1)' }}
-              >
-                <div className="flex items-center gap-2 mb-2">
+              <div key={i} className="rounded-2xl p-5" style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.1)' }}>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(193,122,71,0.2)', color: '#C17A47' }}>{flow.from}</span>
                   <span style={{ color: 'rgba(250,246,240,0.3)' }}>→</span>
                   <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(250,246,240,0.08)', color: 'rgba(250,246,240,0.7)' }}>{flow.to}</span>
@@ -674,17 +469,17 @@ export default function Platform() {
               Get a demo
             </p>
             <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
-              Walk through the platform with your catalogue.
+              Walk through it with your own catalog.
             </h2>
             <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(250,246,240,0.65)' }}>
-              30 minutes. We cover all four modules with your actual product catalogue and consumer use case — so you leave with a clear picture of what the intelligence loop looks like for your brand.
+              30 minutes. We&rsquo;ll cover all four pieces using your actual products and customers, so you leave knowing exactly what this would look like for your brand.
             </p>
             <div className="space-y-4">
               {[
-                'Live Routine Engine demo with your catalogue',
-                'Outcome Tracker and compliance walkthrough',
-                'Brand Dashboard analytics preview',
-                'Widget integration on your storefront',
+                'A live look at the quiz with your products',
+                'How check-ins and reminders work',
+                'A preview of your dashboard',
+                'What setup on your site would look like',
               ].map(item => (
                 <div key={item} className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(193,122,71,0.25)' }}>
@@ -710,19 +505,19 @@ export default function Platform() {
                 <span className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5" style={{ color: 'rgba(250,246,240,0.4)' }}>Intelligence</span>
               </div>
               <p className="text-[13px] leading-relaxed max-w-xs" style={{ color: 'rgba(250,246,240,0.45)' }}>
-                Predictive consumer intelligence for CPG brands. Know your customer. Personalize deeper. Retain longer.
+                Real customer intelligence for beauty &amp; CPG brands, in plain language. Know them. Personalize for them. Keep them.
               </p>
             </div>
             <div>
               <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-4" style={{ color: 'rgba(250,246,240,0.3)' }}>
-                Platform
+                How it works
               </p>
               <div className="space-y-2.5">
                 {[
-                  { label: 'Routine Engine', href: '#routine-engine' },
-                  { label: 'Outcome Tracker', href: '#outcome-tracker' },
-                  { label: 'Brand Dashboard', href: '#brand-dashboard' },
-                  { label: 'Embeddable Widget', href: '#widget' },
+                  { label: 'The Quiz', href: '#quiz' },
+                  { label: 'Check-Ins', href: '#checkins' },
+                  { label: 'Your Dashboard', href: '#dashboard' },
+                  { label: 'Getting Set Up', href: '#setup' },
                 ].map(l => (
                   <a key={l.label} href={l.href} className="block text-[13px] transition-opacity hover:opacity-80" style={{ color: 'rgba(250,246,240,0.5)' }}>
                     {l.label}
