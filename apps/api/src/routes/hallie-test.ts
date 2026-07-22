@@ -18,11 +18,17 @@ import { ApiError } from '../lib/errors.js'
 // is what makes its filters "auto-update" instantly with no extra
 // round-trips.
 
+// Mirrors hallie-api's actual consent gate (save_consent_gate in
+// app/domains/users/service.py) — these 4 are the only types the app ever
+// hard-requires before letting a user through onboarding. "ai_personalization"
+// was previously listed here too, but hallie-api has never recorded a
+// consent type by that name (see app/domains/shared/consent.py's
+// CONSENT_TYPES) — its presence meant no user could ever show as fully
+// compliant, permanently capped at 4/5.
 const REQUIRED_CONSENT_TYPES = [
   'terms_of_service',
   'privacy_policy_ack',
   'partner_brand_sharing',
-  'ai_personalization',
   'sensitive_info',
 ]
 

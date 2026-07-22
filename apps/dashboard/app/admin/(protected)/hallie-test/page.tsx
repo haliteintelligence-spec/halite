@@ -41,6 +41,40 @@ const STAT_CARDS = [
 const TABS = ['overview', 'users', 'products', 'usage', 'preferences', 'compliance'] as const
 type Tab = (typeof TABS)[number]
 
+// Where each Overview summary's "deeper dive" button lands — the tab (and,
+// for Users, the pre-applied compliance filter / sort) that best explains
+// that number. Covers both the top stat cards and the growth/engagement
+// grid, keyed by the same field name used to read the value out of
+// `summary`.
+const DEEP_DIVE: Record<string, { tab: Tab; compliance?: 'compliant' | 'incomplete'; sort?: SortField }> = {
+  totalUsers: { tab: 'users' },
+  uniqueLoginUsers30d: { tab: 'users', sort: 'loginCount' },
+  totalLogs: { tab: 'usage' },
+  compliantUsers: { tab: 'users', compliance: 'compliant' },
+  totalProducts: { tab: 'products' },
+  haliteLinkedUsers: { tab: 'users' },
+  repurchaseRate: { tab: 'usage' },
+  newUsers7d: { tab: 'users', sort: 'createdAt' },
+  newUsers30d: { tab: 'users', sort: 'createdAt' },
+  logs7d: { tab: 'usage' },
+  logs30d: { tab: 'usage' },
+  totalLogins: { tab: 'users', sort: 'loginCount' },
+  profileCompleteUsers: { tab: 'users' },
+  pointsAwarded: { tab: 'users', sort: 'pointsBalance' },
+  payoutCount: { tab: 'users' },
+}
+
+const GROWTH_ITEMS: { key: string; label: string }[] = [
+  { key: 'newUsers7d', label: 'New users (7d)' },
+  { key: 'newUsers30d', label: 'New users (30d)' },
+  { key: 'logs7d', label: 'Logs (7d)' },
+  { key: 'logs30d', label: 'Logs (30d)' },
+  { key: 'totalLogins', label: 'Total logins' },
+  { key: 'profileCompleteUsers', label: 'Profile-complete users' },
+  { key: 'pointsAwarded', label: 'Points awarded' },
+  { key: 'payoutCount', label: 'Payout requests' },
+]
+
 function useHallieTestFetch<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null)
   useEffect(() => {
@@ -55,11 +89,29 @@ function useHallieTestFetch<T>(path: string | null) {
 
 export default function HallieTestPage() {
   const [tab, setTab] = useState<Tab>('overview')
+  // Seeded from an Overview "deeper dive" button click — `token` is bumped
+  // on every click (even to the same target) so UsersTab, keyed on it
+  // below, fully remounts and picks up the fresh initial filter/sort
+  // instead of keeping whatever the user had left set from before.
+  const [usersSeed, setUsersSeed] = useState<{ compliance: 'all' | 'compliant' | 'incomplete'; sort: SortField; token: number }>({
+    compliance: 'all',
+    sort: 'createdAt',
+    token: 0,
+  })
   const summary = useHallieTestFetch<any>('/admin/hallie-test/summary')
   const usersData = useHallieTestFetch<{ users: User[] }>('/admin/hallie-test/users')
   const productsData = useHallieTestFetch<any>(tab === 'products' ? '/admin/hallie-test/insights/products' : null)
   const usageData = useHallieTestFetch<any>(tab === 'usage' ? '/admin/hallie-test/insights/usage' : null)
   const prefsData = useHallieTestFetch<any>(tab === 'preferences' ? '/admin/hallie-test/insights/preferences' : null)
+
+  function handleDeepDive(key: string) {
+    const target = DEEP_DIVE[key]
+    if (!target) return
+    if (target.tab === 'users') {
+      setUsersSeed((s) => ({ compliance: target.compliance ?? 'all', sort: target.sort ?? 'createdAt', token: s.token + 1 }))
+    }
+    setTab(target.tab)
+  }
 
   return (
     <div className="max-w-5xl">
@@ -81,8 +133,10 @@ export default function HallieTestPage() {
         ))}
       </div>
 
-      {tab === 'overview' && <OverviewTab summary={summary} />}
-      {tab === 'users' && <UsersTab users={usersData?.users ?? []} />}
+      {tab === 'overview' && <OverviewTab summary={summary} onDeepDive={handleDeepDive} />}
+      {tab === 'users' && (
+        <UsersTab key={usersSeed.token} users={usersData?.users ?? []} initialCompliance={usersSeed.compliance} initialSort={usersSeed.sort} />
+      )}
       {tab === 'products' && <ProductsTab products={productsData?.products ?? []} />}
       {tab === 'usage' && <UsageTab usage={usageData?.usage ?? []} />}
       {tab === 'preferences' && <PreferencesTab rows={prefsData?.rows ?? []} />}
@@ -99,12 +153,18 @@ function Card({ children }: { children: React.ReactNode }) {
   )
 }
 
-function OverviewTab({ summary }: { summary: any }) {
+function OverviewTab({ summary, onDeepDive }: { summary: any; onDeepDive: (key: string) => void }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {STAT_CARDS.map(({ key, label, icon: Icon, color, suffix }) => (
-          <div key={key} className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <button
+            key={key}
+            type="button"
+            onClick={() => onDeepDive(key)}
+            className="text-left rounded-xl p-5 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', outlineColor: 'var(--clay)' }}
+          >
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{label}</p>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${color}18` }}>
@@ -119,7 +179,7 @@ function OverviewTab({ summary }: { summary: any }) {
                 {summary.repurchaseAnsweredCount.toLocaleString()} responses
               </p>
             )}
-          </div>
+          </button>
         ))}
       </div>
       <Card>
@@ -127,20 +187,17 @@ function OverviewTab({ summary }: { summary: any }) {
           <h2 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Growth & engagement</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4">
-          {[
-            ['New users (7d)', summary?.newUsers7d],
-            ['New users (30d)', summary?.newUsers30d],
-            ['Logs (7d)', summary?.logs7d],
-            ['Logs (30d)', summary?.logs30d],
-            ['Total logins', summary?.totalLogins],
-            ['Profile-complete users', summary?.profileCompleteUsers],
-            ['Points awarded', summary?.pointsAwarded],
-            ['Payout requests', summary?.payoutCount],
-          ].map(([label, value]) => (
-            <div key={label as string} className="p-5" style={{ borderTop: '1px solid var(--border)' }}>
+          {GROWTH_ITEMS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onDeepDive(key)}
+              className="text-left p-5 transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2"
+              style={{ borderTop: '1px solid var(--border)', outlineColor: 'var(--clay)' }}
+            >
               <p className="text-[10px] font-medium tracking-wide uppercase mb-1.5" style={{ color: 'var(--ink-3)' }}>{label}</p>
-              <p className="text-xl font-semibold" style={{ color: 'var(--ink)' }}>{(value ?? 0).toLocaleString()}</p>
-            </div>
+              <p className="text-xl font-semibold" style={{ color: 'var(--ink)' }}>{(summary?.[key] ?? 0).toLocaleString()}</p>
+            </button>
           ))}
         </div>
       </Card>
@@ -148,13 +205,22 @@ function OverviewTab({ summary }: { summary: any }) {
   )
 }
 
-type SortField = 'name' | 'createdAt' | 'productCount' | 'logCount' | 'loginCount' | 'grantedRequiredConsents'
+type SortField = 'name' | 'createdAt' | 'productCount' | 'logCount' | 'loginCount' | 'grantedRequiredConsents' | 'pointsBalance'
 
-function UsersTab({ users }: { users: User[] }) {
+function UsersTab({
+  users,
+  initialCompliance = 'all',
+  initialSort = 'createdAt',
+}: {
+  users: User[]
+  /** Seeded from an Overview deep-dive click (e.g. "Fully compliant") — see HallieTestPage. */
+  initialCompliance?: 'all' | 'compliant' | 'incomplete'
+  initialSort?: SortField
+}) {
   const [search, setSearch] = useState('')
   const [city, setCity] = useState('all')
-  const [compliance, setCompliance] = useState<'all' | 'compliant' | 'incomplete'>('all')
-  const [sort, setSort] = useState<{ field: SortField; dir: 'asc' | 'desc' }>({ field: 'createdAt', dir: 'desc' })
+  const [compliance, setCompliance] = useState<'all' | 'compliant' | 'incomplete'>(initialCompliance)
+  const [sort, setSort] = useState<{ field: SortField; dir: 'asc' | 'desc' }>({ field: initialSort, dir: 'desc' })
 
   const cities = useMemo(() => Array.from(new Set(users.map((u) => u.city).filter(Boolean))) as string[], [users])
 
@@ -165,7 +231,7 @@ function UsersTab({ users }: { users: User[] }) {
       r = r.filter((u) => `${u.name} ${u.email} ${u.phone ?? ''}`.toLowerCase().includes(q))
     }
     if (city !== 'all') r = r.filter((u) => u.city === city)
-    if (compliance !== 'all') r = r.filter((u) => (u.grantedRequiredConsents === 5) === (compliance === 'compliant'))
+    if (compliance !== 'all') r = r.filter((u) => (u.grantedRequiredConsents === 4) === (compliance === 'compliant'))
     return [...r].sort((a, b) => {
       const av = a[sort.field]
       const bv = b[sort.field]
@@ -204,7 +270,8 @@ function UsersTab({ users }: { users: User[] }) {
               <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
                 {[
                   ['Name', 'name'], ['Signed up', 'createdAt'], ['Products', 'productCount'],
-                  ['Logs', 'logCount'], ['Logins', 'loginCount'], ['Compliance', 'grantedRequiredConsents'],
+                  ['Logs', 'logCount'], ['Logins', 'loginCount'], ['Points earned', 'pointsBalance'],
+                  ['Compliance', 'grantedRequiredConsents'],
                 ].map(([label, field]) => (
                   <th key={label} onClick={() => toggleSort(field as SortField)}
                     className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase cursor-pointer select-none"
@@ -216,7 +283,7 @@ function UsersTab({ users }: { users: User[] }) {
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No users match these filters.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No users match these filters.</td></tr>
               ) : rows.map((u, i) => (
                 <tr key={u.id} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : undefined }}>
                   <td className="px-4 py-3">
@@ -229,10 +296,11 @@ function UsersTab({ users }: { users: User[] }) {
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{u.productCount}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{u.logCount}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{u.loginCount}</td>
+                  <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{u.pointsBalance.toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={u.grantedRequiredConsents === 5 ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fef3c7', color: '#92400e' }}>
-                      {u.grantedRequiredConsents}/5
+                      style={u.grantedRequiredConsents === 4 ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fef3c7', color: '#92400e' }}>
+                      {u.grantedRequiredConsents}/4
                     </span>
                   </td>
                 </tr>
