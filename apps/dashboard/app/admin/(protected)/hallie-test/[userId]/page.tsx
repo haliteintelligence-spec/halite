@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -42,7 +42,29 @@ function Card({ children }: { children: React.ReactNode }) {
 
 export default function HallieTestUserPage() {
   const { userId } = useParams<{ userId: string }>()
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>('profile')
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!user) return
+    const confirmed = window.confirm(
+      `Permanently delete ${user.name} (${user.email})? This deletes every product, log, and points record they have — this cannot be undone.`
+    )
+    if (!confirmed) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`${API_URL}/admin/hallie-test/users/${userId}`, {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      router.push('/admin/hallie-test')
+    } catch {
+      window.alert("Couldn't delete this account — try again.")
+      setDeleting(false)
+    }
+  }
 
   const profileData = useHallieTestFetch<{ user: any }>(`/admin/hallie-test/users/${userId}`)
   const productsData = useHallieTestFetch<{ products: any[] }>(tab === 'products' ? `/admin/hallie-test/users/${userId}/products` : null)
@@ -97,6 +119,17 @@ export default function HallieTestUserPage() {
                 <p className="text-[13px]" style={{ color: 'var(--ink)' }}>{String(value)}</p>
               </div>
             ))}
+          </div>
+          <div className="px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg"
+              style={{ color: '#b91c1c', background: '#fee2e2', opacity: deleting ? 0.6 : 1 }}
+            >
+              <Trash2 size={13} />
+              {deleting ? 'Deleting…' : 'Delete account'}
+            </button>
           </div>
         </Card>
       )}

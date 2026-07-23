@@ -356,4 +356,20 @@ export async function hallieTestRoutes(server: FastifyInstance) {
     `
     return { rows }
   })
+
+  // ── Account deletion ──────────────────────────────────────────────────
+  server.delete('/users/:userId', { preHandler: requireHaliteAdmin }, async (request) => {
+    const { userId } = request.params as { userId: string }
+    // Every owned table (products, logs, points, consent, etc.) has
+    // ondelete=CASCADE back to this row (see hallie-api's models) — same
+    // mechanism as the user's own self-service DELETE /v1/me, just
+    // triggered here instead since this admin backend only ever has
+    // direct DB access to the shared hallie_testing schema, never a
+    // bearer token for arbitrary users.
+    const result = await prisma.$executeRaw`
+      DELETE FROM hallie_testing.hallie_testing_users WHERE id = ${userId}
+    `
+    if (result === 0) throw new ApiError(404, 'User not found')
+    return { ok: true }
+  })
 }
