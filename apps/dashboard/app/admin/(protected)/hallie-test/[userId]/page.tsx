@@ -31,15 +31,16 @@ function fmtBirthday(d: string | null) {
 }
 
 function useHallieTestFetch<T>(path: string | null) {
-  const [data, setData] = useState<T | null>(null)
+  const [state, setState] = useState<{ data: T | null; status: 'loading' | 'success' | 'error' }>({ data: null, status: 'loading' })
   useEffect(() => {
     if (!path) return
-    setData(null)
+    setState({ data: null, status: 'loading' })
     fetch(`${API_URL}${path}`, { headers: adminHeaders(), cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setData)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Request failed (${r.status})`))))
+      .then((data) => setState({ data, status: 'success' }))
+      .catch(() => setState({ data: null, status: 'error' }))
   }, [path])
-  return data
+  return state
 }
 
 function Card({ children }: { children: React.ReactNode }) {
@@ -76,14 +77,25 @@ export default function HallieTestUserPage() {
     }
   }
 
-  const profileData = useHallieTestFetch<{ user: any }>(`/admin/hallie-test/users/${userId}`)
-  const productsData = useHallieTestFetch<{ products: any[] }>(tab === 'products' ? `/admin/hallie-test/users/${userId}/products` : null)
-  const logsData = useHallieTestFetch<{ logs: any[] }>(tab === 'logs' ? `/admin/hallie-test/users/${userId}/logs` : null)
-  const prefsData = useHallieTestFetch<{ preferences: any[] }>(tab === 'preferences' ? `/admin/hallie-test/users/${userId}/preferences` : null)
-  const feedbackData = useHallieTestFetch<{ feedback: any[] }>(tab === 'feedback' ? `/admin/hallie-test/users/${userId}/feedback` : null)
-  const activityData = useHallieTestFetch<any>(tab === 'activity' ? `/admin/hallie-test/users/${userId}/activity` : null)
+  const { data: profileData, status: profileStatus } = useHallieTestFetch<{ user: any }>(`/admin/hallie-test/users/${userId}`)
+  const { data: productsData } = useHallieTestFetch<{ products: any[] }>(tab === 'products' ? `/admin/hallie-test/users/${userId}/products` : null)
+  const { data: logsData } = useHallieTestFetch<{ logs: any[] }>(tab === 'logs' ? `/admin/hallie-test/users/${userId}/logs` : null)
+  const { data: prefsData } = useHallieTestFetch<{ preferences: any[] }>(tab === 'preferences' ? `/admin/hallie-test/users/${userId}/preferences` : null)
+  const { data: feedbackData } = useHallieTestFetch<{ feedback: any[] }>(tab === 'feedback' ? `/admin/hallie-test/users/${userId}/feedback` : null)
+  const { data: activityData } = useHallieTestFetch<any>(tab === 'activity' ? `/admin/hallie-test/users/${userId}/activity` : null)
 
   const user = profileData?.user
+
+  if (profileStatus === 'error') {
+    return (
+      <div className="max-w-5xl">
+        <Link href="/admin/hallie-test" className="inline-flex items-center gap-1.5 text-[13px] mb-4" style={{ color: 'var(--ink-3)' }}>
+          <ArrowLeft size={13} /> All users
+        </Link>
+        <p className="text-sm" style={{ color: 'var(--ink-3)' }}>This user couldn&apos;t be found.</p>
+      </div>
+    )
+  }
 
   if (!user) {
     return <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Loading…</p>
