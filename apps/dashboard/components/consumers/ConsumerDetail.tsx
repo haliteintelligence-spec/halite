@@ -17,12 +17,17 @@ const SKIN_TYPE_LABELS: Record<string, string> = {
   DRY: 'Dry', OILY: 'Oily', COMBINATION: 'Combination', NORMAL: 'Normal', SENSITIVE: 'Sensitive',
 }
 
+// `birthday` is a date-only value serialized as a UTC-midnight ISO string
+// (the source Postgres column has no time-of-day/timezone component at
+// all). Reading it with local getters rolls the calendar day back by one
+// in any timezone behind UTC — use the UTC getters instead, which give
+// back exactly the calendar date that was stored.
 function calcAge(birthday: string): number {
   const dob = new Date(birthday)
   const today = new Date()
-  let age = today.getFullYear() - dob.getFullYear()
-  const m = today.getMonth() - dob.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  let age = today.getFullYear() - dob.getUTCFullYear()
+  const m = today.getMonth() - dob.getUTCMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getUTCDate())) age--
   return age
 }
 
@@ -283,7 +288,7 @@ export function ConsumerDetail({
           <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Profile</p>
           <div className="space-y-2">
             <Row label="Skin Type" value={bp?.skinType ? (SKIN_TYPE_LABELS[bp.skinType] ?? bp.skinType) : '—'} />
-            <Row label="Birthday" value={birthday ? new Date(birthday).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
+            <Row label="Birthday" value={birthday ? new Date(birthday).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '—'} />
             <Row label="Age" value={birthday ? String(calcAge(birthday)) : '—'} />
             <Row label="Location" value={[bp?.city, bp?.country].filter(Boolean).join(', ') || '—'} />
             <Row label="Climate" value={bp?.climateTag ? fmt(bp.climateTag) : '—'} />

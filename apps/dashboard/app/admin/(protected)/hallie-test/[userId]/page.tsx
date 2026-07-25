@@ -20,6 +20,16 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// Birthday is a date-only value serialized as UTC midnight (the source
+// column has no time-of-day/timezone component), unlike the real
+// timestamps fmtDate above is used for — so it must stay pinned to UTC
+// here rather than rendering in the viewer's local timezone, or it
+// silently displays a day earlier for anyone behind UTC.
+function fmtBirthday(d: string | null) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+}
+
 function useHallieTestFetch<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null)
   useEffect(() => {
@@ -111,7 +121,7 @@ export default function HallieTestUserPage() {
             {[
               ['Name', user.name], ['Email', user.email], ['Phone', user.phone ?? '—'],
               ['City', user.city ?? '—'], ['Country', user.country ?? '—'], ['Timezone', user.timezone ?? '—'],
-              ['Birthday', fmtDate(user.birthday)], ['Signed up', fmtDate(user.createdAt)],
+              ['Birthday', fmtBirthday(user.birthday)], ['Signed up', fmtDate(user.createdAt)],
               ['Points balance', user.pointsBalance], ['Synced to Halite', user.haliteConsumerId ? 'Yes' : 'No'],
             ].map(([label, value]) => (
               <div key={label as string}>

@@ -8,12 +8,15 @@ import { ConsumerDetail, type BeautyProfile, type CheckInRow, type RoutineStepRo
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+// See the matching comment in components/consumers/ConsumerDetail.tsx —
+// `birthday` is a date-only value serialized as UTC midnight, so it must
+// be read back with UTC getters, not local ones.
 function calcAge(birthday: string): number {
   const dob = new Date(birthday)
   const today = new Date()
-  let age = today.getFullYear() - dob.getFullYear()
-  const m = today.getMonth() - dob.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  let age = today.getFullYear() - dob.getUTCFullYear()
+  const m = today.getMonth() - dob.getUTCMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getUTCDate())) age--
   return age
 }
 
