@@ -20,6 +20,13 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// Category/type fields come from hallie_testing_* tables owned by a separate
+// app (see comment atop the API route) and aren't guaranteed non-null here —
+// a bad row for one user shouldn't crash the whole tab.
+function fmt(s: string | null | undefined) {
+  return s ? s.replace(/_/g, ' ') : '—'
+}
+
 // Birthday is a date-only value serialized as UTC midnight (the source
 // column has no time-of-day/timezone component), unlike the real
 // timestamps fmtDate above is used for — so it must stay pinned to UTC
@@ -173,7 +180,7 @@ export default function HallieTestUserPage() {
                 <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{p.brand}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.name}</td>
-                  <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>{p.category.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>{fmt(p.category)}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.rating} / 10</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.initialLevel}%</td>
                 </tr>
@@ -190,7 +197,7 @@ export default function HallieTestUserPage() {
           ) : logsData.logs.map((log: any) => (
             <Card key={log.id}>
               <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-                <span className="text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{log.category.replace(/_/g, ' ')}</span>
+                <span className="text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{fmt(log.category)}</span>
                 <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{fmtDate(log.date)}</span>
               </div>
               <div className="p-5 space-y-2">
@@ -223,10 +230,10 @@ export default function HallieTestUserPage() {
           ) : prefsData.preferences.map((pref: any) => (
             <Card key={pref.category}>
               <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                <span className="text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{pref.category.replace(/_/g, ' ')}</span>
+                <span className="text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{fmt(pref.category)}</span>
               </div>
               <div className="p-5 grid grid-cols-2 gap-3">
-                {Object.entries(pref.answers).map(([q, a]) => (
+                {Object.entries(pref.answers ?? {}).map(([q, a]) => (
                   <div key={q}>
                     <p className="text-[10px] font-medium tracking-wide uppercase mb-0.5" style={{ color: 'var(--ink-3)' }}>{q.replace(/_/g, ' ')}</p>
                     <p className="text-[13px]" style={{ color: 'var(--ink)' }}>{Array.isArray(a) ? a.join(', ') : String(a)}</p>
@@ -294,7 +301,7 @@ export default function HallieTestUserPage() {
               <tbody>
                 {(activityData.consentHistory ?? []).map((c: any) => (
                   <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td className="px-4 py-3 text-[13px] capitalize" style={{ color: 'var(--ink)' }}>{c.type.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-[13px] capitalize" style={{ color: 'var(--ink)' }}>{fmt(c.type)}</td>
                     <td className="px-4 py-3">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                         style={c.granted ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fee2e2', color: '#b91c1c' }}>
