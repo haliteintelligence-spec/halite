@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Users, LogIn, ClipboardList, ShieldCheck, Package, TrendingUp, RefreshCw } from 'lucide-react'
+import { Users, LogIn, ClipboardList, ShieldCheck, Package, TrendingUp, RefreshCw, ArrowUpDown } from 'lucide-react'
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -274,9 +274,13 @@ function UsersTab({
                   ['Compliance', 'grantedRequiredConsents'],
                 ].map(([label, field]) => (
                   <th key={label} onClick={() => toggleSort(field as SortField)}
-                    className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase cursor-pointer select-none"
+                    className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase cursor-pointer select-none whitespace-nowrap"
                     style={{ color: sort.field === field ? 'var(--clay)' : 'var(--ink-3)' }}>
-                    {label} {sort.field === field ? (sort.dir === 'asc' ? '↑' : '↓') : ''}
+                    <span className="inline-flex items-center gap-1">
+                      {label}
+                      <ArrowUpDown size={10} style={{ opacity: sort.field === field ? 1 : 0.4 }} />
+                      {sort.field === field && <span className="text-[9px]">{sort.dir === 'asc' ? '↑' : '↓'}</span>}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -314,11 +318,18 @@ function UsersTab({
 }
 
 function ProductsTab({ products }: { products: any[] }) {
+  // A product can span more than one category (e.g. a 2-in-1), so it's
+  // counted under each of its categories rather than forced into just one.
   const byCategory = useMemo(() => {
     const groups: Record<string, { count: number; avgRating: number; avgLevel: number }> = {}
     for (const p of products) {
-      const g = (groups[p.category] ??= { count: 0, avgRating: 0, avgLevel: 0 })
-      g.count++; g.avgRating += p.rating; g.avgLevel += p.initialLevel
+      const cats: string[] = Array.isArray(p.categories) && p.categories.length > 0 ? p.categories : ['uncategorized']
+      for (const cat of cats) {
+        const g = (groups[cat] ??= { count: 0, avgRating: 0, avgLevel: 0 })
+        g.count++
+        g.avgRating += p.rating ?? 0
+        g.avgLevel += p.initialLevel ?? 0
+      }
     }
     for (const g of Object.values(groups)) { g.avgRating = g.count ? g.avgRating / g.count : 0; g.avgLevel = g.count ? g.avgLevel / g.count : 0 }
     return groups

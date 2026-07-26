@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, Trash2 } from 'lucide-react'
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -55,6 +55,87 @@ function Card({ children }: { children: React.ReactNode }) {
     <div className="rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
       {children}
     </div>
+  )
+}
+
+type ProductSortField = 'brand' | 'name' | 'categories' | 'productTypes' | 'rating' | 'initialLevel' | 'currentLevel'
+
+const PRODUCT_COLUMNS: { label: string; field: ProductSortField }[] = [
+  { label: 'Brand', field: 'brand' },
+  { label: 'Name', field: 'name' },
+  { label: 'Categories', field: 'categories' },
+  { label: 'Product Type(s)', field: 'productTypes' },
+  { label: 'Rating', field: 'rating' },
+  { label: 'Initial Level', field: 'initialLevel' },
+  { label: 'Current Level', field: 'currentLevel' },
+]
+
+// categories/productTypes are string[] (a product can span more than one
+// category — see the API route's comment); sort on their joined text.
+function productSortValue(p: any, field: ProductSortField): string | number {
+  if (field === 'categories' || field === 'productTypes') {
+    return Array.isArray(p[field]) ? p[field].join(', ') : ''
+  }
+  return p[field] ?? -Infinity
+}
+
+function UserProductsTable({ products, loading }: { products: any[]; loading: boolean }) {
+  const [sort, setSort] = useState<{ field: ProductSortField; dir: 'asc' | 'desc' }>({ field: 'brand', dir: 'asc' })
+
+  function toggleSort(field: ProductSortField) {
+    setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' }))
+  }
+
+  const rows = useMemo(() => {
+    return [...products].sort((a, b) => {
+      const av = productSortValue(a, sort.field)
+      const bv = productSortValue(b, sort.field)
+      const cmp = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv) : Number(av) - Number(bv)
+      return sort.dir === 'asc' ? cmp : -cmp
+    })
+  }, [products, sort])
+
+  return (
+    <Card>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px]">
+          <thead>
+            <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+              {PRODUCT_COLUMNS.map(({ label, field }) => (
+                <th key={field} onClick={() => toggleSort(field)}
+                  className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase cursor-pointer select-none whitespace-nowrap"
+                  style={{ color: sort.field === field ? 'var(--clay)' : 'var(--ink-3)' }}>
+                  <span className="inline-flex items-center gap-1">
+                    {label}
+                    <ArrowUpDown size={10} style={{ opacity: sort.field === field ? 1 : 0.4 }} />
+                    {sort.field === field && <span className="text-[9px]">{sort.dir === 'asc' ? '↑' : '↓'}</span>}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={PRODUCT_COLUMNS.length} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{loading ? 'Loading…' : 'No products yet.'}</td></tr>
+            ) : rows.map((p: any) => (
+              <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{p.brand}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.name}</td>
+                <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>
+                  {Array.isArray(p.categories) && p.categories.length ? p.categories.map((c: string) => fmt(c)).join(', ') : '—'}
+                </td>
+                <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>
+                  {Array.isArray(p.productTypes) && p.productTypes.length ? p.productTypes.map((t: string) => fmt(t)).join(', ') : '—'}
+                </td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.rating != null ? `${p.rating} / 10` : '—'}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.initialLevel != null ? `${p.initialLevel}%` : '—'}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.currentLevel != null ? `${p.currentLevel}%` : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   )
 }
 
@@ -164,30 +245,7 @@ export default function HallieTestUserPage() {
       )}
 
       {tab === 'products' && (
-        <Card>
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
-                {['Brand', 'Name', 'Category', 'Rating', 'Initial level'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {!productsData?.products?.length ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{productsData ? 'No products yet.' : 'Loading…'}</td></tr>
-              ) : productsData.products.map((p: any) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{p.brand}</td>
-                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.name}</td>
-                  <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>{fmt(p.category)}</td>
-                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.rating} / 10</td>
-                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.initialLevel}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <UserProductsTable products={productsData?.products ?? []} loading={!productsData} />
       )}
 
       {tab === 'logs' && (

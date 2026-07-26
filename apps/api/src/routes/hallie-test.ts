@@ -32,6 +32,37 @@ const REQUIRED_CONSENT_TYPES = [
   'sensitive_info',
 ]
 
+function safeJsonParse<T>(raw: unknown, fallback: T): T {
+  if (typeof raw !== 'string' || !raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+// hallie_testing_products stores a product's category/type as JSON text, not
+// plain columns — `categories` is a JSON array (a product can span more than
+// one, e.g. a 2-in-1), and `productTypes` is a JSON object keyed by category
+// (each category gets its own type, e.g. {"makeup": "lip", "skincare": "spf"}).
+// This normalizes both into flat arrays plus a best-guess current fill level
+// (the app only stores a manual override when the user corrects it — absent
+// that, initialLevel is the best available estimate, and an emptied product
+// is always 0 regardless of any stale override).
+function parseProductRow(p: Record<string, unknown>) {
+  const categories = safeJsonParse<string[]>(p.categories, [])
+  const productTypesByCategory = safeJsonParse<Record<string, string>>(p.productTypes, {})
+  const currentLevel = p.isEmpty
+    ? 0
+    : ((p.currentLevelOverride as number | null) ?? (p.initialLevel as number | null))
+  return {
+    ...p,
+    categories,
+    productTypes: Object.values(productTypesByCategory),
+    currentLevel,
+  }
+}
+
 export async function hallieTestRoutes(server: FastifyInstance) {
   // ── Top-line traction/compliance/engagement summary ──────────────────
   server.get('/summary', { preHandler: requireHaliteAdmin }, async () => {
@@ -225,7 +256,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
     const products = await prisma.$queryRaw<Array<Record<string, unknown>>>`
       SELECT * FROM hallie_testing.hallie_testing_products WHERE "userId" = ${userId} ORDER BY "createdAt" DESC
     `
-    return { products }
+    return { products: products.map(parseProductRow) }
   })
 
   server.get('/users/:userId/logs', { preHandler: requireHaliteAdmin }, async (request) => {
@@ -310,12 +341,12 @@ export async function hallieTestRoutes(server: FastifyInstance) {
   // ── Product-type usage insights ────────────────────────────────────────
   server.get('/insights/products', { preHandler: requireHaliteAdmin }, async () => {
     const products = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT id, "userId", category, "productType", brand, name, rating, "initialLevel",
-        "routineTags", "occasionTags", "createdAt"
+      SELECT id, "userId", categories, "productTypes", brand, name, rating, "initialLevel",
+        "currentLevelOverride", "isEmpty", "routineTags", "occasionTags", "createdAt"
       FROM hallie_testing.hallie_testing_products
       ORDER BY "createdAt" DESC
     `
-    return { products }
+    return { products: products.map(parseProductRow) }
   })
 
   // ── Real-world usage: city / time-of-year view ─────────────────────────
@@ -324,7 +355,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
       SELECT
         li.id, li.rating, li."outcomeTags", li."wearDuration", li."wouldRepurchase",
         le.date, le.category,
-        pr.id AS "productId", pr.brand AS "productBrand", pr.name AS "productName", pr."productType",
+        pr.id AS "productId", pr.brand AS "productBrand", pr.name AS "productName", pr."productTypes",
         u.id AS "userId", u.city, u.country, u.timezone
       FROM hallie_testing.hallie_testing_log_items li
       JOIN hallie_testing.hallie_testing_log_entries le ON le.id = li."logEntryId"
@@ -332,7 +363,12 @@ export async function hallieTestRoutes(server: FastifyInstance) {
       JOIN hallie_testing.hallie_testing_users u ON u.id = le."userId"
       ORDER BY le.date DESC
     `
-    return { usage }
+    return {
+      usage: usage.map((row) => ({
+        ...row,
+        productTypes: Object.values(safeJsonParse<Record<string, string>>(row.productTypes, {})),
+      })),
+    }
   })
 
   // ── Skin-type / preference vs. product relationship ────────────────────
@@ -348,13 +384,18 @@ export async function hallieTestRoutes(server: FastifyInstance) {
           WHEN 'makeup'    THEN pref.answers::jsonb -> 'undertone' ->> 0
           WHEN 'perfume'   THEN pref.answers::jsonb -> 'intensity' ->> 0
         END AS classifier,
-        pr.id AS "productId", pr.category AS "productCategory", pr.brand, pr.name, pr.rating, pr."initialLevel"
+        pr.id AS "productId", pr.categories AS "productCategories", pr.brand, pr.name, pr.rating, pr."initialLevel"
       FROM hallie_testing.hallie_testing_preference_responses pref
       JOIN hallie_testing.hallie_testing_users u ON u.id = pref."userId"
       LEFT JOIN hallie_testing.hallie_testing_products pr
-        ON pr."userId" = pref."userId" AND pr.category = pref.category
+        ON pr."userId" = pref."userId" AND pr.categories::jsonb ? pref.category
     `
-    return { rows }
+    return {
+      rows: rows.map((row) => ({
+        ...row,
+        productCategories: safeJsonParse<string[]>(row.productCategories, []),
+      })),
+    }
   })
 
   // ── Account deletion ──────────────────────────────────────────────────
