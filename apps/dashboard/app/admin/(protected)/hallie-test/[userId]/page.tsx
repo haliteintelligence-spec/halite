@@ -58,6 +58,18 @@ function Card({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Shown above every filterable table so it's always clear how many rows the
+// current filters left in view, out of how many exist unfiltered.
+function EntryCount({ shown, total, label }: { shown: number; total: number; label: string }) {
+  return (
+    <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+      {shown === total
+        ? `${total.toLocaleString()} ${label}${total !== 1 ? 's' : ''}`
+        : `Showing ${shown.toLocaleString()} of ${total.toLocaleString()} ${label}${total !== 1 ? 's' : ''}`}
+    </p>
+  )
+}
+
 type ProductSortField = 'brand' | 'name' | 'categories' | 'productTypes' | 'rating' | 'initialLevel' | 'currentLevel'
 
 const PRODUCT_COLUMNS: { label: string; field: ProductSortField }[] = [
@@ -118,6 +130,7 @@ function UserProductsTable({ products, loading }: { products: any[]; loading: bo
           {types.map((t) => <option key={t} value={t}>{fmt(t)}</option>)}
         </select>
       </div>
+      <EntryCount shown={rows.length} total={products.length} label="product" />
       <Card>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px]">
@@ -273,6 +286,7 @@ export default function HallieTestUserPage() {
 
       {tab === 'logs' && (
         <div className="space-y-3">
+          {logsData && <EntryCount shown={logsData.logs.length} total={logsData.logs.length} label="log" />}
           {!logsData?.logs?.length ? (
             <Card><p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{logsData ? 'No logs yet.' : 'Loading…'}</p></Card>
           ) : logsData.logs.map((log: any) => (
@@ -306,6 +320,7 @@ export default function HallieTestUserPage() {
 
       {tab === 'preferences' && (
         <div className="space-y-3">
+          {prefsData && <EntryCount shown={prefsData.preferences.length} total={prefsData.preferences.length} label="preference response" />}
           {!prefsData?.preferences?.length ? (
             <Card><p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{prefsData ? 'No preferences answered yet.' : 'Loading…'}</p></Card>
           ) : prefsData.preferences.map((pref: any) => (
@@ -327,28 +342,31 @@ export default function HallieTestUserPage() {
       )}
 
       {tab === 'feedback' && (
-        <Card>
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
-                {['Rating', 'Comment', 'Date'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {!feedbackData?.feedback?.length ? (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{feedbackData ? 'No feedback yet.' : 'Loading…'}</td></tr>
-              ) : feedbackData.feedback.map((f: any) => (
-                <tr key={f.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{f.rating} / 5</td>
-                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{f.comment ?? '—'}</td>
-                  <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>{fmtDate(f.createdAt)}</td>
+        <div className="space-y-3">
+          {feedbackData && <EntryCount shown={feedbackData.feedback.length} total={feedbackData.feedback.length} label="feedback entry" />}
+          <Card>
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+                  {['Rating', 'Comment', 'Date'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+              </thead>
+              <tbody>
+                {!feedbackData?.feedback?.length ? (
+                  <tr><td colSpan={3} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{feedbackData ? 'No feedback yet.' : 'Loading…'}</td></tr>
+                ) : feedbackData.feedback.map((f: any) => (
+                  <tr key={f.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{f.rating} / 5</td>
+                    <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{f.comment ?? '—'}</td>
+                    <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>{fmtDate(f.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
       )}
 
       {tab === 'activity' && activityData && (
@@ -370,6 +388,7 @@ export default function HallieTestUserPage() {
           <Card>
             <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
               <h2 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Consent history</h2>
+              <EntryCount shown={(activityData.consentHistory ?? []).length} total={(activityData.consentHistory ?? []).length} label="entry" />
             </div>
             <table className="w-full">
               <thead>
@@ -399,6 +418,7 @@ export default function HallieTestUserPage() {
           <Card>
             <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
               <h2 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Points ledger</h2>
+              <EntryCount shown={(activityData.pointsTransactions ?? []).length} total={(activityData.pointsTransactions ?? []).length} label="transaction" />
             </div>
             <table className="w-full">
               <thead>

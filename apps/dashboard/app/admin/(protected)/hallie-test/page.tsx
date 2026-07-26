@@ -263,6 +263,8 @@ function UsersTab({
         </select>
       </div>
 
+      <EntryCount shown={rows.length} total={users.length} label="user" />
+
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px]">
@@ -323,6 +325,18 @@ function fmtTag(s: string | null | undefined) {
 
 function avg(nums: number[]): number | null {
   return nums.length ? nums.reduce((s, n) => s + n, 0) / nums.length : null
+}
+
+// Shown above every filterable table so it's always clear how many rows the
+// current filters left in view, out of how many exist unfiltered.
+function EntryCount({ shown, total, label }: { shown: number; total: number; label: string }) {
+  return (
+    <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+      {shown === total
+        ? `${total.toLocaleString()} ${label}${total !== 1 ? 's' : ''}`
+        : `Showing ${shown.toLocaleString()} of ${total.toLocaleString()} ${label}${total !== 1 ? 's' : ''}`}
+    </p>
+  )
 }
 
 function SortableTh<F extends string>({
@@ -412,6 +426,7 @@ function ProductsTab({ products }: { products: any[] }) {
           {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
         </select>
       </div>
+      <EntryCount shown={filteredProducts.length} total={products.length} label="product entry" />
       <Card>
       <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
         <h2 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Products by category</h2>
@@ -453,13 +468,19 @@ type ProductDetailSortField = 'name' | 'brand' | 'userCount' | 'avgRating' | 'av
 function CategoryDetail({ category, products, onBack }: { category: string; products: any[]; onBack: () => void }) {
   const [sort, setSort] = useState<{ field: ProductDetailSortField; dir: 'asc' | 'desc' }>({ field: 'userCount', dir: 'desc' })
   const [filterType, setFilterType] = useState('all')
+  const [filterBrand, setFilterBrand] = useState('all')
 
   const inCategory = useMemo(() => products.filter((p) => Array.isArray(p.categories) && p.categories.includes(category)), [products, category])
   const allTypes = useMemo(() => Array.from(new Set(inCategory.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [inCategory])
-  const filtered = useMemo(
-    () => (filterType === 'all' ? inCategory : inCategory.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))),
-    [inCategory, filterType]
-  )
+  const allBrands = useMemo(() => Array.from(new Set(inCategory.map((p) => p.brand).filter(Boolean))).sort(), [inCategory])
+  const filtered = useMemo(() => {
+    let r = inCategory
+    if (filterType !== 'all') r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))
+    if (filterBrand !== 'all') r = r.filter((p) => p.brand === filterBrand)
+    return r
+  }, [inCategory, filterType, filterBrand])
+
+  const totalDistinctProducts = useMemo(() => new Set(inCategory.map((p) => `${p.brand}::${p.name}`)).size, [inCategory])
 
   const rows = useMemo(() => {
     type Group = { name: string; brand: string; users: Set<string>; ratings: number[]; initialLevels: number[]; currentLevels: number[]; types: Set<string> }
@@ -509,13 +530,22 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
             <div>
               <h2 className="text-[13px] font-semibold capitalize" style={{ color: 'var(--ink)' }}>{fmtTag(category)}</h2>
               <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
-                {rows.length} distinct product{rows.length !== 1 ? 's' : ''} · {totalUsers} user{totalUsers !== 1 ? 's' : ''} with at least one in this category
+                {totalUsers} user{totalUsers !== 1 ? 's' : ''} with at least one matching product in this category
               </p>
             </div>
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
-              <option value="all">All product types</option>
-              {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <select value={filterBrand} onChange={(e) => setFilterBrand(e.target.value)} className={selectCls} style={selectStyle}>
+                <option value="all">All brands</option>
+                {allBrands.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
+                <option value="all">All product types</option>
+                {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="mt-2">
+            <EntryCount shown={rows.length} total={totalDistinctProducts} label="product" />
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -591,6 +621,7 @@ function UsageTab({ usage }: { usage: any[] }) {
           City is freeform text entered by each user — variations in spelling/format aren&apos;t normalized.
         </p>
       )}
+      <EntryCount shown={usage.length} total={usage.length} label="usage log entry" />
       <Card>
         <table className="w-full">
           <thead>
@@ -661,6 +692,7 @@ function PreferencesTab({ rows }: { rows: any[] }) {
 
   return (
     <div className="space-y-4">
+      <EntryCount shown={rows.length} total={rows.length} label="preference response" />
       {Object.keys(grouped).length === 0 ? (
         <Card><p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No preference data yet.</p></Card>
       ) : Object.entries(grouped).map(([category, byClassifier]) => (
