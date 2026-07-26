@@ -81,22 +81,44 @@ function productSortValue(p: any, field: ProductSortField): string | number {
 
 function UserProductsTable({ products, loading }: { products: any[]; loading: boolean }) {
   const [sort, setSort] = useState<{ field: ProductSortField; dir: 'asc' | 'desc' }>({ field: 'brand', dir: 'asc' })
+  const [filterCategory, setFilterCategory] = useState('all')
+  const [filterType, setFilterType] = useState('all')
+
+  const categories = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.categories) ? p.categories : [])))).sort(), [products])
+  const types = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [products])
 
   function toggleSort(field: ProductSortField) {
     setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' }))
   }
 
   const rows = useMemo(() => {
-    return [...products].sort((a, b) => {
+    let r = products
+    if (filterCategory !== 'all') r = r.filter((p) => Array.isArray(p.categories) && p.categories.includes(filterCategory))
+    if (filterType !== 'all') r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))
+    return [...r].sort((a, b) => {
       const av = productSortValue(a, sort.field)
       const bv = productSortValue(b, sort.field)
       const cmp = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv) : Number(av) - Number(bv)
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [products, sort])
+  }, [products, sort, filterCategory, filterType])
+
+  const selectCls = 'px-3 py-1.5 rounded-lg text-[12px] outline-none'
+  const selectStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
 
   return (
-    <Card>
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className={selectCls} style={selectStyle}>
+          <option value="all">All categories</option>
+          {categories.map((c) => <option key={c} value={c}>{fmt(c)}</option>)}
+        </select>
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
+          <option value="all">All product types</option>
+          {types.map((t) => <option key={t} value={t}>{fmt(t)}</option>)}
+        </select>
+      </div>
+      <Card>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px]">
           <thead>
@@ -135,7 +157,8 @@ function UserProductsTable({ products, loading }: { products: any[]; loading: bo
           </tbody>
         </table>
       </div>
-    </Card>
+      </Card>
+    </div>
   )
 }
 

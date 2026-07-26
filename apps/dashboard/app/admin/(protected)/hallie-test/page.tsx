@@ -317,12 +317,59 @@ function UsersTab({
   )
 }
 
+function fmtTag(s: string | null | undefined) {
+  return s ? s.replace(/_/g, ' ') : '—'
+}
+
+function avg(nums: number[]): number | null {
+  return nums.length ? nums.reduce((s, n) => s + n, 0) / nums.length : null
+}
+
+function SortableTh<F extends string>({
+  label, field, sort, onSort,
+}: {
+  label: string
+  field: F
+  sort: { field: F; dir: 'asc' | 'desc' }
+  onSort: (field: F) => void
+}) {
+  const active = sort.field === field
+  return (
+    <th onClick={() => onSort(field)}
+      className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase cursor-pointer select-none whitespace-nowrap"
+      style={{ color: active ? 'var(--clay)' : 'var(--ink-3)' }}>
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <ArrowUpDown size={10} style={{ opacity: active ? 1 : 0.4 }} />
+        {active && <span className="text-[9px]">{sort.dir === 'asc' ? '↑' : '↓'}</span>}
+      </span>
+    </th>
+  )
+}
+
+type CategorySortField = 'category' | 'count' | 'avgRating' | 'avgLevel'
+
 function ProductsTab({ products }: { products: any[] }) {
+  const [category, setCategory] = useState<string | null>(null)
+  const [sort, setSort] = useState<{ field: CategorySortField; dir: 'asc' | 'desc' }>({ field: 'count', dir: 'desc' })
+  const [filterCategory, setFilterCategory] = useState('all')
+  const [filterType, setFilterType] = useState('all')
+
+  const allCategories = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.categories) ? p.categories : [])))).sort(), [products])
+  const allTypes = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [products])
+
+  const filteredProducts = useMemo(() => {
+    let r = products
+    if (filterCategory !== 'all') r = r.filter((p) => Array.isArray(p.categories) && p.categories.includes(filterCategory))
+    if (filterType !== 'all') r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))
+    return r
+  }, [products, filterCategory, filterType])
+
   // A product can span more than one category (e.g. a 2-in-1), so it's
   // counted under each of its categories rather than forced into just one.
-  const byCategory = useMemo(() => {
+  const rows = useMemo(() => {
     const groups: Record<string, { count: number; avgRating: number; avgLevel: number }> = {}
-    for (const p of products) {
+    for (const p of filteredProducts) {
       const cats: string[] = Array.isArray(p.categories) && p.categories.length > 0 ? p.categories : ['uncategorized']
       for (const cat of cats) {
         const g = (groups[cat] ??= { count: 0, avgRating: 0, avgLevel: 0 })
@@ -332,36 +379,177 @@ function ProductsTab({ products }: { products: any[] }) {
       }
     }
     for (const g of Object.values(groups)) { g.avgRating = g.count ? g.avgRating / g.count : 0; g.avgLevel = g.count ? g.avgLevel / g.count : 0 }
-    return groups
-  }, [products])
+    return Object.entries(groups)
+      .map(([cat, g]) => ({ category: cat, ...g }))
+      .sort((a, b) => {
+        const av = a[sort.field]
+        const bv = b[sort.field]
+        const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av as number) - (bv as number)
+        return sort.dir === 'asc' ? cmp : -cmp
+      })
+  }, [filteredProducts, sort])
+
+  function toggleSort(field: CategorySortField) {
+    setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: field === 'category' ? 'asc' : 'desc' }))
+  }
+
+  if (category) {
+    return <CategoryDetail category={category} products={filteredProducts} onBack={() => setCategory(null)} />
+  }
+
+  const selectCls = 'px-3 py-1.5 rounded-lg text-[12px] outline-none'
+  const selectStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
 
   return (
-    <Card>
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className={selectCls} style={selectStyle}>
+          <option value="all">All categories</option>
+          {allCategories.map((c) => <option key={c} value={c}>{fmtTag(c)}</option>)}
+        </select>
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
+          <option value="all">All product types</option>
+          {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
+        </select>
+      </div>
+      <Card>
       <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
         <h2 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Products by category</h2>
+        <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>Click a category to see every product entered under it.</p>
       </div>
-      <table className="w-full">
-        <thead>
-          <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
-            {['Category', 'Count', 'Avg rating', 'Avg initial level'].map((h) => (
-              <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Object.keys(byCategory).length === 0 ? (
-            <tr><td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No products yet.</td></tr>
-          ) : Object.entries(byCategory).map(([cat, g]) => (
-            <tr key={cat} style={{ borderBottom: '1px solid var(--border)' }}>
-              <td className="px-4 py-3 text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{cat.replace(/_/g, ' ')}</td>
-              <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.count}</td>
-              <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.avgRating.toFixed(1)} / 10</td>
-              <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.avgLevel.toFixed(0)}%</td>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px]">
+          <thead>
+            <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+              <SortableTh label="Category" field="category" sort={sort} onSort={toggleSort} />
+              <SortableTh label="Count" field="count" sort={sort} onSort={toggleSort} />
+              <SortableTh label="Avg rating" field="avgRating" sort={sort} onSort={toggleSort} />
+              <SortableTh label="Avg initial level" field="avgLevel" sort={sort} onSort={toggleSort} />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No products yet.</td></tr>
+            ) : rows.map((g) => (
+              <tr key={g.category} onClick={() => setCategory(g.category)}
+                className="cursor-pointer transition-colors hover:bg-black/[0.02]"
+                style={{ borderBottom: '1px solid var(--border)' }}>
+                <td className="px-4 py-3 text-[13px] font-medium capitalize" style={{ color: 'var(--ink)' }}>{fmtTag(g.category)}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.count}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.avgRating.toFixed(1)} / 10</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{g.avgLevel.toFixed(0)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      </Card>
+    </div>
+  )
+}
+
+type ProductDetailSortField = 'name' | 'brand' | 'userCount' | 'avgRating' | 'avgInitialLevel' | 'avgCurrentLevel'
+
+function CategoryDetail({ category, products, onBack }: { category: string; products: any[]; onBack: () => void }) {
+  const [sort, setSort] = useState<{ field: ProductDetailSortField; dir: 'asc' | 'desc' }>({ field: 'userCount', dir: 'desc' })
+  const [filterType, setFilterType] = useState('all')
+
+  const inCategory = useMemo(() => products.filter((p) => Array.isArray(p.categories) && p.categories.includes(category)), [products, category])
+  const allTypes = useMemo(() => Array.from(new Set(inCategory.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [inCategory])
+  const filtered = useMemo(
+    () => (filterType === 'all' ? inCategory : inCategory.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))),
+    [inCategory, filterType]
+  )
+
+  const rows = useMemo(() => {
+    type Group = { name: string; brand: string; users: Set<string>; ratings: number[]; initialLevels: number[]; currentLevels: number[]; types: Set<string> }
+    const groups: Record<string, Group> = {}
+    for (const p of filtered) {
+      const key = `${p.brand}::${p.name}`
+      const g = (groups[key] ??= { name: p.name, brand: p.brand, users: new Set(), ratings: [], initialLevels: [], currentLevels: [], types: new Set() })
+      g.users.add(p.userId)
+      if (p.rating != null) g.ratings.push(p.rating)
+      if (p.initialLevel != null) g.initialLevels.push(p.initialLevel)
+      if (p.currentLevel != null) g.currentLevels.push(p.currentLevel)
+      for (const t of p.productTypes ?? []) g.types.add(t)
+    }
+    return Object.values(groups)
+      .map((g) => ({
+        name: g.name,
+        brand: g.brand,
+        userCount: g.users.size,
+        avgRating: avg(g.ratings),
+        avgInitialLevel: avg(g.initialLevels),
+        avgCurrentLevel: avg(g.currentLevels),
+        types: Array.from(g.types),
+      }))
+      .sort((a, b) => {
+        const av = a[sort.field]
+        const bv = b[sort.field]
+        const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av ?? -Infinity) - (bv as number ?? -Infinity)
+        return sort.dir === 'asc' ? cmp : -cmp
+      })
+  }, [filtered, sort])
+
+  const totalUsers = useMemo(() => new Set(filtered.map((p) => p.userId)).size, [filtered])
+
+  function toggleSort(field: ProductDetailSortField) {
+    setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: field === 'name' || field === 'brand' ? 'asc' : 'desc' }))
+  }
+
+  const selectCls = 'px-3 py-1.5 rounded-lg text-[12px] outline-none'
+  const selectStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="text-[12px] hover:underline" style={{ color: 'var(--ink-3)' }}>← Back to categories</button>
+      <Card>
+        <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-[13px] font-semibold capitalize" style={{ color: 'var(--ink)' }}>{fmtTag(category)}</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                {rows.length} distinct product{rows.length !== 1 ? 's' : ''} · {totalUsers} user{totalUsers !== 1 ? 's' : ''} with at least one in this category
+              </p>
+            </div>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
+              <option value="all">All product types</option>
+              {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px]">
+            <thead>
+              <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+                <SortableTh label="Product" field="name" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Brand" field="brand" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Users" field="userCount" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Avg rating" field="avgRating" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Avg initial level" field="avgInitialLevel" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Avg current level" field="avgCurrentLevel" sort={sort} onSort={toggleSort} />
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Type(s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No products in this category.</td></tr>
+              ) : rows.map((r) => (
+                <tr key={`${r.brand}::${r.name}`} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{r.name}</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.brand}</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.userCount}</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.avgRating != null ? `${r.avgRating.toFixed(1)} / 10` : '—'}</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.avgInitialLevel != null ? `${r.avgInitialLevel.toFixed(0)}%` : '—'}</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.avgCurrentLevel != null ? `${r.avgCurrentLevel.toFixed(0)}%` : '—'}</td>
+                  <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>{r.types.length ? r.types.map((t) => fmtTag(t)).join(', ') : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   )
 }
 
