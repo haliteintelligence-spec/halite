@@ -579,14 +579,23 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
     return r
   }, [inCategory, filterTypes, filterBrands])
 
-  const totalDistinctProducts = useMemo(() => new Set(inCategory.map((p) => `${p.brand}::${p.name}`)).size, [inCategory])
+  // Makeup is the one category where shade genuinely distinguishes two
+  // otherwise-identical products (see hallie-api's duplicate-check logic —
+  // same brand/name in a different shade is a different product), so it
+  // joins the grouping key there and gets shown as its own column; every
+  // other category groups exactly as before.
+  const isMakeup = category === 'makeup'
+  const totalDistinctProducts = useMemo(
+    () => new Set(inCategory.map((p) => (isMakeup ? `${p.brand}::${p.name}::${p.shade ?? ''}` : `${p.brand}::${p.name}`))).size,
+    [inCategory, isMakeup]
+  )
 
   const rows = useMemo(() => {
-    type Group = { name: string; brand: string; users: Set<string>; ratings: number[]; initialLevels: number[]; currentLevels: number[]; types: Set<string> }
+    type Group = { name: string; brand: string; shade: string | null; users: Set<string>; ratings: number[]; initialLevels: number[]; currentLevels: number[]; types: Set<string> }
     const groups: Record<string, Group> = {}
     for (const p of filtered) {
-      const key = `${p.brand}::${p.name}`
-      const g = (groups[key] ??= { name: p.name, brand: p.brand, users: new Set(), ratings: [], initialLevels: [], currentLevels: [], types: new Set() })
+      const key = isMakeup ? `${p.brand}::${p.name}::${p.shade ?? ''}` : `${p.brand}::${p.name}`
+      const g = (groups[key] ??= { name: p.name, brand: p.brand, shade: p.shade ?? null, users: new Set(), ratings: [], initialLevels: [], currentLevels: [], types: new Set() })
       g.users.add(p.userId)
       if (p.rating != null) g.ratings.push(p.rating)
       if (p.initialLevel != null) g.initialLevels.push(p.initialLevel)
@@ -597,6 +606,7 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
       .map((g) => ({
         name: g.name,
         brand: g.brand,
+        shade: g.shade,
         userCount: g.users.size,
         avgRating: avg(g.ratings),
         avgInitialLevel: avg(g.initialLevels),
@@ -609,7 +619,7 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
         const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av ?? -Infinity) - (bv as number ?? -Infinity)
         return sort.dir === 'asc' ? cmp : -cmp
       })
-  }, [filtered, sort])
+  }, [filtered, sort, isMakeup])
 
   const totalUsers = useMemo(() => new Set(filtered.map((p) => p.userId)).size, [filtered])
 
@@ -644,6 +654,9 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
               <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
                 <SortableTh label="Product" field="name" sort={sort} onSort={toggleSort} />
                 <SortableTh label="Brand" field="brand" sort={sort} onSort={toggleSort} />
+                {isMakeup && (
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--ink-3)' }}>Shade</th>
+                )}
                 <SortableTh label="Users" field="userCount" sort={sort} onSort={toggleSort} />
                 <SortableTh label="Avg rating" field="avgRating" sort={sort} onSort={toggleSort} />
                 <SortableTh label="Avg initial level" field="avgInitialLevel" sort={sort} onSort={toggleSort} />
@@ -653,11 +666,14 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No products in this category.</td></tr>
+                <tr><td colSpan={isMakeup ? 8 : 7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No products in this category.</td></tr>
               ) : rows.map((r) => (
-                <tr key={`${r.brand}::${r.name}`} style={{ borderBottom: '1px solid var(--border)' }}>
+                <tr key={`${r.brand}::${r.name}::${r.shade ?? ''}`} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{r.name}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.brand}</td>
+                  {isMakeup && (
+                    <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.shade ?? '—'}</td>
+                  )}
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.userCount}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.avgRating != null ? `${r.avgRating.toFixed(1)} / 10` : '—'}</td>
                   <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{r.avgInitialLevel != null ? `${r.avgInitialLevel.toFixed(0)}%` : '—'}</td>

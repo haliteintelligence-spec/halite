@@ -267,7 +267,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
         COALESCE(
           json_agg(
             json_build_object(
-              'id', li.id, 'productId', li."productId", 'productBrand', pr.brand, 'productName', pr.name,
+              'id', li.id, 'productId', li."productId", 'productBrand', pr."normalizedBrand", 'productName', pr."normalizedName",
               'rating', li.rating, 'outcomeTags', li."outcomeTags", 'wearDuration', li."wearDuration", 'endOfDayLook', li."endOfDayLook",
               'wouldRepurchase', li."wouldRepurchase"
             ) ORDER BY li.id
@@ -342,8 +342,8 @@ export async function hallieTestRoutes(server: FastifyInstance) {
   // ── Product-type usage insights ────────────────────────────────────────
   server.get('/insights/products', { preHandler: requireHaliteAdmin }, async () => {
     const products = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT id, "userId", categories, "productTypes", brand, name, rating, "initialLevel",
-        "currentLevelOverride", "isEmpty", "routineTags", "occasionTags", "createdAt"
+      SELECT id, "userId", categories, "productTypes", "normalizedBrand" AS brand, "normalizedName" AS name,
+        shade, rating, "initialLevel", "currentLevelOverride", "isEmpty", "routineTags", "occasionTags", "createdAt"
       FROM hallie_testing.hallie_testing_products
       ORDER BY "createdAt" DESC
     `
@@ -356,7 +356,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
       SELECT
         li.id, li.rating, li."outcomeTags", li."wearDuration", li."wouldRepurchase",
         le.date, le.category,
-        pr.id AS "productId", pr.brand AS "productBrand", pr.name AS "productName", pr."productTypes",
+        pr.id AS "productId", pr."normalizedBrand" AS "productBrand", pr."normalizedName" AS "productName", pr."productTypes",
         u.id AS "userId", u.city, u.country, u.timezone
       FROM hallie_testing.hallie_testing_log_items li
       JOIN hallie_testing.hallie_testing_log_entries le ON le.id = li."logEntryId"
@@ -385,7 +385,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
           WHEN 'makeup'    THEN pref.answers::jsonb -> 'undertone' ->> 0
           WHEN 'perfume'   THEN pref.answers::jsonb -> 'intensity' ->> 0
         END AS classifier,
-        pr.id AS "productId", pr.categories AS "productCategories", pr.brand, pr.name, pr.rating, pr."initialLevel"
+        pr.id AS "productId", pr.categories AS "productCategories", pr."normalizedBrand" AS brand, pr."normalizedName" AS name, pr.rating, pr."initialLevel"
       FROM hallie_testing.hallie_testing_preference_responses pref
       JOIN hallie_testing.hallie_testing_users u ON u.id = pref."userId"
       LEFT JOIN hallie_testing.hallie_testing_products pr

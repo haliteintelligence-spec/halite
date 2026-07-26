@@ -71,13 +71,17 @@ function EntryCount({ shown, total, label }: { shown: number; total: number; lab
   )
 }
 
-type ProductSortField = 'brand' | 'name' | 'categories' | 'productTypes' | 'rating' | 'initialLevel' | 'currentLevel'
+type ProductSortField = 'brand' | 'name' | 'categories' | 'productTypes' | 'shade' | 'rating' | 'initialLevel' | 'currentLevel'
 
 const PRODUCT_COLUMNS: { label: string; field: ProductSortField }[] = [
   { label: 'Brand', field: 'brand' },
   { label: 'Name', field: 'name' },
   { label: 'Categories', field: 'categories' },
   { label: 'Product Type(s)', field: 'productTypes' },
+  // Only meaningful for makeup — every other category's rows just show "—",
+  // same treatment as Rating/Initial Level/Current Level not applying to
+  // every collection state.
+  { label: 'Shade', field: 'shade' },
   { label: 'Rating', field: 'rating' },
   { label: 'Initial Level', field: 'initialLevel' },
   { label: 'Current Level', field: 'currentLevel' },
@@ -85,10 +89,15 @@ const PRODUCT_COLUMNS: { label: string; field: ProductSortField }[] = [
 
 // categories/productTypes are string[] (a product can span more than one
 // category — see the API route's comment); sort on their joined text.
+// brand/name sort (and display, below) on the normalized fields — this
+// endpoint does `SELECT *`, so the raw columns come through unaliased as
+// normalizedBrand/normalizedName.
 function productSortValue(p: any, field: ProductSortField): string | number {
   if (field === 'categories' || field === 'productTypes') {
     return Array.isArray(p[field]) ? p[field].join(', ') : ''
   }
+  if (field === 'brand') return p.normalizedBrand ?? -Infinity
+  if (field === 'name') return p.normalizedName ?? -Infinity
   return p[field] ?? -Infinity
 }
 
@@ -146,14 +155,15 @@ function UserProductsTable({ products, loading }: { products: any[]; loading: bo
               <tr><td colSpan={PRODUCT_COLUMNS.length} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>{loading ? 'Loading…' : 'No products yet.'}</td></tr>
             ) : rows.map((p: any) => (
               <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{p.brand}</td>
-                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.name}</td>
+                <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{p.normalizedBrand}</td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.normalizedName}</td>
                 <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>
                   {Array.isArray(p.categories) && p.categories.length ? p.categories.map((c: string) => fmt(c)).join(', ') : '—'}
                 </td>
                 <td className="px-4 py-3 text-[12px] capitalize" style={{ color: 'var(--ink-3)' }}>
                   {Array.isArray(p.productTypes) && p.productTypes.length ? p.productTypes.map((t: string) => fmt(t)).join(', ') : '—'}
                 </td>
+                <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.shade ?? '—'}</td>
                 <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.rating != null ? `${p.rating} / 10` : '—'}</td>
                 <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.initialLevel != null ? `${p.initialLevel}%` : '—'}</td>
                 <td className="px-4 py-3 text-[13px]" style={{ color: 'var(--ink)' }}>{p.currentLevel != null ? `${p.currentLevel}%` : '—'}</td>
