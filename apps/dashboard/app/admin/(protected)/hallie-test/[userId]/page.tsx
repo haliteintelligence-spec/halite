@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ArrowUpDown, Trash2 } from 'lucide-react'
+import { MultiSelectFilter } from '../_multi-select-filter'
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -93,8 +94,8 @@ function productSortValue(p: any, field: ProductSortField): string | number {
 
 function UserProductsTable({ products, loading }: { products: any[]; loading: boolean }) {
   const [sort, setSort] = useState<{ field: ProductSortField; dir: 'asc' | 'desc' }>({ field: 'brand', dir: 'asc' })
-  const [filterCategory, setFilterCategory] = useState('all')
-  const [filterType, setFilterType] = useState('all')
+  const [filterCategories, setFilterCategories] = useState<string[]>([])
+  const [filterTypes, setFilterTypes] = useState<string[]>([])
 
   const categories = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.categories) ? p.categories : [])))).sort(), [products])
   const types = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [products])
@@ -105,30 +106,21 @@ function UserProductsTable({ products, loading }: { products: any[]; loading: bo
 
   const rows = useMemo(() => {
     let r = products
-    if (filterCategory !== 'all') r = r.filter((p) => Array.isArray(p.categories) && p.categories.includes(filterCategory))
-    if (filterType !== 'all') r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))
+    if (filterCategories.length > 0) r = r.filter((p) => Array.isArray(p.categories) && p.categories.some((c: string) => filterCategories.includes(c)))
+    if (filterTypes.length > 0) r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.some((t: string) => filterTypes.includes(t)))
     return [...r].sort((a, b) => {
       const av = productSortValue(a, sort.field)
       const bv = productSortValue(b, sort.field)
       const cmp = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv) : Number(av) - Number(bv)
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [products, sort, filterCategory, filterType])
-
-  const selectCls = 'px-3 py-1.5 rounded-lg text-[12px] outline-none'
-  const selectStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
+  }, [products, sort, filterCategories, filterTypes])
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className={selectCls} style={selectStyle}>
-          <option value="all">All categories</option>
-          {categories.map((c) => <option key={c} value={c}>{fmt(c)}</option>)}
-        </select>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
-          <option value="all">All product types</option>
-          {types.map((t) => <option key={t} value={t}>{fmt(t)}</option>)}
-        </select>
+        <MultiSelectFilter label="Category" options={categories} selected={filterCategories} onChange={setFilterCategories} formatOption={fmt} />
+        <MultiSelectFilter label="Product Type" options={types} selected={filterTypes} onChange={setFilterTypes} formatOption={fmt} />
       </div>
       <EntryCount shown={rows.length} total={products.length} label="product" />
       <Card>

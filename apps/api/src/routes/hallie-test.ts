@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '@halite/db'
 import { requireHaliteAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
+import { tryFernetDecrypt } from '../lib/fernet.js'
 
 // Hallie Testing (hal.haliteintelligence.com) is a separate Next.js app,
 // not part of this monorepo — but its Postgres tables live in the same
@@ -396,6 +397,64 @@ export async function hallieTestRoutes(server: FastifyInstance) {
         productCategories: safeJsonParse<string[]>(row.productCategories, []),
       })),
     }
+  })
+
+  // ── Payout requests ──────────────────────────────────────────────────
+  // pointsRedeemed/amountCents are numerically identical to each other
+  // (1 point = 1 cent), plain integers — nothing to decrypt there. Only
+  // payoutContact/bankName/bankAccountName/bankAccountNumber are Fernet-
+  // encrypted by hallie-api at write time (see field_encryption.py), so
+  // those are only decrypted in the single-request detail endpoint below,
+  // not the list — the list never needs them, and decrypting rows that
+  // won't be shown would be wasted work on every page load.
+  server.get('/payouts', { preHandler: requireHaliteAdmin }, async () => {
+    const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
+      SELECT rr.id, rr."pointsRedeemed", rr."amountCents", rr.status, rr."payoutMethod", rr."createdAt",
+             u.id AS "userId", u.name AS "userName", u.email AS "userEmail"
+      FROM hallie_testing.hallie_testing_reward_requests rr
+      JOIN hallie_testing.hallie_testing_users u ON u.id = rr."userId"
+      ORDER BY rr."createdAt" DESC
+    `
+    return { payoutRequests: rows }
+  })
+
+  server.get('/payouts/:requestId', { preHandler: requireHaliteAdmin }, async (request) => {
+    const { requestId } = request.params as { requestId: string }
+    const [row] = await prisma.$queryRaw<Array<Record<string, unknown>>>`
+      SELECT rr.id, rr."pointsRedeemed", rr."amountCents", rr.status, rr."payoutMethod", rr."createdAt",
+             rr."payoutContact", rr."bankName", rr."bankAccountName", rr."bankAccountNumber",
+             u.id AS "userId", u.name AS "userName", u.email AS "userEmail"
+      FROM hallie_testing.hallie_testing_reward_requests rr
+      JOIN hallie_testing.hallie_testing_users u ON u.id = rr."userId"
+      WHERE rr.id = ${requestId}
+    `
+    if (!row) throw new ApiError(404, 'Payout request not found')
+
+    const key = process.env.FIELD_ENCRYPTION_KEY
+    return {
+      payoutRequest: {
+        ...row,
+        payoutContact: tryFernetDecrypt(row.payoutContact as string | null, key),
+        bankName: tryFernetDecrypt(row.bankName as string | null, key),
+        bankAccountName: tryFernetDecrypt(row.bankAccountName as string | null, key),
+        bankAccountNumber: tryFernetDecrypt(row.bankAccountNumber as string | null, key),
+      },
+    }
+  })
+
+  // The `status` column itself is never encrypted — updating it directly
+  // here is what keeps hallie-web/iOS's own GET /v1/rewards (reading the
+  // exact same row via hallie-api) and this admin view in sync with zero
+  // extra sync work, since there's only one row to ever be out of date.
+  server.patch('/payouts/:requestId', { preHandler: requireHaliteAdmin }, async (request) => {
+    const { requestId } = request.params as { requestId: string }
+    const { paid } = request.body as { paid: boolean }
+    const status = paid ? 'paid' : 'pending'
+    const result = await prisma.$executeRaw`
+      UPDATE hallie_testing.hallie_testing_reward_requests SET status = ${status} WHERE id = ${requestId}
+    `
+    if (result === 0) throw new ApiError(404, 'Payout request not found')
+    return { ok: true, status }
   })
 
   // ── Account deletion ──────────────────────────────────────────────────

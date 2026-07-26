@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Users, LogIn, ClipboardList, ShieldCheck, Package, TrendingUp, RefreshCw, ArrowUpDown } from 'lucide-react'
+import { MultiSelectFilter } from './_multi-select-filter'
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -38,8 +39,25 @@ const STAT_CARDS = [
   { key: 'repurchaseRate', label: 'Repurchase intent', icon: RefreshCw, color: '#0d9488', suffix: '%' },
 ]
 
-const TABS = ['overview', 'users', 'products', 'usage', 'preferences', 'compliance'] as const
+const TABS = ['overview', 'users', 'products', 'payouts', 'usage', 'preferences', 'compliance'] as const
 type Tab = (typeof TABS)[number]
+
+const TAB_LABELS: Partial<Record<Tab, string>> = {
+  usage: 'Usage & Relationships',
+  payouts: 'Payout Requested',
+}
+
+type PayoutRequest = {
+  id: string
+  userId: string
+  userName: string
+  userEmail: string
+  pointsRedeemed: number
+  amountCents: number
+  status: string
+  payoutMethod: string
+  createdAt: string
+}
 
 // Where each Overview summary's "deeper dive" button lands — the tab (and,
 // for Users, the pre-applied compliance filter / sort) that best explains
@@ -61,7 +79,7 @@ const DEEP_DIVE: Record<string, { tab: Tab; compliance?: 'compliant' | 'incomple
   totalLogins: { tab: 'users', sort: 'loginCount' },
   profileCompleteUsers: { tab: 'users' },
   pointsAwarded: { tab: 'users', sort: 'pointsBalance' },
-  payoutCount: { tab: 'users' },
+  payoutCount: { tab: 'payouts' },
 }
 
 const GROWTH_ITEMS: { key: string; label: string }[] = [
@@ -101,6 +119,7 @@ export default function HallieTestPage() {
   const summary = useHallieTestFetch<any>('/admin/hallie-test/summary')
   const usersData = useHallieTestFetch<{ users: User[] }>('/admin/hallie-test/users')
   const productsData = useHallieTestFetch<any>(tab === 'products' ? '/admin/hallie-test/insights/products' : null)
+  const payoutsData = useHallieTestFetch<{ payoutRequests: PayoutRequest[] }>(tab === 'payouts' ? '/admin/hallie-test/payouts' : null)
   const usageData = useHallieTestFetch<any>(tab === 'usage' ? '/admin/hallie-test/insights/usage' : null)
   const prefsData = useHallieTestFetch<any>(tab === 'preferences' ? '/admin/hallie-test/insights/preferences' : null)
 
@@ -127,7 +146,7 @@ export default function HallieTestPage() {
           <button key={t} onClick={() => setTab(t)}
             className="relative px-4 py-2.5 text-[12px] font-medium capitalize transition-colors whitespace-nowrap"
             style={{ color: tab === t ? 'var(--ink)' : 'var(--ink-3)' }}>
-            {t === 'usage' ? 'Usage & Relationships' : t}
+            {TAB_LABELS[t] ?? t}
             {tab === t && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: 'var(--clay)' }} />}
           </button>
         ))}
@@ -138,6 +157,7 @@ export default function HallieTestPage() {
         <UsersTab key={usersSeed.token} users={usersData?.users ?? []} initialCompliance={usersSeed.compliance} initialSort={usersSeed.sort} />
       )}
       {tab === 'products' && <ProductsTab products={productsData?.products ?? []} />}
+      {tab === 'payouts' && <PayoutsTab payoutRequests={payoutsData?.payoutRequests ?? []} />}
       {tab === 'usage' && <UsageTab usage={usageData?.usage ?? []} />}
       {tab === 'preferences' && <PreferencesTab rows={prefsData?.rows ?? []} />}
       {tab === 'compliance' && <ComplianceTab summary={summary} />}
@@ -218,8 +238,8 @@ function UsersTab({
   initialSort?: SortField
 }) {
   const [search, setSearch] = useState('')
-  const [city, setCity] = useState('all')
-  const [compliance, setCompliance] = useState<'all' | 'compliant' | 'incomplete'>(initialCompliance)
+  const [cities_, setCities_] = useState<string[]>([])
+  const [compliance, setCompliance] = useState<string[]>(initialCompliance === 'all' ? [] : [initialCompliance])
   const [sort, setSort] = useState<{ field: SortField; dir: 'asc' | 'desc' }>({ field: initialSort, dir: 'desc' })
 
   const cities = useMemo(() => Array.from(new Set(users.map((u) => u.city).filter(Boolean))) as string[], [users])
@@ -230,15 +250,15 @@ function UsersTab({
       const q = search.toLowerCase()
       r = r.filter((u) => `${u.name} ${u.email} ${u.phone ?? ''}`.toLowerCase().includes(q))
     }
-    if (city !== 'all') r = r.filter((u) => u.city === city)
-    if (compliance !== 'all') r = r.filter((u) => (u.grantedRequiredConsents === 4) === (compliance === 'compliant'))
+    if (cities_.length > 0) r = r.filter((u) => u.city && cities_.includes(u.city))
+    if (compliance.length > 0) r = r.filter((u) => compliance.includes(u.grantedRequiredConsents === 4 ? 'compliant' : 'incomplete'))
     return [...r].sort((a, b) => {
       const av = a[sort.field]
       const bv = b[sort.field]
       const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av as number) - (bv as number)
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [users, search, city, compliance, sort])
+  }, [users, search, cities_, compliance, sort])
 
   function toggleSort(field: SortField) {
     setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'desc' }))
@@ -252,15 +272,14 @@ function UsersTab({
       <div className="flex flex-wrap gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, phone…"
           className={`${inputCls} flex-1 min-w-[200px]`} style={inputStyle} />
-        <select value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} style={inputStyle}>
-          <option value="all">All cities</option>
-          {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={compliance} onChange={(e) => setCompliance(e.target.value as any)} className={inputCls} style={inputStyle}>
-          <option value="all">All compliance</option>
-          <option value="compliant">Fully compliant</option>
-          <option value="incomplete">Incomplete</option>
-        </select>
+        <MultiSelectFilter label="City" options={cities} selected={cities_} onChange={setCities_} />
+        <MultiSelectFilter
+          label="Compliance"
+          options={['compliant', 'incomplete']}
+          selected={compliance}
+          onChange={setCompliance}
+          formatOption={(v) => (v === 'compliant' ? 'Fully compliant' : 'Incomplete')}
+        />
       </div>
 
       <EntryCount shown={rows.length} total={users.length} label="user" />
@@ -307,6 +326,95 @@ function UsersTab({
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                       style={u.grantedRequiredConsents === 4 ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fef3c7', color: '#92400e' }}>
                       {u.grantedRequiredConsents}/4
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+type PayoutSortField = 'userName' | 'amountCents' | 'status' | 'createdAt'
+
+function PayoutsTab({ payoutRequests }: { payoutRequests: PayoutRequest[] }) {
+  const [search, setSearch] = useState('')
+  const [paidFilter, setPaidFilter] = useState<string[]>([])
+  const [sort, setSort] = useState<{ field: PayoutSortField; dir: 'asc' | 'desc' }>({ field: 'createdAt', dir: 'desc' })
+
+  const rows = useMemo(() => {
+    let r = payoutRequests
+    if (search) {
+      const q = search.toLowerCase()
+      r = r.filter((p) => `${p.userName} ${p.userEmail}`.toLowerCase().includes(q))
+    }
+    if (paidFilter.length > 0) r = r.filter((p) => paidFilter.includes(p.status === 'paid' ? 'paid' : 'pending'))
+    return [...r].sort((a, b) => {
+      const av = a[sort.field]
+      const bv = b[sort.field]
+      const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av as number) - (bv as number)
+      return sort.dir === 'asc' ? cmp : -cmp
+    })
+  }, [payoutRequests, search, paidFilter, sort])
+
+  function toggleSort(field: PayoutSortField) {
+    setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: field === 'userName' ? 'asc' : 'desc' }))
+  }
+
+  const inputCls = 'px-3 py-1.5 rounded-lg text-[13px] outline-none'
+  const inputStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email…"
+          className={`${inputCls} flex-1 min-w-[200px]`} style={inputStyle} />
+        <MultiSelectFilter
+          label="Paid"
+          options={['paid', 'pending']}
+          selected={paidFilter}
+          onChange={setPaidFilter}
+          formatOption={(v) => (v === 'paid' ? 'Paid' : 'Not paid')}
+        />
+      </div>
+
+      <EntryCount shown={rows.length} total={payoutRequests.length} label="payout request" />
+
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px]">
+            <thead>
+              <tr style={{ background: 'var(--sand-1)', borderBottom: '1px solid var(--border)' }}>
+                <SortableTh label="User" field="userName" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Amount requested" field="amountCents" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Requested" field="createdAt" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Paid" field="status" sort={sort} onSort={toggleSort} />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No payout requests match these filters.</td></tr>
+              ) : rows.map((p, i) => (
+                <tr key={p.id} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : undefined }}>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/hallie-test/payouts/${p.id}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--ink)' }}>
+                      {p.userName}
+                    </Link>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>{p.userEmail}</p>
+                  </td>
+                  <td className="px-4 py-3 text-[13px] font-medium" style={{ color: 'var(--ink)' }}>
+                    ${(p.amountCents / 100).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                    {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={p.status === 'paid' ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fef3c7', color: '#92400e' }}>
+                      {p.status === 'paid' ? 'Yes' : 'No'}
                     </span>
                   </td>
                 </tr>
@@ -366,18 +474,18 @@ type CategorySortField = 'category' | 'count' | 'avgRating' | 'avgLevel'
 function ProductsTab({ products }: { products: any[] }) {
   const [category, setCategory] = useState<string | null>(null)
   const [sort, setSort] = useState<{ field: CategorySortField; dir: 'asc' | 'desc' }>({ field: 'count', dir: 'desc' })
-  const [filterCategory, setFilterCategory] = useState('all')
-  const [filterType, setFilterType] = useState('all')
+  const [filterCategories, setFilterCategories] = useState<string[]>([])
+  const [filterTypes, setFilterTypes] = useState<string[]>([])
 
   const allCategories = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.categories) ? p.categories : [])))).sort(), [products])
   const allTypes = useMemo(() => Array.from(new Set(products.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [products])
 
   const filteredProducts = useMemo(() => {
     let r = products
-    if (filterCategory !== 'all') r = r.filter((p) => Array.isArray(p.categories) && p.categories.includes(filterCategory))
-    if (filterType !== 'all') r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))
+    if (filterCategories.length > 0) r = r.filter((p) => Array.isArray(p.categories) && p.categories.some((c: string) => filterCategories.includes(c)))
+    if (filterTypes.length > 0) r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.some((t: string) => filterTypes.includes(t)))
     return r
-  }, [products, filterCategory, filterType])
+  }, [products, filterCategories, filterTypes])
 
   // A product can span more than one category (e.g. a 2-in-1), so it's
   // counted under each of its categories rather than forced into just one.
@@ -411,20 +519,11 @@ function ProductsTab({ products }: { products: any[] }) {
     return <CategoryDetail category={category} products={filteredProducts} onBack={() => setCategory(null)} />
   }
 
-  const selectCls = 'px-3 py-1.5 rounded-lg text-[12px] outline-none'
-  const selectStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
-
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className={selectCls} style={selectStyle}>
-          <option value="all">All categories</option>
-          {allCategories.map((c) => <option key={c} value={c}>{fmtTag(c)}</option>)}
-        </select>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
-          <option value="all">All product types</option>
-          {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
-        </select>
+        <MultiSelectFilter label="Category" options={allCategories} selected={filterCategories} onChange={setFilterCategories} formatOption={fmtTag} />
+        <MultiSelectFilter label="Product Type" options={allTypes} selected={filterTypes} onChange={setFilterTypes} formatOption={fmtTag} />
       </div>
       <EntryCount shown={filteredProducts.length} total={products.length} label="product entry" />
       <Card>
@@ -467,18 +566,18 @@ type ProductDetailSortField = 'name' | 'brand' | 'userCount' | 'avgRating' | 'av
 
 function CategoryDetail({ category, products, onBack }: { category: string; products: any[]; onBack: () => void }) {
   const [sort, setSort] = useState<{ field: ProductDetailSortField; dir: 'asc' | 'desc' }>({ field: 'userCount', dir: 'desc' })
-  const [filterType, setFilterType] = useState('all')
-  const [filterBrand, setFilterBrand] = useState('all')
+  const [filterTypes, setFilterTypes] = useState<string[]>([])
+  const [filterBrands, setFilterBrands] = useState<string[]>([])
 
   const inCategory = useMemo(() => products.filter((p) => Array.isArray(p.categories) && p.categories.includes(category)), [products, category])
   const allTypes = useMemo(() => Array.from(new Set(inCategory.flatMap((p) => (Array.isArray(p.productTypes) ? p.productTypes : [])))).sort(), [inCategory])
   const allBrands = useMemo(() => Array.from(new Set(inCategory.map((p) => p.brand).filter(Boolean))).sort(), [inCategory])
   const filtered = useMemo(() => {
     let r = inCategory
-    if (filterType !== 'all') r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.includes(filterType))
-    if (filterBrand !== 'all') r = r.filter((p) => p.brand === filterBrand)
+    if (filterTypes.length > 0) r = r.filter((p) => Array.isArray(p.productTypes) && p.productTypes.some((t: string) => filterTypes.includes(t)))
+    if (filterBrands.length > 0) r = r.filter((p) => filterBrands.includes(p.brand))
     return r
-  }, [inCategory, filterType, filterBrand])
+  }, [inCategory, filterTypes, filterBrands])
 
   const totalDistinctProducts = useMemo(() => new Set(inCategory.map((p) => `${p.brand}::${p.name}`)).size, [inCategory])
 
@@ -518,9 +617,6 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
     setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: field === 'name' || field === 'brand' ? 'asc' : 'desc' }))
   }
 
-  const selectCls = 'px-3 py-1.5 rounded-lg text-[12px] outline-none'
-  const selectStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--surface)' }
-
   return (
     <div className="space-y-4">
       <button onClick={onBack} className="text-[12px] hover:underline" style={{ color: 'var(--ink-3)' }}>← Back to categories</button>
@@ -534,14 +630,8 @@ function CategoryDetail({ category, products, onBack }: { category: string; prod
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <select value={filterBrand} onChange={(e) => setFilterBrand(e.target.value)} className={selectCls} style={selectStyle}>
-                <option value="all">All brands</option>
-                {allBrands.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls} style={selectStyle}>
-                <option value="all">All product types</option>
-                {allTypes.map((t) => <option key={t} value={t}>{fmtTag(t)}</option>)}
-              </select>
+              <MultiSelectFilter label="Brand" options={allBrands} selected={filterBrands} onChange={setFilterBrands} />
+              <MultiSelectFilter label="Product Type" options={allTypes} selected={filterTypes} onChange={setFilterTypes} formatOption={fmtTag} />
             </div>
           </div>
           <div className="mt-2">
