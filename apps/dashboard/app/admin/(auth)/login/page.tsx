@@ -23,7 +23,7 @@ export default function AdminLoginPage() {
       })
       const data = await res.json() as { token?: string; error?: string }
       if (!res.ok || !data.token) throw new Error(data.error ?? 'Invalid credentials')
-      document.cookie = `halite_admin_token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
+      document.cookie = `halite_admin_token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax; secure`
       router.push('/admin')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')

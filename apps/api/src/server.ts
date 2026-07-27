@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
@@ -26,19 +27,27 @@ const server = Fastify({
   logger: {
     level: process.env.LOG_LEVEL ?? 'info',
   },
+  // Railway terminates TLS and proxies at its edge; trusting only that one
+  // hop means `request.ip` (used in login-event audit logs) reflects the
+  // real client rather than an arbitrary client-supplied X-Forwarded-For.
+  trustProxy: 1,
 })
 
 async function bootstrap() {
   await server.register(cors, {
     origin: (origin, cb) => {
-      // Allow Shopify storefronts, brand subdomains, and dashboard
+      // Explicit allowlist only — no shared-PaaS wildcards. *.up.railway.app
+      // is shared across every Railway customer, not just this project, so
+      // it must never appear here even though this API happens to be
+      // Railway-hosted too.
       const allowed = [
         /\.haliteintelligence\.com$/,
-        /^https?:\/\/haliteintelligence\.com$/,
+        /^https:\/\/haliteintelligence\.com$/,
         /\.myshopify\.com$/,
-        /\.up\.railway\.app$/,
-        /^http:\/\/localhost/,
       ]
+      if (process.env.NODE_ENV !== 'production') {
+        allowed.push(/^http:\/\/localhost(:\d+)?$/)
+      }
       if (!origin || allowed.some((r) => r.test(origin))) {
         cb(null, true)
       } else {
@@ -48,9 +57,19 @@ async function bootstrap() {
     credentials: true,
   })
 
+  await server.register(helmet, {
+    // The widget is embedded via <script> on arbitrary Shopify storefronts
+    // and needs to fetch/render across origins, and the API itself serves
+    // no HTML — a strict default CSP would only break that without
+    // protecting anything that isn't already protected via CORS.
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+
   await server.register(jwt, {
     secret: process.env.JWT_SECRET!,
     sign: { expiresIn: '7d' },
+    verify: { algorithms: ['HS256'] },
   })
 
   await server.register(rateLimit, {
@@ -89,9 +108,7 @@ async function bootstrap() {
   // Backfill BrandType for rows created before the enum column existed.
   // Prisma preserves camelCase field names as-is in Postgres, so the column
   // is "isDemo" (quoted) not is_demo.
-  await prisma.$executeRawUnsafe(
-    `UPDATE brands SET type = 'DEMO' WHERE "isDemo" = true AND type = 'ONBOARDED'`
-  )
+  await prisma.$executeRaw`UPDATE brands SET type = 'DEMO' WHERE "isDemo" = true AND type = 'ONBOARDED'`
 
   const port = Number(process.env.PORT ?? 3001)
   await server.listen({ port, host: '0.0.0.0' })

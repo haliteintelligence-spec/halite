@@ -5,6 +5,12 @@ import { requireBrandAdmin, requireHaliteAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { getAnthropic } from '../lib/model-router.js'
 
+// Each message is a real, metered LLM call — the generic 200/min global
+// limiter leaves far too much room for cost/token-draining abuse on an
+// AI endpoint specifically.
+const CRYSTAL_MESSAGE_RATE_LIMIT = { max: 20, timeWindow: '1 minute' }
+const MAX_MESSAGE_LENGTH = 4000
+
 // ── Brand context assembler ────────────────────────────────────────────────
 
 async function buildBrandContext(brandId: string): Promise<string> {
@@ -266,11 +272,11 @@ export async function crystalRoutes(server: FastifyInstance) {
   // ── Send message (streaming) ──────────────────────────────────────
   server.post(
     '/:brandId/crystal/conversations/:conversationId/messages',
-    { preHandler: requireBrandAdmin },
+    { preHandler: requireBrandAdmin, config: { rateLimit: CRYSTAL_MESSAGE_RATE_LIMIT } },
     async (request, reply) => {
       const { brandId, conversationId } = request.params as { brandId: string; conversationId: string }
       const adminId = request.brandAdmin!.adminId
-      const { message } = z.object({ message: z.string().min(1) }).parse(request.body)
+      const { message } = z.object({ message: z.string().min(1).max(MAX_MESSAGE_LENGTH) }).parse(request.body)
 
       const conversation = await prisma.crystalConversation.findFirst({
         where: { id: conversationId, brandId, adminId },
@@ -399,11 +405,11 @@ export async function adminCrystalRoutes(server: FastifyInstance) {
   // ── Send message (streaming) ──────────────────────────────────────
   server.post(
     '/admin/crystal/conversations/:conversationId/messages',
-    { preHandler: requireHaliteAdmin },
+    { preHandler: requireHaliteAdmin, config: { rateLimit: CRYSTAL_MESSAGE_RATE_LIMIT } },
     async (request, reply) => {
       const { conversationId } = request.params as { conversationId: string }
       const adminId = request.haliteAdmin!.adminId
-      const { message } = z.object({ message: z.string().min(1) }).parse(request.body)
+      const { message } = z.object({ message: z.string().min(1).max(MAX_MESSAGE_LENGTH) }).parse(request.body)
 
       const conversation = await prisma.crystalConversation.findFirst({
         where: { id: conversationId, brandId: null, adminId },

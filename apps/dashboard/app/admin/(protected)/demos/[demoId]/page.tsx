@@ -125,7 +125,7 @@ export default function DemoDetailPage() {
       })
       if (!res.ok) throw new Error('Failed to create session')
       const data = await res.json() as { token: string; slug: string }
-      document.cookie = `halite_token=${data.token}; path=/${data.slug}; max-age=86400; SameSite=Lax`
+      document.cookie = `halite_token=${data.token}; path=/${data.slug}; max-age=86400; SameSite=Lax; Secure`
       window.open(`https://portal.haliteintelligence.com/${data.slug}`, '_blank')
     } finally {
       setEntering(false)
@@ -396,7 +396,7 @@ export default function DemoDetailPage() {
               isLink
             />
             <CredRow label="Email" value={demo.email ?? ''} onCopy={() => copyText(demo.email ?? '', 'email')} copied={copied === 'email'} />
-            <CredRow label="Password" value={demo.password} onCopy={() => copyText(demo.password, 'pw')} copied={copied === 'pw'} />
+            <CredRow label="Password" value={demo.password ?? 'Not available for demos created before this update'} onCopy={() => copyText(demo.password ?? '', 'pw')} copied={copied === 'pw'} />
           </div>
         )}
       </div>

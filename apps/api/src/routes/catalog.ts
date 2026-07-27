@@ -8,6 +8,52 @@ import { processCatalogUpload } from '../lib/catalog-processor.js'
 import { embedBrandProducts } from '../lib/embeddings.js'
 import * as XLSX from 'xlsx'
 
+// Client-supplied filenames are untrusted — used raw, they let arbitrary
+// characters (including path-like sequences) into an S3 key. Keeps only a
+// safe charset and caps length; the timestamp prefix already guarantees
+// uniqueness so this only needs to stay human-readable, not unique.
+function sanitizeUploadFilename(filename: string): string {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100)
+  return safe || 'upload'
+}
+
+// The extension/declared MIME type are both client-controlled and easily
+// spoofed (a renamed executable still claims to be "catalog.csv"). Actually
+// attempting to parse the content is what makes this check meaningful: a
+// file that doesn't parse as valid JSON/CSV text is rejected regardless of
+// what it claims to be.
+function assertParsableCatalogFile(buffer: Buffer, format: CatalogFormat) {
+  if (buffer.includes(0)) throw new ApiError(400, 'File does not look like a text-based CSV/JSON catalog')
+  if (format === 'JSON') {
+    try {
+      JSON.parse(buffer.toString('utf-8'))
+    } catch {
+      throw new ApiError(400, 'File is not valid JSON')
+    }
+  } else {
+    const text = buffer.toString('utf-8')
+    const firstLine = text.split(/\r?\n/, 1)[0] ?? ''
+    if (!firstLine.includes(',')) throw new ApiError(400, 'File does not look like a valid CSV (no comma-delimited header row)')
+  }
+}
+
+// A cell value starting with =, +, -, or @ is interpreted as a formula by
+// Excel/Sheets/LibreOffice when the exported file is opened — a brand name,
+// product name, or note containing e.g. `=HYPERLINK(...)` or a DDE payload
+// would execute in whoever's spreadsheet app opens this export. Prefixing a
+// single quote forces those apps to treat it as literal text.
+function neutralizeFormula(value: unknown): unknown {
+  if (typeof value === 'string' && /^[=+\-@]/.test(value)) return `'${value}`
+  return value
+}
+
+function safeJsonToSheet(rows: Record<string, unknown>[]) {
+  const sanitized = rows.map((row) =>
+    Object.fromEntries(Object.entries(row).map(([k, v]) => [k, neutralizeFormula(v)]))
+  )
+  return XLSX.utils.json_to_sheet(sanitized)
+}
+
 export async function catalogRoutes(server: FastifyInstance) {
   // ── Upload catalog file (CSV or JSON) ─────────────────────────────
   server.post(
@@ -24,7 +70,8 @@ export async function catalogRoutes(server: FastifyInstance) {
         ext === 'csv' ? 'CSV' : ext === 'json' ? 'JSON' : (() => { throw new ApiError(400, 'Unsupported format. Use CSV or JSON') })()
 
       const buffer = await data.toBuffer()
-      const key = `catalogs/${brandId}/${Date.now()}-${data.filename}`
+      assertParsableCatalogFile(buffer, format)
+      const key = `catalogs/${brandId}/${Date.now()}-${sanitizeUploadFilename(data.filename)}`
       const fileUrl = await uploadToS3(key, buffer, data.mimetype)
 
       const upload = await prisma.catalogUpload.create({
@@ -167,7 +214,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           }
         }
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Purchase History')
+        XLSX.utils.book_append_sheet(wb, safeJsonToSheet(rows), 'Purchase History')
       } else if (name.includes('customer') || name.includes('consumer')) {
         const users = await prisma.endUser.findMany({
           where: { brandId },
@@ -196,7 +243,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           }
         })
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Customer Profiles')
+        XLSX.utils.book_append_sheet(wb, safeJsonToSheet(rows), 'Customer Profiles')
       } else if (name.includes('quiz')) {
         const sessions = await prisma.quizSession.findMany({
           where: { brandId, completed: true },
@@ -241,7 +288,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           }
         })
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Quiz Results')
+        XLSX.utils.book_append_sheet(wb, safeJsonToSheet(rows), 'Quiz Results')
       } else if (name.includes('routine')) {
         const routines = await prisma.routine.findMany({
           where: { endUser: { brandId }, activeTo: null },
@@ -270,7 +317,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           }
         })
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Routine Assignments')
+        XLSX.utils.book_append_sheet(wb, safeJsonToSheet(rows), 'Routine Assignments')
       } else if (name.includes('check')) {
         const checkIns = await prisma.checkIn.findMany({
           where: { endUser: { brandId } },
@@ -288,7 +335,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           date: c.createdAt.toISOString().slice(0, 10),
         }))
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Check-ins')
+        XLSX.utils.book_append_sheet(wb, safeJsonToSheet(rows), 'Check-ins')
       } else {
         const products = await prisma.product.findMany({ where: { brandId }, take: 500 })
         const rows = products.map(p => ({
@@ -303,7 +350,7 @@ export async function catalogRoutes(server: FastifyInstance) {
           productUrl: p.productUrl ?? '',
         }))
         wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Products')
+        XLSX.utils.book_append_sheet(wb, safeJsonToSheet(rows), 'Products')
       }
 
       const buf = Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }))
@@ -721,7 +768,7 @@ export async function catalogRoutes(server: FastifyInstance) {
     async (request, reply) => {
       const { brandId } = request.params as { brandId: string }
       const { filename } = z.object({ filename: z.string() }).parse(request.body)
-      const key = `catalogs/${brandId}/${Date.now()}-${filename}`
+      const key = `catalogs/${brandId}/${Date.now()}-${sanitizeUploadFilename(filename)}`
       const url = await getPresignedUrl(key)
       return reply.send({ url, key })
     }

@@ -1,5 +1,6 @@
 import type { HaliteApi } from './api'
 import type { Routine } from './types'
+import { escapeHtml } from './utils'
 
 const SYMPTOMS_NEGATIVE = [
   { value: 'BREAKOUT', label: '🔴 Breakout' },
@@ -404,7 +405,7 @@ export class CheckInController {
     el.className = 'hlw-loading'
     el.innerHTML = `
       <div class="hlw-spinner"></div>
-      <p class="hlw-loading-text">${msg}</p>
+      <p class="hlw-loading-text">${escapeHtml(msg)}</p>
       <div class="hlw-dots"><span></span><span></span><span></span></div>
     `
     this.render(el)
@@ -416,8 +417,8 @@ export class CheckInController {
     el.className = 'hlw-error'
     el.innerHTML = `
       <div class="hlw-error-icon">✦</div>
-      <p class="hlw-error-text">${title}</p>
-      <p class="hlw-error-sub">${sub}</p>
+      <p class="hlw-error-text">${escapeHtml(title)}</p>
+      <p class="hlw-error-sub">${escapeHtml(sub)}</p>
     `
     this.render(el)
   }

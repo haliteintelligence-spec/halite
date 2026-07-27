@@ -10,10 +10,55 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
-function buildWhiteLabelCSS(t: BrandThemeConfig): string {
-  const fontImport = t.fontUrl
-    ? `@import url('${t.fontUrl}');`
-    : ''
+// brandThemeConfig ultimately comes from admin-triggered scraping of a
+// brand's own website (see apps/api's scrape-theme endpoint) — it's not
+// hand-authored, so it isn't trustworthy CSS. Every value is validated
+// against a strict allowlist before it's allowed anywhere near the raw
+// <style dangerouslySetInnerHTML> block below; anything that doesn't match
+// falls back to a safe default rather than being dropped in as-is, since a
+// value like `</style><script>...` would otherwise break out of the style
+// tag entirely and execute as real script.
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i
+const FONT_NAME_RE = /^[a-z0-9 '-]{1,60}$/i
+
+function safeColor(value: string, fallback: string): string {
+  return HEX_COLOR_RE.test(value) ? value : fallback
+}
+
+function safeFontName(value: string, fallback: string): string {
+  const trimmed = value.trim()
+  return FONT_NAME_RE.test(trimmed) ? trimmed : fallback
+}
+
+function safeFontUrl(value: string | null): string | null {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:') return null
+    // Reject anything that could break out of the url('...') context.
+    if (/['"<>;\s]/.test(value)) return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
+function buildWhiteLabelCSS(raw: BrandThemeConfig): string {
+  const t = {
+    primary: safeColor(raw.primary, '#450F2A'),
+    primaryLight: safeColor(raw.primaryLight, '#F5E6ED'),
+    primaryDark: safeColor(raw.primaryDark, '#2D0A1C'),
+    background: safeColor(raw.background, '#FAF6F0'),
+    surface: safeColor(raw.surface, '#ffffff'),
+    text: safeColor(raw.text, '#1A0A12'),
+    textSecondary: safeColor(raw.textSecondary, '#4A2A38'),
+    accent: safeColor(raw.accent, '#C17A47'),
+    border: safeColor(raw.border, '#E8DDD0'),
+    fontSans: safeFontName(raw.fontSans, 'Inter'),
+    fontDisplay: safeFontName(raw.fontDisplay, 'Playfair Display'),
+    fontUrl: safeFontUrl(raw.fontUrl),
+  }
+  const fontImport = t.fontUrl ? `@import url('${t.fontUrl}');` : ''
   return `${fontImport}
 :root {
   --clay: ${t.primary};

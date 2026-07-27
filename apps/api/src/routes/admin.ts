@@ -10,6 +10,7 @@ import { parsePurchaseHistory } from '../lib/purchase-history-processor.js'
 import { uploadToS3 } from '../lib/storage.js'
 import { provisionDemoEnvironment } from '../lib/demo-generator.js'
 import { scrapeTheme } from '../lib/theme-scraper.js'
+import { tryDecryptSecret } from '../lib/secret-box.js'
 
 // CheckInProduct.productId and RoutineStep.productId have no onDelete: Cascade,
 // so we must clear them manually before deleting a brand or its products.
@@ -68,7 +69,7 @@ export async function adminRoutes(server: FastifyInstance) {
       ])
 
       if (!brand) throw new ApiError(404, 'Brand not found')
-      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
+      const { shopifyToken, shopifyTokenEncrypted, shopifyWebhookSecret, apiKey, demoPasswordEncrypted, ...safe } = brand
       return { brand: { ...safe, checkIns30d } }
     }
   )
@@ -253,6 +254,14 @@ export async function adminRoutes(server: FastifyInstance) {
       let quizMime = 'text/csv'
       let quizFilename = 'quiz-results.xlsx'
 
+      const ALLOWED_UPLOAD_EXTENSIONS = new Set(['csv', 'xlsx', 'xls', 'json'])
+      function assertAllowedExtension(filename: string) {
+        const ext = filename.split('.').pop()?.toLowerCase()
+        if (!ext || !ALLOWED_UPLOAD_EXTENSIONS.has(ext)) {
+          throw new ApiError(400, `Unsupported file type: ${filename}. Use CSV, XLSX, or JSON.`)
+        }
+      }
+
       for await (const part of parts) {
         if (part.type === 'field') {
           if (part.fieldname === 'prospectName') prospectName = String(part.value)
@@ -264,23 +273,25 @@ export async function adminRoutes(server: FastifyInstance) {
           if (part.fieldname === 'productCount') productCount = Math.min(100, Math.max(1, parseInt(String(part.value)) || 20))
           if (part.fieldname === 'historyMonths') historyMonths = Math.min(60, Math.max(0, parseInt(String(part.value)) || 12))
         } else {
+          const filename = (part as any).filename as string | undefined
+          if (filename) assertAllowedExtension(filename)
           const buf = await part.toBuffer()
           if (part.fieldname === 'catalogFile') {
             catalogBuffer = buf
             catalogMime = part.mimetype
-            catalogFilename = (part as any).filename ?? 'catalog.csv'
+            catalogFilename = filename ?? 'catalog.csv'
           } else if (part.fieldname === 'purchaseFile') {
             purchaseBuffer = buf
             purchaseMime = part.mimetype
-            purchaseFilename = (part as any).filename ?? 'purchase-history.csv'
+            purchaseFilename = filename ?? 'purchase-history.csv'
           } else if (part.fieldname === 'customerProfileFile') {
             customerProfileBuffer = buf
             customerProfileMime = part.mimetype
-            customerProfileFilename = (part as any).filename ?? 'customer-profiles.xlsx'
+            customerProfileFilename = filename ?? 'customer-profiles.xlsx'
           } else if (part.fieldname === 'quizFile') {
             quizBuffer = buf
             quizMime = part.mimetype
-            quizFilename = (part as any).filename ?? 'quiz-results.xlsx'
+            quizFilename = filename ?? 'quiz-results.xlsx'
           }
         }
       }
@@ -449,7 +460,7 @@ export async function adminRoutes(server: FastifyInstance) {
           active: d.active,
           loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${d.slug}/login`,
           email: d.admins[0]?.email ?? null,
-          password: `demo-${d.slug}`,
+          password: tryDecryptSecret(d.demoPasswordEncrypted),
           demoLinkExpiresAt: d.demoLinkExpiresAt,
           focusAreas: d.focusAreas,
           productCount: d._count.products,
@@ -491,7 +502,7 @@ export async function adminRoutes(server: FastifyInstance) {
           active: brand.active,
           loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${brand.slug}/login`,
           email: brand.admins[0]?.email ?? null,
-          password: `demo-${brand.slug}`,
+          password: tryDecryptSecret(brand.demoPasswordEncrypted),
           demoLinkExpiresAt: brand.demoLinkExpiresAt,
           focusAreas: brand.focusAreas,
           name: brand.name,
@@ -669,7 +680,7 @@ export async function adminRoutes(server: FastifyInstance) {
       return {
         loginUrl: `${process.env.DASHBOARD_URL ?? 'https://portal.haliteintelligence.com'}/${brand.slug}/login`,
         email: brand.admins[0]?.email ?? `admin@${brand.slug}.halite`,
-        password: `demo-${brand.slug}`,
+        password: tryDecryptSecret(brand.demoPasswordEncrypted),
         demoLinkExpiresAt: brand.demoLinkExpiresAt,
         status: demoBrandStatus(brand),
       }
@@ -798,7 +809,7 @@ export async function adminRoutes(server: FastifyInstance) {
         },
       })
       if (!brand) throw new ApiError(404, 'Brand not found')
-      const { shopifyToken, shopifyWebhookSecret, ...safe } = brand
+      const { shopifyToken, shopifyTokenEncrypted, shopifyWebhookSecret, demoPasswordEncrypted, ...safe } = brand
       return { brand: safe }
     }
   )

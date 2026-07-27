@@ -1,5 +1,6 @@
 import type { HaliteApi } from './api'
 import type { ReorderItem } from './types'
+import { escapeHtml } from './utils'
 
 const URGENCY_CONFIG = {
   overdue:  { color: '#e57373', bg: '#e5737318', label: 'Overdue',  badge: '⚠️' },
@@ -71,8 +72,8 @@ export class ReorderController {
       const info = document.createElement('div')
       info.style.cssText = 'flex:1;'
       info.innerHTML = `
-        <p style="font-size:14px;font-weight:600;color:#1a1a1a;margin:0 0 3px;">${item.product.name}</p>
-        <p style="font-size:11px;color:#888;margin:0;">${item.routineArea.toLowerCase()} routine · ${item.product.currency} ${item.product.price.toFixed(2)}</p>
+        <p style="font-size:14px;font-weight:600;color:#1a1a1a;margin:0 0 3px;">${escapeHtml(item.product.name)}</p>
+        <p style="font-size:11px;color:#888;margin:0;">${escapeHtml(item.routineArea.toLowerCase())} routine · ${escapeHtml(item.product.currency)} ${item.product.price.toFixed(2)}</p>
       `
       top.appendChild(info)
 

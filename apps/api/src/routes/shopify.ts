@@ -5,6 +5,7 @@ import { prisma } from '@halite/db'
 import { requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
 import { processCatalogUpload } from '../lib/catalog-processor.js'
+import { encryptSecret, tryDecryptSecret } from '../lib/secret-box.js'
 
 // ── Shared HMAC verifier ───────────────────────────────────────────────────
 function verifyShopifyHmac(query: Record<string, string>): boolean {
@@ -21,20 +22,75 @@ function verifyShopifyHmac(query: Record<string, string>): boolean {
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))
 }
 
+// ── OAuth state: binds the callback's brandId to the admin session that ────
+// actually requested the install. Shopify's own HMAC only proves "this
+// callback really came from Shopify" — it says nothing about whether the
+// brandId embedded in `state` was legitimately issued, since the caller
+// controls that value at the /install-url step. Signing it here closes that
+// gap: /callback rejects any state it didn't itself sign and hand out.
+function signOAuthState(brandId: string): string {
+  const payload = Buffer.from(JSON.stringify({ brandId, ts: Date.now() })).toString('base64url')
+  const sig = crypto.createHmac('sha256', process.env.JWT_SECRET!).update(payload).digest('base64url')
+  return `${payload}.${sig}`
+}
+
+function verifyOAuthState(state: string): { brandId: string } {
+  const [payload, sig] = state.split('.')
+  if (!payload || !sig) throw new ApiError(400, 'Invalid state')
+  const expectedSig = crypto.createHmac('sha256', process.env.JWT_SECRET!).update(payload).digest('base64url')
+  const sigBuf = Buffer.from(sig)
+  const expectedBuf = Buffer.from(expectedSig)
+  if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+    throw new ApiError(400, 'Invalid state signature')
+  }
+  const { brandId, ts } = JSON.parse(Buffer.from(payload, 'base64url').toString()) as { brandId: string; ts: number }
+  if (Date.now() - ts > 10 * 60 * 1000) throw new ApiError(400, 'OAuth request expired — please try connecting again')
+  return { brandId }
+}
+
+const SHOP_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    rawBody?: Buffer
+  }
+}
+
 // ── Shopify OAuth install flow ────────────────────────────────────────────
 export async function shopifyRoutes(server: FastifyInstance) {
-  // Step 1: Begin OAuth
-  server.get('/install', async (request, reply) => {
-    const { shop, brandId } = request.query as { shop: string; brandId: string }
-    if (!shop || !brandId) throw new ApiError(400, 'Missing shop or brandId')
+  // Scoped to this plugin's routes only (Fastify content-type parsers are
+  // encapsulated per-context). The webhook HMAC must be checked against the
+  // exact bytes Shopify signed — JSON.stringify(request.body) re-serializes
+  // the already-parsed object, and key order/number/unicode formatting
+  // aren't guaranteed to round-trip identically, which made that check both
+  // unreliable and the wrong foundation for a signature verification.
+  server.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
+    req.rawBody = body as Buffer
+    try {
+      done(null, body.length ? JSON.parse(body.toString('utf-8')) : {})
+    } catch (err) {
+      done(err as Error, undefined)
+    }
+  })
+
+  // Step 1: Begin OAuth. Requires an authenticated brand admin — brandId
+  // comes from their verified session, never from client input, so the
+  // resulting state can only ever point at the brand the caller actually
+  // administers. Returns the URL for the frontend to navigate to, rather
+  // than redirecting directly, since this is invoked via authenticated
+  // fetch (a plain <a href> can't carry an Authorization header).
+  server.post('/install-url', { preHandler: requireBrandAdmin }, async (request) => {
+    const { shop } = z.object({ shop: z.string() }).parse(request.body)
+    if (!SHOP_DOMAIN_RE.test(shop)) throw new ApiError(400, 'Invalid shop domain')
+    const brandId = request.brandAdmin!.brandId
 
     const clientId = process.env.SHOPIFY_CLIENT_ID!
     const redirectUri = `${process.env.API_BASE_URL}/shopify/callback`
     const scopes = 'read_products,read_customers,read_orders,write_script_tags,write_customers'
-    const state = Buffer.from(JSON.stringify({ brandId })).toString('base64')
+    const state = signOAuthState(brandId)
 
-    const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`
-    return reply.redirect(authUrl)
+    const url = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`
+    return { url }
   })
 
   // Step 2: OAuth callback
@@ -46,7 +102,7 @@ export async function shopifyRoutes(server: FastifyInstance) {
       throw new ApiError(400, 'Invalid HMAC')
     }
 
-    const { brandId } = JSON.parse(Buffer.from(state!, 'base64').toString())
+    const { brandId } = verifyOAuthState(state!)
 
     // Exchange code for token
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
@@ -62,7 +118,9 @@ export async function shopifyRoutes(server: FastifyInstance) {
 
     await prisma.brand.update({
       where: { id: brandId },
-      data: { shopifyShop: shop ?? null, shopifyToken: access_token },
+      // shopifyToken (legacy plaintext) is cleared on every new connection —
+      // only shopifyTokenEncrypted is written going forward.
+      data: { shopifyShop: shop ?? null, shopifyTokenEncrypted: encryptSecret(access_token), shopifyToken: null },
     })
 
     // Kick off initial catalog sync
@@ -78,12 +136,16 @@ export async function shopifyRoutes(server: FastifyInstance) {
     const shopDomain = request.headers['x-shopify-shop-domain'] as string
     const hmac = request.headers['x-shopify-hmac-sha256'] as string
 
-    const rawBody = JSON.stringify(request.body)
+    if (!hmac || !request.rawBody) return reply.status(401).send()
     const expected = crypto
       .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET!)
-      .update(rawBody)
+      .update(request.rawBody)
       .digest('base64')
-    if (expected !== hmac) return reply.status(401).send()
+    const expectedBuf = Buffer.from(expected)
+    const hmacBuf = Buffer.from(hmac)
+    if (expectedBuf.length !== hmacBuf.length || !crypto.timingSafeEqual(expectedBuf, hmacBuf)) {
+      return reply.status(401).send()
+    }
 
     const brand = await prisma.brand.findUnique({ where: { shopifyShop: shopDomain } })
     if (!brand) return reply.status(200).send()
@@ -101,9 +163,10 @@ export async function shopifyRoutes(server: FastifyInstance) {
     async (request, reply) => {
       const { brandId } = request.params as { brandId: string }
       const brand = await prisma.brand.findUnique({ where: { id: brandId } })
-      if (!brand?.shopifyShop || !brand.shopifyToken) throw new ApiError(400, 'Shopify not connected')
+      const token = tryDecryptSecret(brand?.shopifyTokenEncrypted) ?? brand?.shopifyToken ?? null
+      if (!brand?.shopifyShop || !token) throw new ApiError(400, 'Shopify not connected')
 
-      triggerShopifyProductSync(brandId, brand.shopifyShop, brand.shopifyToken).catch(console.error)
+      triggerShopifyProductSync(brandId, brand.shopifyShop, token).catch(console.error)
       return reply.status(202).send({ message: 'Sync started' })
     }
   )

@@ -1,5 +1,6 @@
 import type { HaliteApi } from './api'
 import type { QuizQuestion, Routine } from './types'
+import { escapeHtml } from './utils'
 
 const TIME_LABELS: Record<string, string> = {
   AM: 'Morning',
@@ -253,7 +254,7 @@ export class QuizController {
 
             // Update preview
             preview.style.display = 'flex'
-            preview.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:${opt.swatchColor};flex-shrink:0;display:inline-block;"></span><div><p style="font-size:12px;font-weight:600;color:#1a1a1a;margin:0;">${opt.label}</p><p style="font-size:11px;color:#888;margin:0;">${opt.description ?? ''}</p></div>`
+            preview.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:${escapeHtml(opt.swatchColor)};flex-shrink:0;display:inline-block;"></span><div><p style="font-size:12px;font-weight:600;color:#1a1a1a;margin:0;">${escapeHtml(opt.label)}</p><p style="font-size:11px;color:#888;margin:0;">${escapeHtml(opt.description ?? '')}</p></div>`
           })
 
           circle.setAttribute('data-swatch', opt.value)
@@ -269,7 +270,7 @@ export class QuizController {
         q.options.forEach(opt => {
           const el = document.createElement('div')
           el.className = 'hlw-option'
-          el.innerHTML = `<div class="hlw-option-label">${opt.label}</div>${opt.description ? `<div class="hlw-option-desc">${opt.description}</div>` : ''}`
+          el.innerHTML = `<div class="hlw-option-label">${escapeHtml(opt.label)}</div>${opt.description ? `<div class="hlw-option-desc">${escapeHtml(opt.description)}</div>` : ''}`
           el.addEventListener('click', () => {
             opts.querySelectorAll('.hlw-option').forEach(o => o.classList.remove('selected'))
             el.classList.add('selected')
@@ -292,7 +293,7 @@ export class QuizController {
       q.options.forEach(opt => {
         const el = document.createElement('div')
         el.className = 'hlw-option'
-        el.innerHTML = `<div class="hlw-option-label">${opt.label}</div>`
+        el.innerHTML = `<div class="hlw-option-label">${escapeHtml(opt.label)}</div>`
         el.addEventListener('click', () => {
           if (chosen.has(opt.value)) { chosen.delete(opt.value); el.classList.remove('selected') }
           else { chosen.add(opt.value); el.classList.add('selected') }
@@ -314,7 +315,7 @@ export class QuizController {
       input.min = '1'; input.max = String(steps); input.value = String(Math.ceil(steps / 2))
       const labels = document.createElement('div')
       labels.className = 'hlw-scale-labels'
-      labels.innerHTML = `<span>${q.scaleMin ?? '1'}</span><span>${q.scaleMax ?? String(steps)}</span>`
+      labels.innerHTML = `<span>${escapeHtml(q.scaleMin ?? '1')}</span><span>${escapeHtml(q.scaleMax ?? String(steps))}</span>`
       wrap.appendChild(input); wrap.appendChild(labels)
       container.appendChild(wrap)
       getValue = () => input.value
@@ -501,8 +502,8 @@ export class QuizController {
     el.className = 'hlw-loading'
     el.innerHTML = `
       <div class="hlw-spinner"></div>
-      <p class="hlw-loading-text">${title}</p>
-      ${sub ? `<p class="hlw-loading-sub">${sub}</p>` : ''}
+      <p class="hlw-loading-text">${escapeHtml(title)}</p>
+      ${sub ? `<p class="hlw-loading-sub">${escapeHtml(sub)}</p>` : ''}
       <div class="hlw-dots"><span></span><span></span><span></span></div>
     `
     this.render(el)
@@ -514,8 +515,8 @@ export class QuizController {
     el.className = 'hlw-error'
     el.innerHTML = `
       <div class="hlw-error-icon">✦</div>
-      <p class="hlw-error-text">${title}</p>
-      <p class="hlw-error-sub">${sub}</p>
+      <p class="hlw-error-text">${escapeHtml(title)}</p>
+      <p class="hlw-error-sub">${escapeHtml(sub)}</p>
     `
     this.render(el)
   }
@@ -632,11 +633,11 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
       card.innerHTML = `
         <div class="hlw-step-top">
           <div class="hlw-step-num">${step.step}</div>
-          <div class="hlw-step-name">${step.product.name}</div>
-          <div class="hlw-step-price">${step.product.currency} ${step.product.price.toFixed(2)}</div>
+          <div class="hlw-step-name">${escapeHtml(step.product.name)}</div>
+          <div class="hlw-step-price">${escapeHtml(step.product.currency)} ${step.product.price.toFixed(2)}</div>
         </div>
-        <p class="hlw-step-instruction">${step.instruction}</p>
-        ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${i}</span>`).join('')}</div>` : ''}
+        <p class="hlw-step-instruction">${escapeHtml(step.instruction)}</p>
+        ${ingredients.length ? `<div class="hlw-tags">${ingredients.map(i => `<span class="hlw-tag">${escapeHtml(i)}</span>`).join('')}</div>` : ''}
       `
 
       group.appendChild(card)
@@ -675,8 +676,8 @@ function buildRoutineSteps(routine: Routine, container: HTMLElement, config: Bra
 
     const info = document.createElement('div')
     info.style.cssText = 'flex:1;min-width:0;'
-    info.innerHTML = `<p style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${step.product.name}</p>` +
-      (step.product.price > 0 ? `<p style="font-size:11px;opacity:.5;">${step.product.currency} ${step.product.price.toFixed(2)}</p>` : '')
+    info.innerHTML = `<p style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(step.product.name)}</p>` +
+      (step.product.price > 0 ? `<p style="font-size:11px;opacity:.5;">${escapeHtml(step.product.currency)} ${step.product.price.toFixed(2)}</p>` : '')
 
     row.appendChild(cb)
     row.appendChild(info)

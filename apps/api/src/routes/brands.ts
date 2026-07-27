@@ -506,7 +506,7 @@ export async function brandRoutes(server: FastifyInstance) {
       const parsed = schema.parse(request.body)
       const data = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined))
       const brand = await prisma.brand.update({ where: { id: brandId }, data })
-      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
+      const { shopifyToken, shopifyTokenEncrypted, shopifyWebhookSecret, apiKey, demoPasswordEncrypted, ...safe } = brand
       return { brand: safe }
     }
   )
@@ -522,7 +522,7 @@ export async function brandRoutes(server: FastifyInstance) {
         include: { _count: { select: { endUsers: true, products: true } } },
       })
       if (!brand) throw new ApiError(404, 'Brand not found')
-      const { shopifyToken, shopifyWebhookSecret, apiKey, ...safe } = brand
+      const { shopifyToken, shopifyTokenEncrypted, shopifyWebhookSecret, apiKey, demoPasswordEncrypted, ...safe } = brand
       return { brand: { ...safe, whiteLabelEnabled: brand.whiteLabelEnabled, brandThemeConfig: brand.brandThemeConfig } }
     }
   )
@@ -566,7 +566,7 @@ export async function brandRoutes(server: FastifyInstance) {
       const { brandId } = request.params as { brandId: string }
       await prisma.brand.update({
         where: { id: brandId },
-        data: { shopifyShop: null, shopifyToken: null, shopifyWebhookSecret: null },
+        data: { shopifyShop: null, shopifyToken: null, shopifyTokenEncrypted: null, shopifyWebhookSecret: null },
       })
       return reply.status(204).send()
     }

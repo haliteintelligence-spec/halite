@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { prisma, Prisma } from '@halite/db'
 
@@ -12,8 +13,10 @@ const eventSchema = z.object({
 
 export async function internalRoutes(server: FastifyInstance) {
   server.addHook('onRequest', async (request, reply) => {
-    if (request.headers['x-internal-secret'] !== process.env.INTERNAL_API_SECRET) {
-      reply.code(401).send({ error: 'Unauthorized' })
+    const provided = Buffer.from((request.headers['x-internal-secret'] as string) ?? '')
+    const expected = Buffer.from(process.env.INTERNAL_API_SECRET ?? '')
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      return reply.code(401).send({ error: 'Unauthorized' })
     }
   })
 

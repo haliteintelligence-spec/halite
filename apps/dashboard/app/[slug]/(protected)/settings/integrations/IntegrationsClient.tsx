@@ -67,13 +67,24 @@ export function IntegrationsClient({
     }
   }, [banner])
 
-  function buildInstallUrl() {
+  async function goToShopifyInstall() {
     let shop = shopInput.trim().toLowerCase()
-    if (!shop) { setConnectError('Enter your shop domain.'); return null }
+    if (!shop) { setConnectError('Enter your shop domain.'); return }
     shop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '')
     if (!shop.includes('.myshopify.com')) shop = `${shop}.myshopify.com`
     setConnectError('')
-    return `${API_URL}/shopify/install?shop=${encodeURIComponent(shop)}&brandId=${brandId}`
+    try {
+      const res = await fetch(`${API_URL}/shopify/install-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ shop }),
+      })
+      if (!res.ok) { setConnectError('Could not start Shopify connection. Check the shop domain and try again.'); return }
+      const { url } = await res.json() as { url: string }
+      window.location.href = url
+    } catch {
+      setConnectError('Could not start Shopify connection. Check the shop domain and try again.')
+    }
   }
 
   async function sync() {
@@ -258,18 +269,12 @@ export function IntegrationsClient({
                       className="w-full px-3 py-2 rounded-lg border text-[13px] text-ink bg-white outline-none transition-colors"
                       style={{ borderColor: connectError ? '#fca5a5' : 'var(--sand-2)' }}
                       onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          const url = buildInstallUrl()
-                          if (url) window.location.href = url
-                        }
+                        if (e.key === 'Enter') void goToShopifyInstall()
                       }}
                     />
                   </div>
                   <button
-                    onClick={() => {
-                      const url = buildInstallUrl()
-                      if (url) window.location.href = url
-                    }}
+                    onClick={() => void goToShopifyInstall()}
                     className="px-5 py-2 rounded-lg text-[13px] font-semibold text-white flex-shrink-0"
                     style={{ background: 'var(--clay)' }}
                   >

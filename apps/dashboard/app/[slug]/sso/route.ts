@@ -19,6 +19,7 @@ export async function GET(
     maxAge: 60 * 60 * 24,
     sameSite: 'lax',
     httpOnly: false,
+    secure: true,
   })
 
   return response

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { Resend } from 'resend'
 import { prisma } from '@halite/db'
+import { escapeHtml } from './html.js'
 // AgentWorkflow type inlined to avoid module resolution issues
 interface AgentWorkflow {
   id: string
@@ -136,23 +137,23 @@ async function sendRunEmail(
   const recommendations: string[] = Array.isArray(out?.recommendations) ? (out.recommendations as string[]) : []
 
   const insightRows = insights.map((ins, i) =>
-    `<tr><td style="padding:8px 0;border-bottom:1px solid #f0e8e0;font-size:13px;color:#1c1410;">${i + 1}. ${ins}</td></tr>`
+    `<tr><td style="padding:8px 0;border-bottom:1px solid #f0e8e0;font-size:13px;color:#1c1410;">${i + 1}. ${escapeHtml(ins)}</td></tr>`
   ).join('')
 
   const recRows = recommendations.map(r =>
-    `<li style="margin-bottom:6px;font-size:13px;color:#6b4f3a;">· ${r}</li>`
+    `<li style="margin-bottom:6px;font-size:13px;color:#6b4f3a;">· ${escapeHtml(r)}</li>`
   ).join('')
 
   const fallback = !summary && insights.length === 0
-    ? `<pre style="font-size:12px;color:#6b4f3a;white-space:pre-wrap;background:#faf7f4;padding:16px;border-radius:8px;">${JSON.stringify(output, null, 2)}</pre>`
+    ? `<pre style="font-size:12px;color:#6b4f3a;white-space:pre-wrap;background:#faf7f4;padding:16px;border-radius:8px;">${escapeHtml(JSON.stringify(output, null, 2))}</pre>`
     : ''
 
   const html = `
     <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:32px;">
       <p style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#9c8878;margin-bottom:8px;">Halite Intelligence</p>
-      <h2 style="font-size:22px;color:#1c1410;margin:0 0 4px;">${workflowName}</h2>
-      <p style="font-size:13px;color:#9c8878;margin:0 0 24px;">${brandName} · Agent Run Complete</p>
-      ${summary ? `<p style="font-size:14px;color:#6b4f3a;line-height:1.6;margin-bottom:24px;">${summary}</p>` : ''}
+      <h2 style="font-size:22px;color:#1c1410;margin:0 0 4px;">${escapeHtml(workflowName)}</h2>
+      <p style="font-size:13px;color:#9c8878;margin:0 0 24px;">${escapeHtml(brandName)} · Agent Run Complete</p>
+      ${summary ? `<p style="font-size:14px;color:#6b4f3a;line-height:1.6;margin-bottom:24px;">${escapeHtml(summary)}</p>` : ''}
       ${insights.length > 0 ? `
         <p style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#9c8878;margin-bottom:8px;">Insights</p>
         <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">${insightRows}</table>
@@ -163,7 +164,7 @@ async function sendRunEmail(
       ` : ''}
       ${fallback}
       <hr style="border:none;border-top:1px solid #e8ddd3;margin:32px 0;"/>
-      <p style="font-size:12px;color:#9c8878;">Sent by Halite Intelligence · ${brandName}</p>
+      <p style="font-size:12px;color:#9c8878;">Sent by Halite Intelligence · ${escapeHtml(brandName)}</p>
     </div>`
 
   await resend.emails.send({

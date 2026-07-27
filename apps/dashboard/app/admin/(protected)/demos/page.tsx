@@ -216,7 +216,7 @@ export default function DemosPage() {
                   <td className="px-4 py-3">
                     <div className="text-[11px] space-y-0.5 font-mono" style={{ color: 'var(--ink-3)' }}>
                       <p className="truncate max-w-[140px]">{demo.email ?? '—'}</p>
-                      <p className="truncate max-w-[140px]">{demo.password}</p>
+                      <p className="truncate max-w-[140px]">{demo.password ?? '—'}</p>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--ink-3)' }}>

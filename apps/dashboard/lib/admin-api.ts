@@ -26,7 +26,7 @@ export interface DemoSummary {
   active: boolean
   loginUrl: string
   email: string | null
-  password: string
+  password: string | null
   demoLinkExpiresAt: string | null
   demoProvisioningError: { message: string; failedAt: string } | null
   focusAreas: string[]

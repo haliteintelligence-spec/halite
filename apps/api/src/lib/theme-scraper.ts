@@ -1,3 +1,69 @@
+import dns from 'node:dns'
+
+// Blocks the server from being used as an SSRF proxy against internal
+// infrastructure or cloud metadata endpoints (e.g. 169.254.169.254). Checked
+// both before the initial request and again on every redirect hop, since
+// `fetch` would otherwise happily follow a public URL that 302s to a
+// private one.
+function isPrivateOrReservedIp(ip: string): boolean {
+  if (ip.includes(':')) {
+    const lower = ip.toLowerCase()
+    if (lower === '::1' || lower === '::') return true
+    if (lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) return true
+    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(lower)
+    if (mapped) return isPrivateOrReservedIp(mapped[1]!)
+    return false
+  }
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return true
+  const [a, b] = parts as [number, number, number, number]
+  if (a === 10) return true
+  if (a === 127) return true
+  if (a === 169 && b === 254) return true
+  if (a === 172 && b >= 16 && b <= 31) return true
+  if (a === 192 && b === 168) return true
+  if (a === 0) return true
+  if (a === 100 && b >= 64 && b <= 127) return true // carrier-grade NAT
+  return false
+}
+
+async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
+  const url = new URL(rawUrl)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('Only http/https URLs are allowed')
+  }
+  const hostname = url.hostname.toLowerCase()
+  if (hostname === 'localhost' || hostname.endsWith('.local') || hostname === 'metadata.google.internal') {
+    throw new Error('URL host is not allowed')
+  }
+  const addresses = await dns.promises.lookup(hostname, { all: true }).catch(() => [])
+  if (addresses.length === 0) throw new Error('Could not resolve host')
+  for (const { address } of addresses) {
+    if (isPrivateOrReservedIp(address)) throw new Error('URL resolves to a private or reserved address')
+  }
+  return url
+}
+
+// Fetches with manual redirect handling so every hop — not just the
+// original URL — is re-validated against the same private-IP allowlist.
+async function fetchPublicUrl(rawUrl: string, maxRedirects = 3): Promise<Response> {
+  let current = rawUrl
+  for (let i = 0; i <= maxRedirects; i++) {
+    await assertPublicHttpUrl(current)
+    const res = await fetch(current, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HaliteBot/1.0; +https://haliteintelligence.com)' },
+      signal: AbortSignal.timeout(8000),
+      redirect: 'manual',
+    })
+    if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
+      current = new URL(res.headers.get('location')!, current).toString()
+      continue
+    }
+    return res
+  }
+  throw new Error('Too many redirects')
+}
+
 export interface BrandThemeConfig {
   primary: string
   primaryLight: string
@@ -125,10 +191,7 @@ function extractFonts(html: string): { fontSans: string; fontDisplay: string; fo
 export async function scrapeTheme(url: string): Promise<BrandThemeConfig> {
   let html = ''
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HaliteBot/1.0; +https://haliteintelligence.com)' },
-      signal: AbortSignal.timeout(8000),
-    })
+    const res = await fetchPublicUrl(url)
     if (res.ok) html = await res.text()
   } catch {
     return { ...DEFAULT_THEME }

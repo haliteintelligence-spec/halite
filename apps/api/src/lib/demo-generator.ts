@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'node:crypto'
 import { prisma } from '@halite/db'
 import { generateRoutine } from './routine-generator.js'
 import { runAgentWorkflow } from './agent-runner.js'
 import { withRetry } from './retry.js'
+import { encryptSecret } from './secret-box.js'
 import type { PurchaseMatrix } from './purchase-history-processor.js'
 
 // ── Pre-built workflow definitions ────────────────────────────────────────────
@@ -203,6 +205,15 @@ function slugify(s: string) {
 
 function randomSlug4() {
   return Math.random().toString(36).slice(2, 6)
+}
+
+// Was previously `demo-${slug}` — fully guessable from the brand's own
+// public slug, so anyone who found an active demo's URL could log in as
+// OWNER with zero brute-forcing. This is real randomness instead, still
+// displayable to the operator (via demoPasswordEncrypted) to hand to the
+// prospect out of band.
+function randomDemoPassword() {
+  return randomBytes(9).toString('base64url') // 12 chars, ~64 bits of entropy
 }
 
 // Generate a deterministic but realistic-looking phone for a demo consumer.
@@ -409,7 +420,7 @@ export async function provisionDemoEnvironment(
   }
 
   const email = `admin@${slug}.halite`
-  const password = `demo-${slug}`
+  const password = randomDemoPassword()
   const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
 
   // 2. Create BrandAdmin login (skip if already exists)
@@ -424,6 +435,10 @@ export async function provisionDemoEnvironment(
         name: `${prospectName} Demo`,
         role: 'OWNER',
       },
+    })
+    await prisma.brand.update({
+      where: { id: brand.id },
+      data: { demoPasswordEncrypted: encryptSecret(password) },
     })
   }
 

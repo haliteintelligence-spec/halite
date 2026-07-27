@@ -16,9 +16,16 @@ const strongPasswordSchema = z.string()
   .regex(/[0-9]/, 'Password must contain at least one number')
   .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
 
+// The global rate limit (200 req/min/IP, applied to the whole API) leaves
+// enough headroom to brute-force an 8-character password well before it
+// engages. Login/signup get a much tighter, endpoint-specific budget on top
+// of it.
+const LOGIN_RATE_LIMIT = { max: 8, timeWindow: '1 minute' }
+const REGISTER_RATE_LIMIT = { max: 5, timeWindow: '10 minutes' }
+
 export async function authRoutes(server: FastifyInstance) {
   // Halite admin login
-  server.post('/halite-admin/login', async (request, reply) => {
+  server.post('/halite-admin/login', { config: { rateLimit: LOGIN_RATE_LIMIT } }, async (request, reply) => {
     const { email, password } = loginSchema.parse(request.body)
 
     const admin = await prisma.haliteAdmin.findUnique({ where: { email } })
@@ -32,7 +39,7 @@ export async function authRoutes(server: FastifyInstance) {
   })
 
   // Brand admin login
-  server.post('/brand-admin/login', async (request, reply) => {
+  server.post('/brand-admin/login', { config: { rateLimit: LOGIN_RATE_LIMIT } }, async (request, reply) => {
     const { email, password } = loginSchema.parse(request.body)
 
     const admin = await prisma.brandAdmin.findUnique({
@@ -71,7 +78,7 @@ export async function authRoutes(server: FastifyInstance) {
   })
 
   // Brand admin registration (self-service account creation)
-  server.post('/brand-admin/register', async (request, reply) => {
+  server.post('/brand-admin/register', { config: { rateLimit: REGISTER_RATE_LIMIT } }, async (request, reply) => {
     const schema = z.object({
       slug: z.string().min(1),
       email: z.string().email(),

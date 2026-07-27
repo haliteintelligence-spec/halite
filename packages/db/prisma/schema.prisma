@@ -39,7 +39,11 @@ model Brand {
 
   // Shopify integration
   shopifyShop          String? @unique
+  // Deprecated: legacy plaintext token, kept only as a read fallback for
+  // brands that connected before shopifyTokenEncrypted existed. New writes
+  // always go to the encrypted field — see apps/api/src/lib/secret-box.ts.
   shopifyToken         String?
+  shopifyTokenEncrypted String?
   shopifyWebhookSecret String?
 
   // Branding
@@ -56,6 +60,9 @@ model Brand {
   demoLinkExpiresAt     DateTime?
   demoConvertedAt       DateTime?
   demoProvisioningError Json?
+  // Encrypted so the admin dashboard can still display the demo login to
+  // share with a prospect without a second plaintext-password column.
+  demoPasswordEncrypted String?
 
   // White-label
   whiteLabelEnabled Boolean @default(false)
