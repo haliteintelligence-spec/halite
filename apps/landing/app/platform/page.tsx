@@ -544,9 +544,14 @@ export default function Platform() {
             </div>
           </div>
           <div style={{ borderTop: '1px solid rgba(250,246,240,0.08)' }} className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.3)' }}>
-              © 2026 Halite Intelligence. All rights reserved.
-            </p>
+            <div className="flex flex-col gap-1 text-center sm:text-left">
+              <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.3)' }}>
+                © 2026 Halite Intelligence. All rights reserved.
+              </p>
+              <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.3)' }}>
+                Halite Intelligence is a subsidiary of Lodestar Procurement Advisory LLC, registered in Atlanta, GA.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
