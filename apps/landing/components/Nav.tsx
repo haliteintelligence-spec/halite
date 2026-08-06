@@ -33,8 +33,8 @@ export function Nav() {
   // Both segments are always links to the other side's page — the "active" one
   // just points at its own page, so clicking it is a harmless no-op rather than
   // a dead control.
-  const segmentBase = 'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all'
-  const inactiveSegment = { background: 'transparent', color: scrolled ? '#8B6575' : 'rgba(250,246,240,0.7)' }
+  const segment = 'px-3 sm:px-4 py-1.5 rounded-full text-[11.5px] sm:text-[12px] font-semibold transition-all whitespace-nowrap'
+  const inactive = { background: 'transparent', color: scrolled ? '#8B6575' : 'rgba(250,246,240,0.7)' }
 
   return (
     <header
@@ -45,8 +45,9 @@ export function Nav() {
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
       }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-        {/* Logo */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
+        {/* Logo — "Intelligence" is dropped on the narrowest screens to leave
+            room for the audience switcher, which matters more than the wordmark. */}
         <a href="/" className="flex items-center gap-2 flex-shrink-0">
           <span
             className="text-[10px] font-bold tracking-[0.25em] uppercase"
@@ -55,22 +56,23 @@ export function Nav() {
             ✦
           </span>
           <span
-            className="font-display text-lg font-semibold leading-none"
+            className="font-display text-[17px] sm:text-lg font-semibold leading-none"
             style={{ color: scrolled ? '#1A0A12' : '#FAF6F0' }}
           >
             Halite
           </span>
           <span
-            className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5"
+            className="hidden sm:inline text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5"
             style={{ color: scrolled ? '#8B6575' : 'rgba(250,246,240,0.7)' }}
           >
             Intelligence
           </span>
         </a>
 
-        {/* Audience switcher — navigates between the two pages */}
+        {/* Audience switcher — visible at every width. Switching side of the
+            business is the one thing that shouldn't be buried behind a tap. */}
         <div
-          className="hidden md:flex p-[3px] rounded-full flex-shrink-0"
+          className="flex p-[3px] rounded-full flex-shrink-0"
           style={{
             background: scrolled ? '#F2EBE0' : 'rgba(250,246,240,0.12)',
             border: scrolled ? '1px solid #E8DDD0' : '1px solid rgba(250,246,240,0.22)',
@@ -78,27 +80,29 @@ export function Nav() {
         >
           <a
             href="/"
-            className={segmentBase}
+            className={segment}
             style={
               !isConsumer
                 ? { background: '#450F2A', color: '#FAF6F0', boxShadow: '0 1px 3px rgba(69,15,42,0.3)' }
-                : inactiveSegment
+                : inactive
             }
             aria-current={!isConsumer ? 'page' : undefined}
           >
-            For brands
+            <span className="sm:hidden">Brands</span>
+            <span className="hidden sm:inline">For brands</span>
           </a>
           <a
             href="/hallie"
-            className={segmentBase}
+            className={segment}
             style={
               isConsumer
                 ? { background: '#C17A47', color: '#2A1206', boxShadow: '0 1px 3px rgba(193,122,71,0.35)' }
-                : inactiveSegment
+                : inactive
             }
             aria-current={isConsumer ? 'page' : undefined}
           >
-            For consumers
+            <span className="sm:hidden">Consumers</span>
+            <span className="hidden sm:inline">For consumers</span>
           </a>
         </div>
 
@@ -144,7 +148,7 @@ export function Nav() {
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden p-2"
+          className="md:hidden p-2 -mr-2 flex-shrink-0"
           onClick={() => setOpen(!open)}
           aria-label="Menu"
           aria-expanded={open}
@@ -157,60 +161,49 @@ export function Nav() {
         </button>
       </div>
 
-      {/* Mobile menu — both audiences listed rather than switched, since a phone
-          menu has room to show everything and a segmented control there would
-          hide half the site behind an extra tap. */}
+      {/* Mobile menu — only the current page's sections. Crossing to the other
+          audience is the switcher's job, and it's visible right above this, so
+          repeating both sets of links here would just be noise. */}
       {open && (
-        <div className="md:hidden px-6 pb-6 pt-2" style={{ background: '#FAF6F0' }}>
-          <p className="text-[10px] font-bold tracking-[0.18em] uppercase mb-2.5" style={{ color: '#8B6575' }}>
-            For brands
-          </p>
-          <div className="space-y-3 mb-5">
-            {BRAND_LINKS.map(l => (
-              <a
-                key={l.href}
-                href={l.href}
-                className="block text-[14px] font-medium"
-                style={{ color: '#4A2A38' }}
-                onClick={() => setOpen(false)}
-              >
-                {l.label}
-              </a>
-            ))}
-            <a
-              href="/#demo"
-              className="block text-[13px] font-semibold px-5 py-2.5 rounded-full text-center"
-              style={{ background: '#450F2A', color: '#FAF6F0' }}
-              onClick={() => setOpen(false)}
-            >
-              Book a demo
-            </a>
-          </div>
-
-          <p className="text-[10px] font-bold tracking-[0.18em] uppercase mb-2.5" style={{ color: '#C17A47' }}>
-            For consumers
+        <div className="md:hidden px-6 pb-6 pt-3" style={{ background: '#FAF6F0' }}>
+          <p
+            className="text-[10px] font-bold tracking-[0.18em] uppercase mb-3"
+            style={{ color: isConsumer ? '#C17A47' : '#8B6575' }}
+          >
+            {isConsumer ? 'On this page' : 'For brands'}
           </p>
           <div className="space-y-3">
-            {CONSUMER_LINKS.map(l => (
+            {links.map(l => (
               <a
                 key={l.href}
                 href={l.href}
-                className="block text-[14px] font-medium"
+                className="block text-[15px] font-medium py-1"
                 style={{ color: '#4A2A38' }}
                 onClick={() => setOpen(false)}
               >
                 {l.label}
               </a>
             ))}
-            <a
-              href={HALLIE_URL}
-              {...EXTERNAL_LINK_PROPS}
-              className="block text-[13px] font-semibold px-5 py-2.5 rounded-full text-center"
-              style={{ background: '#C17A47', color: '#2A1206' }}
-              onClick={() => setOpen(false)}
-            >
-              Open Hallie ↗
-            </a>
+            {isConsumer ? (
+              <a
+                href={HALLIE_URL}
+                {...EXTERNAL_LINK_PROPS}
+                className="block text-[14px] font-semibold px-5 py-3 rounded-full text-center mt-1"
+                style={{ background: '#C17A47', color: '#2A1206' }}
+                onClick={() => setOpen(false)}
+              >
+                Open Hallie ↗
+              </a>
+            ) : (
+              <a
+                href="/#demo"
+                className="block text-[14px] font-semibold px-5 py-3 rounded-full text-center mt-1"
+                style={{ background: '#450F2A', color: '#FAF6F0' }}
+                onClick={() => setOpen(false)}
+              >
+                Book a demo
+              </a>
+            )}
           </div>
         </div>
       )}
