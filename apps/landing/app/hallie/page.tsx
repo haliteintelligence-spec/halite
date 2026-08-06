@@ -62,18 +62,19 @@ export default function HalliePage() {
           style={{ background: 'radial-gradient(620px 460px at 88% 0%, rgba(193,122,71,0.16), transparent 62%), radial-gradient(420px 420px at 0% 100%, rgba(69,15,42,0.06), transparent 60%)' }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-12 items-center w-full">
+        <div className="relative max-w-7xl mx-auto px-6 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-[1.32fr_0.68fr] gap-12 items-center w-full">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mb-6" style={{ color: '#C17A47' }}>
               For consumers · Beauty first, the whole shelf next
             </p>
+            {/* Held to a single line from lg up — the nowrap is what guarantees it,
+                the sizes are picked to fit the widened column at each breakpoint.
+                Below lg it wraps naturally rather than shrinking to fit a phone. */}
             <h1
-              className="font-display text-4xl sm:text-5xl lg:text-[56px] xl:text-[64px] font-semibold leading-[1.06] mb-6"
+              className="font-display text-[30px] sm:text-[40px] lg:text-[46px] xl:text-[54px] lg:whitespace-nowrap font-semibold leading-[1.08] mb-6"
               style={{ color: '#1A0A12' }}
             >
-              Meet <span style={{ color: '#C17A47' }}>Hallie</span> — she already
-              <br />
-              knows what&rsquo;s on your shelf.
+              Meet <span style={{ color: '#C17A47' }}>Hallie</span>. She knows your shelf.
             </h1>
             <p className="text-lg leading-relaxed mb-9 max-w-2xl" style={{ color: '#8B6575' }}>
               Add the products you actually own. Log what you use. Hallie learns your skin, your
