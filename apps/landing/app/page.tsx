@@ -88,11 +88,11 @@ export default function Landing() {
               The consumer profile that travels · Built for CPG
             </p>
             <h1
-              className="font-display text-4xl sm:text-5xl lg:text-[56px] xl:text-[66px] font-semibold leading-[1.06] mb-6"
+              className="font-display text-[32px] sm:text-4xl md:text-5xl lg:text-[56px] xl:text-[66px] font-semibold leading-[1.08] mb-6"
               style={{ color: '#FAF6F0' }}
             >
-              Your next customer
-              <br />
+              Your next customer{' '}
+              <br className="hidden sm:inline" />
               <span style={{ color: '#C17A47' }}>already has</span> a profile.
             </h1>
             <p
@@ -215,7 +215,7 @@ export default function Landing() {
       </section>
 
       {/* ── THE PROBLEM ──────────────────────────────────────────────────── */}
-      <section className="py-24 px-6" style={{ background: '#FAF6F0' }}>
+      <section className="py-16 md:py-24 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-4xl mb-14">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
@@ -246,7 +246,7 @@ export default function Landing() {
             ].map(p => (
               <div
                 key={p.title}
-                className="rounded-2xl p-8"
+                className="rounded-2xl p-6 md:p-8"
                 style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}
               >
                 <div
@@ -265,7 +265,7 @@ export default function Landing() {
             {/* The cold start — the problem the other three don't name, and the
                 one the portable profile exists to solve. Inverted so it reads as
                 the setup for the section that answers it. */}
-            <div className="rounded-2xl p-8" style={{ background: '#450F2A' }}>
+            <div className="rounded-2xl p-6 md:p-8" style={{ background: '#450F2A' }}>
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-5"
                 style={{ background: 'rgba(193,122,71,0.2)', color: '#C17A47' }}
@@ -285,13 +285,13 @@ export default function Landing() {
       </section>
 
       {/* ── HOW HALITE WORKS ─────────────────────────────────────────────── */}
-      <section id="how" className="py-24 px-6" style={{ background: '#450F2A' }}>
+      <section id="how" className="py-16 md:py-24 px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
               How Halite works
             </p>
-            <h2 className="font-display text-4xl font-semibold" style={{ color: '#FAF6F0' }}>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold" style={{ color: '#FAF6F0' }}>
               Four simple steps. No spreadsheets, no guesswork.
             </h2>
             <p className="text-base mt-4 max-w-lg mx-auto" style={{ color: 'rgba(250,246,240,0.55)' }}>
@@ -308,7 +308,7 @@ export default function Landing() {
             ].map(step => (
               <div
                 key={step.n}
-                className="rounded-2xl p-8"
+                className="rounded-2xl p-6 md:p-8"
                 style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.1)' }}
               >
                 <div
@@ -340,20 +340,20 @@ export default function Landing() {
       </section>
 
       {/* ── WHAT YOU ACTUALLY GET ────────────────────────────────────────── */}
-      <section id="get" className="py-24" style={{ background: '#FAF6F0' }}>
+      <section id="get" className="py-16 md:py-24" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-xl mb-16">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
               What you actually get
             </p>
-            <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
               Everything you need to actually know your customers.
             </h2>
           </div>
 
           {/* Feature 1: A profile that keeps learning */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="rounded-3xl p-8 flex flex-col justify-center gap-4" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
+            <div className="rounded-3xl p-6 md:p-8 flex flex-col justify-center gap-4" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
               <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8B6575' }}>How well we know each customer</p>
               {[
                 { label: 'Purchase & usage history', pct: 94 },
@@ -411,7 +411,7 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-            <div className="order-1 lg:order-2 rounded-3xl p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
+            <div className="order-1 lg:order-2 rounded-3xl p-6 md:p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
               {[
                 { who: 'Alicia M.', status: 'Reach out soon', risk: true },
                 { who: 'Devon P.', status: 'Doing great', risk: false },
@@ -497,7 +497,7 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-            <div className="order-1 lg:order-2 rounded-3xl p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
+            <div className="order-1 lg:order-2 rounded-3xl p-6 md:p-8 flex flex-col justify-center gap-2.5" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0', minHeight: 280 }}>
               <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8B6575' }}>Recommended for Tone 08 · dry &amp; uneven tone</p>
               {[
                 { step: 'AM Cleanser — Gentle Milk Cleanser', match: '98%' },
@@ -515,13 +515,13 @@ export default function Landing() {
       </section>
 
       {/* ── THE PORTABLE PROFILE ─────────────────────────────────────────── */}
-      <section id="profile" className="py-24 px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
+      <section id="profile" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-2xl mb-14">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
               The portable consumer profile
             </p>
-            <h2 className="font-display text-4xl md:text-5xl font-semibold leading-tight mb-5" style={{ color: '#FAF6F0' }}>
+            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight mb-5" style={{ color: '#FAF6F0' }}>
               Day one isn&rsquo;t day zero.
             </h2>
             <p className="text-base md:text-lg leading-relaxed" style={{ color: 'rgba(250,246,240,0.65)' }}>
@@ -534,7 +534,7 @@ export default function Landing() {
 
           {/* Without / with */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-12">
-            <div className="rounded-3xl p-8" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.1)' }}>
+            <div className="rounded-3xl p-6 md:p-8" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.1)' }}>
               <p className="text-[11px] font-bold tracking-[0.16em] uppercase mb-6" style={{ color: 'rgba(250,246,240,0.4)' }}>
                 Without Halite
               </p>
@@ -553,7 +553,7 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="rounded-3xl p-8" style={{ background: 'rgba(193,122,71,0.12)', border: '1px solid rgba(193,122,71,0.32)' }}>
+            <div className="rounded-3xl p-6 md:p-8" style={{ background: 'rgba(193,122,71,0.12)', border: '1px solid rgba(193,122,71,0.32)' }}>
               <p className="text-[11px] font-bold tracking-[0.16em] uppercase mb-6" style={{ color: '#C17A47' }}>
                 With Halite
               </p>
@@ -588,7 +588,7 @@ export default function Landing() {
                 body: 'Nothing moves between brands until the person turns partner sharing on, and it stops the moment they turn it off. That’s what makes it defensible.',
               },
             ].map(c => (
-              <div key={c.title} className="rounded-2xl p-7" style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.11)' }}>
+              <div key={c.title} className="rounded-2xl p-6 md:p-7" style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.11)' }}>
                 <h3 className="font-display text-lg font-semibold mb-3" style={{ color: '#FAF6F0' }}>{c.title}</h3>
                 <p className="text-[14px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.55)' }}>{c.body}</p>
               </div>
@@ -603,7 +603,7 @@ export default function Landing() {
       </section>
 
       {/* ── CTA BANNER ────────────────────────────────────────────────────── */}
-      <section className="py-16 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0', borderBottom: '1px solid #E8DDD0' }}>
+      <section className="py-14 md:py-16 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0', borderBottom: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <p className="font-display text-2xl font-semibold mb-1" style={{ color: '#1A0A12' }}>
@@ -624,13 +624,13 @@ export default function Landing() {
       </section>
 
       {/* ── GETTING STARTED (setup, no code required) ───────────────────── */}
-      <section className="py-24 px-6" style={{ background: '#2D0A1C' }}>
+      <section className="py-16 md:py-24 px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
               Getting started
             </p>
-            <h2 className="font-display text-4xl font-semibold mb-4" style={{ color: '#FAF6F0' }}>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold mb-4" style={{ color: '#FAF6F0' }}>
               Live on your site in about a week. We do the setup.
             </h2>
             <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(250,246,240,0.6)' }}>
@@ -701,13 +701,13 @@ export default function Landing() {
       </section>
 
       {/* ── COMPARISON TABLE ─────────────────────────────────────────────── */}
-      <section id="compare" className="py-24 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="compare" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
               Why CPG brands choose Halite
             </p>
-            <h2 className="font-display text-4xl font-semibold" style={{ color: '#1A0A12' }}>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold" style={{ color: '#1A0A12' }}>
               The only platform where the customer arrives already known.
             </h2>
             <p className="text-base mt-3 max-w-lg mx-auto" style={{ color: '#8B6575' }}>
@@ -731,13 +731,13 @@ export default function Landing() {
                 <thead>
                   <tr>
                     <th
-                      className="sticky left-0 z-[2] text-left px-6 py-5 text-[11px] font-bold uppercase tracking-[0.12em]"
+                      className="sm:sticky sm:left-0 sm:z-[2] text-left px-4 sm:px-6 py-5 text-[11px] font-bold uppercase tracking-[0.12em]"
                       style={{ background: '#F2EBE0', color: '#8B6575', borderBottom: '1px solid #E8DDD0' }}
                     >
                       Compare features
                     </th>
                     <th
-                      className="sticky z-[2] text-center px-4 py-5"
+                      className="sm:sticky sm:z-[2] text-center px-4 py-5"
                       style={{ left: 240, background: '#450F2A', borderBottom: '1px solid #E8DDD0' }}
                     >
                       <span className="font-display text-[16px] font-semibold block" style={{ color: '#FAF6F0' }}>Halite ✦</span>
@@ -766,13 +766,13 @@ export default function Landing() {
                     return (
                       <tr key={row.feature}>
                         <td
-                          className="sticky left-0 z-[2] text-left px-6 py-3.5 text-[13.5px] font-semibold"
+                          className="sm:sticky sm:left-0 sm:z-[2] text-left px-4 sm:px-6 py-3.5 text-[13.5px] font-semibold"
                           style={{ background: stripe, color: '#1A0A12', borderBottom: '1px solid #E8DDD0' }}
                         >
                           {row.feature}
                         </td>
                         <td
-                          className="sticky z-[2] text-center px-4 py-3.5"
+                          className="sm:sticky sm:z-[2] text-center px-4 py-3.5"
                           style={{ left: 240, background: row.network ? 'rgba(69,15,42,0.1)' : 'rgba(69,15,42,0.06)', borderBottom: '1px solid #E8DDD0', boxShadow: '6px 0 10px -6px rgba(26,10,18,0.18)' }}
                         >
                           <Mark v={row.halite} lead />
@@ -802,13 +802,13 @@ export default function Landing() {
 
 
       {/* ── THE LOOP (handover between both audiences) ───────────────────── */}
-      <section id="loop" className="py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
+      <section id="loop" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
               One company, both sides of the CPG shelf
             </p>
-            <h2 className="font-display text-4xl font-semibold leading-tight mb-4" style={{ color: '#FAF6F0' }}>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold leading-tight mb-4" style={{ color: '#FAF6F0' }}>
               The shopper builds it. The brand benefits. The shopper gets paid.
             </h2>
             <p className="text-base leading-relaxed" style={{ color: 'rgba(250,246,240,0.6)' }}>
@@ -881,13 +881,13 @@ export default function Landing() {
 
 
       {/* ── DEMO CTA ─────────────────────────────────────────────────────── */}
-      <section id="demo" className="py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
+      <section id="demo" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
               Get a demo
             </p>
-            <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
               See Halite with your own products.
             </h2>
             <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(250,246,240,0.65)' }}>

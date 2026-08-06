@@ -38,7 +38,10 @@ export function Footer() {
             </div>
           </div>
 
-          <div style={{ borderLeft: '1px solid rgba(193,122,71,0.3)', paddingLeft: 22 }}>
+          {/* The copper rule separates this column from the brand links beside it.
+              Once the grid stacks there is nothing to its left to separate, so it
+              becomes a top rule instead of a stray vertical line. */}
+          <div className="pt-6 lg:pt-0 lg:pl-[22px] border-t lg:border-t-0 lg:border-l" style={{ borderColor: 'rgba(193,122,71,0.3)' }}>
             <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-4" style={{ color: '#C17A47' }}>
               Hallie · for you
             </p>
