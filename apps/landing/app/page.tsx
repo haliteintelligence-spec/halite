@@ -1,30 +1,20 @@
 import { Nav } from '@/components/Nav'
 import { DemoForm } from '@/components/DemoForm'
-
-const MONK_TONES = [
-  { hex: '#f6ede4', label: '01' },
-  { hex: '#f3e7db', label: '02' },
-  { hex: '#f7ead0', label: '03' },
-  { hex: '#eadaba', label: '04' },
-  { hex: '#d7bd96', label: '05' },
-  { hex: '#a07d52', label: '06' },
-  { hex: '#825c43', label: '07' },
-  { hex: '#604134', label: '08' },
-  { hex: '#3a312a', label: '09' },
-  { hex: '#292420', label: '10' },
-]
+import { Footer } from '@/components/Footer'
 
 type Cell = 'yes' | 'partial' | 'no'
-const COMPARE_ROWS: { feature: string; halite: Cell; revieve: Cell; klaviyo: Cell; outersignal: Cell }[] = [
-  { feature: 'Personalized recs from your real catalog',                halite: 'yes', revieve: 'yes',     klaviyo: 'partial', outersignal: 'no' },
-  { feature: 'Learns and gets sharper with every check-in',              halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no' },
-  { feature: 'Warns you before a customer leaves',                       halite: 'yes', revieve: 'no',      klaviyo: 'partial', outersignal: 'no' },
-  { feature: 'Easy-to-read dashboard, no data team needed',              halite: 'yes', revieve: 'partial', klaviyo: 'partial', outersignal: 'no' },
-  { feature: 'Built to work well for every skin tone',                   halite: 'yes', revieve: 'partial', klaviyo: 'no',      outersignal: 'no' },
-  { feature: 'One-click Shopify setup',                                  halite: 'yes', revieve: 'no',      klaviyo: 'yes',     outersignal: 'no' },
-  { feature: 'Works on any website — no developer needed',               halite: 'yes', revieve: 'partial', klaviyo: 'partial', outersignal: 'partial' },
+// The first three rows are the network rows. They sit at the top deliberately:
+// every row below them is a feature-parity argument a competitor could close
+// with a roadmap, while these can only be closed by having a consented,
+// cross-brand profile — which is the whole thesis of the page.
+const COMPARE_ROWS: { feature: string; halite: Cell; revieve: Cell; klaviyo: Cell; outersignal: Cell; network?: boolean }[] = [
+  { feature: 'Customers arrive with a profile already built',             halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no', network: true },
+  { feature: 'Profile follows the customer across brands',                halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no', network: true },
+  { feature: 'The shopper builds and controls it themselves',             halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no', network: true },
+  { feature: 'Personalized recs from your real catalog',                  halite: 'yes', revieve: 'yes',     klaviyo: 'partial', outersignal: 'no' },
+  { feature: 'Learns and gets sharper with every check-in',               halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no' },
+  { feature: 'Warns you before a customer leaves',                        halite: 'yes', revieve: 'no',      klaviyo: 'partial', outersignal: 'no' },
   { feature: "Know which products customers love (and which they don't)", halite: 'yes', revieve: 'no',      klaviyo: 'partial', outersignal: 'no' },
-  { feature: 'Regular, automatic check-ins with customers',              halite: 'yes', revieve: 'no',      klaviyo: 'no',      outersignal: 'no' },
 ]
 
 function Mark({ v, lead }: { v: Cell; lead?: boolean }) {
@@ -89,33 +79,32 @@ export default function Landing() {
           style={{ background: 'radial-gradient(560px 420px at 88% -8%, rgba(193,122,71,0.18), transparent 60%), radial-gradient(420px 420px at 6% 110%, rgba(193,122,71,0.12), transparent 60%)' }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
+        <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-16 grid grid-cols-1 lg:grid-cols-[1.18fr_0.82fr] gap-12 items-center w-full">
           <div>
             <p
               className="text-[11px] font-semibold tracking-[0.28em] uppercase mb-6"
               style={{ color: 'rgba(250,246,240,0.5)' }}
             >
-              Built for beauty &amp; CPG brands
+              The consumer profile that travels · Built for CPG
             </p>
             <h1
-              className="font-display text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.05] mb-6"
+              className="font-display text-4xl sm:text-5xl lg:text-[56px] xl:text-[66px] font-semibold leading-[1.06] mb-6"
               style={{ color: '#FAF6F0' }}
             >
-              Know your
+              Your next customer
               <br />
-              customers.
-              <br />
-              <span style={{ color: '#C17A47' }}>Keep them</span>
-              <br />
-              coming back.
+              <span style={{ color: '#C17A47' }}>already has</span> a profile.
             </h1>
             <p
-              className="text-lg leading-relaxed mb-10 max-w-md"
+              className="text-lg leading-relaxed mb-10 max-w-2xl"
               style={{ color: 'rgba(250,246,240,0.72)' }}
             >
-              Every quiz, check-in, and review your customers give you turns into one simple, up-to-date picture of what they need — so you can recommend the right product, catch problems early, and stop losing customers to guesswork.
+              Halite gives every partner brand one consented, portable consumer profile — built by the
+              shopper themselves and carried from brand to brand. They arrive known. You skip the
+              onboarding quiz, personalize precisely on the first visit, and keep them coming back with
+              recommendations that get sharper every time.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 mb-8">
               <a
                 href="#demo"
                 className="inline-flex items-center justify-center px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:opacity-90"
@@ -124,51 +113,63 @@ export default function Landing() {
                 Book a free demo
               </a>
               <a
-                href="#how"
+                href="#profile"
                 className="inline-flex items-center justify-center px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:bg-white/10"
                 style={{ border: '1px solid rgba(250,246,240,0.3)', color: '#FAF6F0' }}
               >
-                See how it works ↓
+                See how the profile travels ↓
               </a>
             </div>
+            <p className="text-[12px]" style={{ color: 'rgba(250,246,240,0.42)' }}>
+              Beauty · personal care · household · wellness · food &amp; beverage
+            </p>
           </div>
 
-          {/* Customer profile card illustration */}
+          {/* Customer profile card — framed as a profile arriving at a new brand */}
           <div className="relative hidden lg:block">
             <div
               className="relative rounded-3xl p-7 mx-auto"
               style={{ background: '#FAF6F0', maxWidth: 400, boxShadow: '0 24px 60px -20px rgba(26,10,18,0.35)' }}
             >
+              <div className="flex items-center justify-between mb-4">
+                <span
+                  className="text-[10px] font-bold tracking-[0.12em] uppercase px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(45,122,58,0.14)', color: '#2D7A3A' }}
+                >
+                  Arrived pre-built
+                </span>
+                <span className="text-[11px]" style={{ color: '#8B6575' }}>0 questions asked</span>
+              </div>
               <div className="flex items-center gap-3.5 mb-5">
                 <div
-                  className="w-13 h-13 rounded-full flex-shrink-0"
+                  className="rounded-full flex-shrink-0"
                   style={{ width: 52, height: 52, background: 'conic-gradient(from 210deg, #D7BD96, #A07D52, #604134, #D7BD96)' }}
                 />
                 <div>
                   <p className="font-display text-[17px] font-semibold" style={{ color: '#1A0A12' }}>Jamie&rsquo;s profile</p>
-                  <p className="text-[12.5px]" style={{ color: '#8B6575' }}>Customer since March · 3 orders</p>
+                  <p className="text-[12.5px]" style={{ color: '#8B6575' }}>First visit to your store · 3rd Halite brand</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 mb-5">
-                {['Combination skin', 'Loves lightweight textures', 'Sensitive to fragrance'].map(tag => (
+                {['Combination skin', 'Monk tone 08', 'Fragrance-sensitive', 'Cool undertone'].map(tag => (
                   <span key={tag} className="text-[12px] font-bold px-3 py-1.5 rounded-full" style={{ background: 'rgba(193,122,71,0.14)', color: '#450F2A' }}>
                     {tag}
                   </span>
                 ))}
               </div>
               <div className="flex justify-between mb-1.5">
-                <span className="text-[12px]" style={{ color: '#8B6575' }}>How well we know Jamie</span>
+                <span className="text-[12px]" style={{ color: '#8B6575' }}>What you know before they browse</span>
                 <span className="text-[12px] font-bold" style={{ color: '#1A0A12' }}>92%</span>
               </div>
               <div className="h-[7px] rounded-full mb-5 overflow-hidden" style={{ background: '#E8DDD0' }}>
                 <div className="h-full rounded-full" style={{ width: '92%', background: 'linear-gradient(90deg, #450F2A, #C17A47)' }} />
               </div>
-              <div className="rounded-2xl p-3.5 flex items-center justify-between" style={{ background: '#F2EBE0' }}>
+              <div className="rounded-2xl p-3.5 flex items-center justify-between gap-3" style={{ background: '#F2EBE0' }}>
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide font-bold mb-0.5" style={{ color: '#8B6575' }}>Next recommendation</p>
+                  <p className="text-[11px] uppercase tracking-wide font-bold mb-0.5" style={{ color: '#8B6575' }}>First recommendation</p>
                   <p className="font-display text-[15px] font-semibold" style={{ color: '#1A0A12' }}>Barrier Repair Cream</p>
                 </div>
-                <span className="text-[13px] font-bold" style={{ color: '#2D7A3A' }}>97% match</span>
+                <span className="text-[13px] font-bold whitespace-nowrap" style={{ color: '#2D7A3A' }}>97% match</span>
               </div>
             </div>
             {/* Floating stat tags */}
@@ -216,16 +217,16 @@ export default function Landing() {
       {/* ── THE PROBLEM ──────────────────────────────────────────────────── */}
       <section className="py-24 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="max-w-2xl mb-14">
+          <div className="max-w-4xl mb-14">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              Where most beauty &amp; CPG brands get stuck
+              Where most CPG brands get stuck
             </p>
-            <h2 className="font-display text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
-              You know what you sold.<br />You don&rsquo;t know who bought it.
+            <h2 className="font-display text-3xl md:text-4xl font-semibold leading-snug" style={{ color: '#1A0A12' }}>
+              You know what you sold.<br />You don&rsquo;t know who bought it — or who&rsquo;s about to.
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               {
                 icon: '◎',
@@ -260,6 +261,25 @@ export default function Landing() {
                 <p className="text-[14px] leading-relaxed" style={{ color: '#8B6575' }}>{p.body}</p>
               </div>
             ))}
+
+            {/* The cold start — the problem the other three don't name, and the
+                one the portable profile exists to solve. Inverted so it reads as
+                the setup for the section that answers it. */}
+            <div className="rounded-2xl p-8" style={{ background: '#450F2A' }}>
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-5"
+                style={{ background: 'rgba(193,122,71,0.2)', color: '#C17A47' }}
+              >
+                ◇
+              </div>
+              <h3 className="font-display text-lg font-semibold mb-3" style={{ color: '#FAF6F0' }}>
+                Every new customer puts you back at zero.
+              </h3>
+              <p className="text-[14px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.62)' }}>
+                A first-time visitor is a blank slate. You ask them to answer twenty questions before
+                you&rsquo;ve given them anything — and most of them just leave instead.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -281,7 +301,7 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { n: '1', title: 'Get to know them', body: 'A short, friendly quiz — under 2 minutes — learns what each customer needs, prefers, and can afford. No forms, no friction.' },
+              { n: '1', title: 'Get to know them — or skip ahead', body: "If Halite already knows them, the quiz arrives pre-answered and they go straight to a recommendation. If not, a friendly 2-minute quiz builds the profile from scratch." },
               { n: '2', title: 'Recommend the right fit', body: "We match them to real products from your own catalog. Never a generic pick, never something you don't actually sell." },
               { n: '3', title: 'Check in, automatically', body: "We follow up on a regular cadence to ask how it's going. Customers tell us what's working, right from your site." },
               { n: '4', title: 'Catch problems early', body: "When satisfaction drops or someone goes quiet, you'll know — in time to actually do something about it." },
@@ -494,6 +514,94 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── THE PORTABLE PROFILE ─────────────────────────────────────────── */}
+      <section id="profile" className="py-24 px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-2xl mb-14">
+            <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
+              The portable consumer profile
+            </p>
+            <h2 className="font-display text-4xl md:text-5xl font-semibold leading-tight mb-5" style={{ color: '#FAF6F0' }}>
+              Day one isn&rsquo;t day zero.
+            </h2>
+            <p className="text-base md:text-lg leading-relaxed" style={{ color: 'rgba(250,246,240,0.65)' }}>
+              A Halite profile belongs to the person, not to any one brand. They build it once — in
+              Hallie, or in any partner brand&rsquo;s quiz — and it travels with them, with their
+              consent, to every Halite brand they meet next. Your store is never their first
+              conversation.
+            </p>
+          </div>
+
+          {/* Without / with */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-12">
+            <div className="rounded-3xl p-8" style={{ background: 'rgba(250,246,240,0.05)', border: '1px solid rgba(250,246,240,0.1)' }}>
+              <p className="text-[11px] font-bold tracking-[0.16em] uppercase mb-6" style={{ color: 'rgba(250,246,240,0.4)' }}>
+                Without Halite
+              </p>
+              <div className="space-y-3.5">
+                {[
+                  'Stranger lands on your product page',
+                  "You ask for twenty answers before you've earned any",
+                  'Most drop out; the rest get a first guess',
+                  'Months of orders before you know if it fit',
+                ].map((line, i) => (
+                  <div key={i} className="flex gap-3.5">
+                    <span className="text-[14px] flex-shrink-0" style={{ color: 'rgba(250,246,240,0.3)' }}>{i + 1}</span>
+                    <span className="text-[14px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.55)' }}>{line}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl p-8" style={{ background: 'rgba(193,122,71,0.12)', border: '1px solid rgba(193,122,71,0.32)' }}>
+              <p className="text-[11px] font-bold tracking-[0.16em] uppercase mb-6" style={{ color: '#C17A47' }}>
+                With Halite
+              </p>
+              <div className="space-y-3.5">
+                {[
+                  'They arrive already carrying a profile',
+                  'The quiz comes pre-answered — or is skipped entirely',
+                  'First recommendation is precise, from your catalog',
+                  'What they buy and how it goes sharpens it for next time',
+                ].map((line, i) => (
+                  <div key={i} className="flex gap-3.5">
+                    <span className="text-[14px] flex-shrink-0" style={{ color: '#C17A47' }}>{i + 1}</span>
+                    <span className="text-[14px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.8)' }}>{line}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              {
+                title: 'One person, one profile',
+                body: 'Not a cookie and not an email list. One identity per person across every Halite brand, matched on the details they gave you themselves.',
+              },
+              {
+                title: 'Brand-agnostic by design',
+                body: 'Skin type, hair type, undertone, concerns and tone travel. Your budget bands, your category preferences and your catalog stay yours alone.',
+              },
+              {
+                title: 'Consent is the gate',
+                body: 'Nothing moves between brands until the person turns partner sharing on, and it stops the moment they turn it off. That’s what makes it defensible.',
+              },
+            ].map(c => (
+              <div key={c.title} className="rounded-2xl p-7" style={{ background: 'rgba(250,246,240,0.06)', border: '1px solid rgba(250,246,240,0.11)' }}>
+                <h3 className="font-display text-lg font-semibold mb-3" style={{ color: '#FAF6F0' }}>{c.title}</h3>
+                <p className="text-[14px] leading-relaxed" style={{ color: 'rgba(250,246,240,0.55)' }}>{c.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[13px] mt-10 max-w-2xl" style={{ color: 'rgba(250,246,240,0.35)' }}>
+            Every brand is a network member and a network contributor. The more brands, the warmer
+            every brand&rsquo;s front door.
+          </p>
+        </div>
+      </section>
+
       {/* ── CTA BANNER ────────────────────────────────────────────────────── */}
       <section className="py-16 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0', borderBottom: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -593,17 +701,18 @@ export default function Landing() {
       </section>
 
       {/* ── COMPARISON TABLE ─────────────────────────────────────────────── */}
-      <section id="compare" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
+      <section id="compare" className="py-24 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
-              Why brands choose Halite
+              Why CPG brands choose Halite
             </p>
             <h2 className="font-display text-4xl font-semibold" style={{ color: '#1A0A12' }}>
-              The only platform that follows through after the recommendation.
+              The only platform where the customer arrives already known.
             </h2>
             <p className="text-base mt-3 max-w-lg mx-auto" style={{ color: '#8B6575' }}>
-              Other tools stop once they&rsquo;ve suggested a product. Halite keeps listening — and helps you act on what it hears.
+              Other tools start every customer from scratch, then stop once they&rsquo;ve suggested a
+              product. Halite starts warm — and keeps listening.
             </p>
           </div>
 
@@ -650,7 +759,10 @@ export default function Landing() {
                 </thead>
                 <tbody>
                   {COMPARE_ROWS.map((row, i) => {
-                    const stripe = i % 2 === 0 ? '#FAF6F0' : '#F2EBE0'
+                    // Network rows get their own copper wash rather than joining
+                    // the zebra stripe — they're the reason the table exists, not
+                    // just its first three entries.
+                    const stripe = row.network ? 'rgba(193,122,71,0.09)' : i % 2 === 0 ? '#FAF6F0' : '#F2EBE0'
                     return (
                       <tr key={row.feature}>
                         <td
@@ -661,7 +773,7 @@ export default function Landing() {
                         </td>
                         <td
                           className="sticky z-[2] text-center px-4 py-3.5"
-                          style={{ left: 240, background: 'rgba(69,15,42,0.06)', borderBottom: '1px solid #E8DDD0', boxShadow: '6px 0 10px -6px rgba(26,10,18,0.18)' }}
+                          style={{ left: 240, background: row.network ? 'rgba(69,15,42,0.1)' : 'rgba(69,15,42,0.06)', borderBottom: '1px solid #E8DDD0', boxShadow: '6px 0 10px -6px rgba(26,10,18,0.18)' }}
                         >
                           <Mark v={row.halite} lead />
                         </td>
@@ -688,69 +800,88 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── INCLUSIVE BY DESIGN ──────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-24 px-6" style={{ background: '#2D0A1C' }}>
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(700px 500px at 100% 0%, rgba(193,122,71,0.16), transparent 60%)' }}
-        />
-        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
-              Built for every customer
+
+      {/* ── THE LOOP (handover between both audiences) ───────────────────── */}
+      <section id="loop" className="py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
+              One company, both sides of the CPG shelf
             </p>
-            <h2 className="font-display text-4xl font-semibold mb-5" style={{ color: '#FAF6F0' }}>
-              Personalization that actually works for everyone.
+            <h2 className="font-display text-4xl font-semibold leading-tight mb-4" style={{ color: '#FAF6F0' }}>
+              The shopper builds it. The brand benefits. The shopper gets paid.
             </h2>
-            <p className="text-base leading-relaxed" style={{ color: 'rgba(250,246,240,0.72)' }}>
-              A lot of beauty AI was built and tested mostly on lighter skin tones — so recommendations quietly work worse for everyone else. Halite is built on the Monk Skin Tone Scale, an industry-standard set of 10 tones used by dermatologists and researchers, so the match is just as accurate no matter who&rsquo;s asking.
+            <p className="text-base leading-relaxed" style={{ color: 'rgba(250,246,240,0.6)' }}>
+              Halite is the brand side. Hallie is the app where people build and own the profile.
+              Neither works without the other, and the person sits at the switch.
             </p>
           </div>
 
-          <div>
-            <div className="mb-8">
-              <div className="flex gap-1.5 mb-3 flex-wrap">
-                {MONK_TONES.map((tone) => (
-                  <div
-                    key={tone.label}
-                    className="flex flex-col items-center gap-2 py-2 px-1 rounded-xl"
-                    style={{ background: 'rgba(250,246,240,0.08)', minWidth: 36 }}
-                  >
-                    <div className="w-7 h-7 rounded-full" style={{ background: tone.hex }} />
-                    <span className="text-[9px] font-semibold" style={{ color: 'rgba(250,246,240,0.5)' }}>
-                      {tone.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.4)' }}>
-                The Monk Skin Tone Scale — all 10 tones, fully supported.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { n: '10', label: 'Skin tones fully supported' },
-                { n: '100%', label: 'Recommendations from your real catalog' },
-                { n: '0', label: 'One-size-fits-all picks' },
-                { n: '✓', label: 'Same accuracy, every skin tone' },
-              ].map(s => (
-                <div
-                  key={s.label}
-                  className="rounded-2xl p-4"
-                  style={{ background: 'rgba(250,246,240,0.07)', border: '1px solid rgba(250,246,240,0.1)' }}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+            {[
+              { badge: 'Hallie',  badgeBg: '#C17A47', badgeFg: '#2A1206', step: 'Step one',   title: 'They build it',        body: 'Shelf, daily logs, quiz answers, ratings — entered by the person, in their own app, for points they cash out.' },
+              { badge: 'Consent', badgeBg: '#1A0A12', badgeFg: '#FAF6F0', step: 'Step two',   title: 'They switch it on',    body: 'Partner-brand sharing is its own consent, off by default, revocable. Nothing travels until they say so.' },
+              { badge: 'Halite',  badgeBg: '#450F2A', badgeFg: '#FAF6F0', step: 'Step three', title: 'They shop a partner',  body: "The brand's quiz arrives pre-answered. First recommendation is precise, from that brand's own catalog." },
+              { badge: 'Both',    badgeBg: '#2D7A3A', badgeFg: '#FFFFFF', step: 'Step four',  title: 'It gets sharper',      body: 'What they bought and how it went flows back into the profile — better for them, better for the next brand.' },
+            ].map(node => (
+              <div key={node.title} className="relative rounded-2xl p-6 pt-7" style={{ background: '#FAF6F0' }}>
+                <span
+                  className="absolute -top-2.5 left-6 text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-1 rounded-full"
+                  style={{ background: node.badgeBg, color: node.badgeFg }}
                 >
-                  <p className="font-display text-2xl font-semibold mb-1" style={{ color: '#C17A47' }}>{s.n}</p>
-                  <p className="text-[12px]" style={{ color: 'rgba(250,246,240,0.55)' }}>{s.label}</p>
-                </div>
-              ))}
-            </div>
+                  {node.badge}
+                </span>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-2" style={{ color: '#8B6575' }}>{node.step}</p>
+                <h3 className="font-display text-lg font-semibold mb-2.5" style={{ color: '#1A0A12' }}>{node.title}</h3>
+                <p className="text-[13px] leading-relaxed" style={{ color: '#8B6575' }}>{node.body}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Return arc — the loop closing back on itself. Hidden below lg,
+              where the four nodes stack vertically and a horizontal arc would
+              point at nothing. */}
+          <svg
+            viewBox="0 0 1000 70"
+            className="hidden lg:block w-full"
+            height={70}
+            role="img"
+            aria-label="The profile loops back from step four to step one, getting richer each pass"
+          >
+            <defs>
+              <marker id="loop-arrowhead" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                <polygon points="0 0, 9 3.5, 0 7" fill="#C17A47" />
+              </marker>
+            </defs>
+            <path
+              d="M 875 4 C 875 46, 820 56, 700 56 L 300 56 C 180 56, 125 46, 125 12"
+              fill="none"
+              stroke="#C17A47"
+              strokeWidth="1.6"
+              strokeDasharray="5 4"
+              markerEnd="url(#loop-arrowhead)"
+              opacity="0.75"
+            />
+            <text x="500" y="52" textAnchor="middle" fill="#C17A47" fontFamily="Georgia, serif" fontSize="15" fontStyle="italic">
+              richer every pass
+            </text>
+          </svg>
+
+          <div className="text-center mt-10 lg:mt-6">
+            <a
+              href="/hallie"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[14px] font-semibold transition-all hover:opacity-90"
+              style={{ background: '#C17A47', color: '#2A1206' }}
+            >
+              See the shopper&rsquo;s side ↗
+            </a>
           </div>
         </div>
       </section>
 
+
       {/* ── DEMO CTA ─────────────────────────────────────────────────────── */}
-      <section id="demo" className="py-24 px-6" style={{ background: '#450F2A' }}>
+      <section id="demo" className="py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
@@ -765,6 +896,7 @@ export default function Landing() {
             <div className="space-y-4">
               {[
                 'A live walkthrough using your own products',
+                'What a customer arriving with a profile actually looks like',
                 'How the customer quiz looks and feels',
                 'How we’d flag customers at risk of leaving',
                 'Answers to any question you have — no pressure',
@@ -783,59 +915,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer className="py-14 px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="font-display text-lg font-semibold" style={{ color: '#FAF6F0' }}>Halite</span>
-                <span className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5" style={{ color: 'rgba(250,246,240,0.4)' }}>Intelligence</span>
-              </div>
-              <p className="text-[13px] leading-relaxed max-w-xs" style={{ color: 'rgba(250,246,240,0.45)' }}>
-                Real customer intelligence for beauty &amp; CPG brands, in plain language. Know them. Personalize for them. Keep them.
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-4" style={{ color: 'rgba(250,246,240,0.3)' }}>
-                What you get
-              </p>
-              <div className="space-y-2.5">
-                {[
-                  { label: 'The customer quiz', href: '/platform#quiz' },
-                  { label: 'Regular check-ins', href: '/platform#checkins' },
-                  { label: 'Your dashboard', href: '/platform#dashboard' },
-                  { label: 'Getting set up', href: '/platform#setup' },
-                ].map(l => (
-                  <a key={l.label} href={l.href} className="block text-[13px] transition-opacity hover:opacity-80" style={{ color: 'rgba(250,246,240,0.5)' }}>
-                    {l.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-4" style={{ color: 'rgba(250,246,240,0.3)' }}>
-                Company
-              </p>
-              <div className="space-y-2.5">
-                {['About', 'Privacy Policy', 'Terms of Service', 'Contact'].map(l => (
-                  <p key={l} className="text-[13px]" style={{ color: 'rgba(250,246,240,0.5)' }}>{l}</p>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(250,246,240,0.08)' }} className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex flex-col gap-1 text-center sm:text-left">
-              <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.3)' }}>
-                © 2026 Halite Intelligence. All rights reserved.
-              </p>
-              <p className="text-[11px]" style={{ color: 'rgba(250,246,240,0.3)' }}>
-                Halite Intelligence is a subsidiary of Lodestar Procurement Advisory LLC, registered in Atlanta, GA.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   )
 }

@@ -17,19 +17,22 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL('https://haliteintelligence.com'),
   title: {
-    default: 'Halite Intelligence — Predictive Consumer Intelligence for CPG Brands',
+    default: 'Halite Intelligence — The Portable Consumer Profile for CPG Brands',
     template: '%s — Halite Intelligence',
   },
-  description: 'Halite Intelligence is the predictive consumer intelligence platform for CPG brands. Know your customer, personalize at scale, and retain longer with AI-powered recommendations and real outcome data.',
+  description: 'Halite gives every CPG brand one consented, portable consumer profile — built by the shopper in Hallie and carried from brand to brand. Customers arrive already known, so you skip the onboarding quiz and personalize precisely from the first visit.',
   keywords: [
+    'portable consumer profile',
+    'consented data sharing CPG',
+    'zero party data CPG',
     'CPG consumer intelligence',
-    'predictive intelligence platform',
     'consumer intelligence platform',
+    'cross-brand personalization',
+    'quiz prefill personalization',
     'CPG brand analytics',
     'AI product personalization',
     'customer retention CPG',
     'beauty brand intelligence',
-    'AI skincare personalization',
     'consumer packaged goods intelligence',
     'Monk Skin Tone AI',
   ],
@@ -52,8 +55,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haliteintelligence.com',
     siteName: 'Halite Intelligence',
-    title: 'Halite Intelligence — Predictive Consumer Intelligence for CPG Brands',
-    description: 'Know your customer. Personalize deeper. Retain longer. The AI platform that turns every consumer interaction into retention leverage for CPG brands.',
+    title: 'Halite Intelligence — The Portable Consumer Profile for CPG Brands',
+    description: 'Your next customer already has a profile. One consented profile per person, built by the shopper and carried from brand to brand — so CPG brands never start a customer from zero.',
     images: [
       {
         url: '/og-image.png',
@@ -65,8 +68,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Halite Intelligence — Predictive Consumer Intelligence for CPG Brands',
-    description: 'Know your customer. Personalize deeper. Retain longer. The AI platform built for CPG brands.',
+    title: 'Halite Intelligence — The Portable Consumer Profile for CPG Brands',
+    description: 'Your next customer already has a profile. Consented, portable, and built by the shopper themselves.',
     images: ['/og-image.png'],
   },
   alternates: {
