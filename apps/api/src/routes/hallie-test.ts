@@ -26,6 +26,18 @@ import { tryFernetDecrypt } from '../lib/fernet.js'
 // consent type by that name (see app/domains/shared/consent.py's
 // CONSENT_TYPES) — its presence meant no user could ever show as fully
 // compliant, permanently capped at 4/5.
+// Membership tiers, mirroring MEMBERSHIP_TIERS in hallie-api's
+// app/models/user.py. Descriptive labels only — no tier grants access to
+// anything, here or in the app, and Hallie never shows them to the user.
+//
+// The real guard is a CHECK constraint on the column itself
+// (hallie_testing_users_tiers_valid): two applications write this table, so a
+// list in either one's code is only a nicety. This exists to give a clear 400
+// instead of a raw constraint violation, and to drive the dashboard's pills.
+const MEMBERSHIP_TIERS = ['member', 'creator', 'internal'] as const
+type MembershipTier = (typeof MEMBERSHIP_TIERS)[number]
+const DEFAULT_MEMBERSHIP_TIER: MembershipTier = 'member'
+
 const REQUIRED_CONSENT_TYPES = [
   'terms_of_service',
   'privacy_policy_ack',
@@ -192,6 +204,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
         createdAt: Date
         pointsBalance: number
         haliteConsumerId: string | null
+        tiers: string[]
         productCount: bigint
         logCount: bigint
         loginCount: bigint
@@ -201,6 +214,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
     >`
       SELECT
         u.id, u.name, u.email, u.phone, u.city, u.country, u."createdAt", u."pointsBalance", u."haliteConsumerId",
+        u.tiers,
         COALESCE(p.cnt, 0) AS "productCount",
         COALESCE(l.cnt, 0) AS "logCount",
         COALESCE(le.cnt, 0) AS "loginCount",
@@ -245,7 +259,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
   server.get('/users/:userId', { preHandler: requireHaliteAdmin }, async (request) => {
     const { userId } = request.params as { userId: string }
     const [user] = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT id, name, email, phone, city, country, timezone, birthday, "pointsBalance", "createdAt", "haliteConsumerId"
+      SELECT id, name, email, phone, city, country, timezone, birthday, "pointsBalance", "createdAt", "haliteConsumerId", tiers
       FROM hallie_testing.hallie_testing_users WHERE id = ${userId}
     `
     if (!user) throw new ApiError(404, 'User not found')
@@ -455,6 +469,33 @@ export async function hallieTestRoutes(server: FastifyInstance) {
     `
     if (result === 0) throw new ApiError(404, 'Payout request not found')
     return { ok: true, status }
+  })
+
+  // ── Membership tiers ──────────────────────────────────────────────────
+  server.patch('/users/:userId/tiers', { preHandler: requireHaliteAdmin }, async (request) => {
+    const { userId } = request.params as { userId: string }
+    const body = request.body as { tiers?: unknown }
+
+    if (!Array.isArray(body?.tiers)) throw new ApiError(400, 'tiers must be an array')
+
+    // Member is the floor: it's added back whatever the caller sent, so a user
+    // can never end up with an empty set. De-duplicated because the column is
+    // a set in meaning even though Postgres arrays don't enforce that.
+    const requested = new Set<string>(body.tiers.map(String))
+    requested.add(DEFAULT_MEMBERSHIP_TIER)
+
+    const unknown = [...requested].filter((t) => !MEMBERSHIP_TIERS.includes(t as MembershipTier))
+    if (unknown.length > 0) throw new ApiError(400, `Unknown tier: ${unknown.join(', ')}`)
+
+    // Stored in the vocabulary's own order rather than the caller's, so two
+    // users with the same tiers always read the same way in the UI.
+    const tiers = MEMBERSHIP_TIERS.filter((t) => requested.has(t))
+
+    const result = await prisma.$executeRaw`
+      UPDATE hallie_testing.hallie_testing_users SET tiers = ${tiers}::text[] WHERE id = ${userId}
+    `
+    if (result === 0) throw new ApiError(404, 'User not found')
+    return { ok: true, tiers }
   })
 
   // ── Account deletion ──────────────────────────────────────────────────

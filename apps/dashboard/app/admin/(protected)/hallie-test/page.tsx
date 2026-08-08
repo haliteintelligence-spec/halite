@@ -22,11 +22,21 @@ type User = {
   createdAt: string
   pointsBalance: number
   haliteConsumerId: string | null
+  tiers: string[]
   productCount: number
   logCount: number
   loginCount: number
   lastLoginAt: string | null
   grantedRequiredConsents: number
+}
+
+// Member reads as neutral because everyone has it; Creator and Internal are
+// tinted so a non-default tier is what catches the eye when scanning the list.
+const TIER_LABEL: Record<string, string> = { member: 'Member', creator: 'Creator', internal: 'Internal' }
+const TIER_BADGE: Record<string, { background: string; color: string }> = {
+  member: { background: 'var(--sand-1)', color: 'var(--ink-3)' },
+  creator: { background: '#ede9fe', color: '#5b3fb5' },
+  internal: { background: '#cff2f7', color: '#0b6a80' },
 }
 
 const STAT_CARDS = [
@@ -304,11 +314,14 @@ function UsersTab({
                     </span>
                   </th>
                 ))}
+                {/* Not sortable: a set of tiers has no natural order to sort by. */}
+                <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase whitespace-nowrap"
+                  style={{ color: 'var(--ink-3)' }}>Tiers</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No users match these filters.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>No users match these filters.</td></tr>
               ) : rows.map((u, i) => (
                 <tr key={u.id} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : undefined }}>
                   <td className="px-4 py-3">
@@ -327,6 +340,16 @@ function UsersTab({
                       style={u.grantedRequiredConsents === 4 ? { background: '#d4f4dd', color: '#1a7a3c' } : { background: '#fef3c7', color: '#92400e' }}>
                       {u.grantedRequiredConsents}/4
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {(u.tiers ?? []).map((t) => (
+                        <span key={t} className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+                          style={TIER_BADGE[t] ?? TIER_BADGE.member}>
+                          {TIER_LABEL[t] ?? t}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               ))}

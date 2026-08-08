@@ -1,10 +1,16 @@
 'use client'
 
+// Mirrors MEMBERSHIP_TIERS in hallie-api's app/models/user.py, and the badge
+// colours on the users list. Member is first because it's the floor.
+
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ArrowUpDown, Trash2 } from 'lucide-react'
 import { MultiSelectFilter } from '../_multi-select-filter'
+
+const TIER_ORDER = ['member', 'creator', 'internal'] as const
+const TIER_LABEL: Record<string, string> = { member: 'Member', creator: 'Creator', internal: 'Internal' }
 
 function adminHeaders(): Record<string, string> {
   const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -183,6 +189,35 @@ export default function HallieTestUserPage() {
   const [tab, setTab] = useState<Tab>('profile')
   const [deleting, setDeleting] = useState(false)
 
+  // Local copy so the pills respond immediately; the fetch hook has no
+  // refetch, and re-reading the whole profile to reflect one toggle would make
+  // the UI feel a beat behind every click.
+  const [tiers, setTiers] = useState<string[] | null>(null)
+  const [savingTiers, setSavingTiers] = useState(false)
+
+  async function toggleTier(tier: string) {
+    if (tier === 'member') return // the floor — not removable
+    const current = tiers ?? []
+    const next = current.includes(tier) ? current.filter((t) => t !== tier) : [...current, tier]
+    setSavingTiers(true)
+    try {
+      const res = await fetch(`${API_URL}/admin/hallie-test/users/${userId}/tiers`, {
+        method: 'PATCH',
+        headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tiers: next }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      // Trust the server's list, not the optimistic one: it re-adds member and
+      // returns the tiers in a fixed order, so the pills match what's stored.
+      const body = (await res.json()) as { tiers: string[] }
+      setTiers(body.tiers)
+    } catch {
+      window.alert("Couldn't update tiers — try again.")
+    } finally {
+      setSavingTiers(false)
+    }
+  }
+
   async function handleDelete() {
     if (!user) return
     const confirmed = window.confirm(
@@ -211,6 +246,10 @@ export default function HallieTestUserPage() {
   const { data: activityData } = useHallieTestFetch<any>(tab === 'activity' ? `/admin/hallie-test/users/${userId}/activity` : null)
 
   const user = profileData?.user
+
+  useEffect(() => {
+    if (user?.tiers && tiers === null) setTiers(user.tiers as string[])
+  }, [user, tiers])
 
   if (profileStatus === 'error') {
     return (
@@ -268,6 +307,40 @@ export default function HallieTestUserPage() {
               </div>
             ))}
           </div>
+          <div className="px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[10px] font-medium tracking-wide uppercase mb-1" style={{ color: 'var(--ink-3)' }}>
+              Membership tiers
+            </p>
+            <p className="text-[12px] mb-3" style={{ color: 'var(--ink-3)' }}>
+              Labels only — they grant no access, and the user never sees them.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {TIER_ORDER.map((t) => {
+                const on = (tiers ?? []).includes(t)
+                const locked = t === 'member'
+                return (
+                  <button
+                    key={t}
+                    onClick={() => toggleTier(t)}
+                    disabled={locked || savingTiers}
+                    title={locked ? 'Everyone is a member — this cannot be removed.' : undefined}
+                    className="text-[12px] font-semibold px-3 py-1.5 rounded-full border transition-colors"
+                    style={{
+                      borderColor: on ? 'var(--clay)' : 'var(--border)',
+                      background: on ? 'var(--sand-1)' : 'transparent',
+                      color: on ? 'var(--ink)' : 'var(--ink-3)',
+                      borderStyle: locked ? 'dashed' : 'solid',
+                      cursor: locked ? 'default' : savingTiers ? 'wait' : 'pointer',
+                      opacity: savingTiers ? 0.6 : 1,
+                    }}
+                  >
+                    {TIER_LABEL[t]}{locked ? ' · always' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
             <button
               onClick={handleDelete}
