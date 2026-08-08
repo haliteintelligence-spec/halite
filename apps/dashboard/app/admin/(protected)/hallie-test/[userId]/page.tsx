@@ -1,7 +1,8 @@
 'use client'
 
 // Mirrors MEMBERSHIP_TIERS in hallie-api's app/models/user.py, and the badge
-// colours on the users list. Member is first because it's the floor.
+// colours on the users list. Member is first because it's the default every
+// account signs up with.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -192,29 +193,30 @@ export default function HallieTestUserPage() {
   // Local copy so the pills respond immediately; the fetch hook has no
   // refetch, and re-reading the whole profile to reflect one toggle would make
   // the UI feel a beat behind every click.
-  const [tiers, setTiers] = useState<string[] | null>(null)
-  const [savingTiers, setSavingTiers] = useState(false)
+  const [tier, setTier] = useState<string | null>(null)
+  const [savingTier, setSavingTier] = useState(false)
 
-  async function toggleTier(tier: string) {
-    if (tier === 'member') return // the floor — not removable
-    const current = tiers ?? []
-    const next = current.includes(tier) ? current.filter((t) => t !== tier) : [...current, tier]
-    setSavingTiers(true)
+  async function selectTier(next: string) {
+    // Picking the current tier is a no-op rather than a deselect: a user is
+    // always in exactly one tier, so there's nothing to deselect *to*. Moving
+    // someone back to Member means clicking Member.
+    if (next === tier || savingTier) return
+    setSavingTier(true)
     try {
-      const res = await fetch(`${API_URL}/admin/hallie-test/users/${userId}/tiers`, {
+      const res = await fetch(`${API_URL}/admin/hallie-test/users/${userId}/tier`, {
         method: 'PATCH',
         headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tiers: next }),
+        body: JSON.stringify({ tier: next }),
       })
       if (!res.ok) throw new Error('Save failed')
-      // Trust the server's list, not the optimistic one: it re-adds member and
-      // returns the tiers in a fixed order, so the pills match what's stored.
-      const body = (await res.json()) as { tiers: string[] }
-      setTiers(body.tiers)
+      // Trust the server's answer rather than the optimistic one, so the pills
+      // always show what's actually stored.
+      const body = (await res.json()) as { tier: string }
+      setTier(body.tier)
     } catch {
-      window.alert("Couldn't update tiers — try again.")
+      window.alert("Couldn't update the tier — try again.")
     } finally {
-      setSavingTiers(false)
+      setSavingTier(false)
     }
   }
 
@@ -231,7 +233,7 @@ export default function HallieTestUserPage() {
         headers: adminHeaders(),
       })
       if (!res.ok) throw new Error('Delete failed')
-      router.push('/admin/hallie-test')
+      router.push('/admin/hallie-test?tab=users')
     } catch {
       window.alert("Couldn't delete this account — try again.")
       setDeleting(false)
@@ -248,13 +250,13 @@ export default function HallieTestUserPage() {
   const user = profileData?.user
 
   useEffect(() => {
-    if (user?.tiers && tiers === null) setTiers(user.tiers as string[])
-  }, [user, tiers])
+    if (user?.tier && tier === null) setTier(user.tier as string)
+  }, [user, tier])
 
   if (profileStatus === 'error') {
     return (
       <div className="max-w-5xl">
-        <Link href="/admin/hallie-test" className="inline-flex items-center gap-1.5 text-[13px] mb-4" style={{ color: 'var(--ink-3)' }}>
+        <Link href="/admin/hallie-test?tab=users" className="inline-flex items-center gap-1.5 text-[13px] mb-4" style={{ color: 'var(--ink-3)' }}>
           <ArrowLeft size={13} /> All users
         </Link>
         <p className="text-sm" style={{ color: 'var(--ink-3)' }}>This user couldn&apos;t be found.</p>
@@ -269,7 +271,7 @@ export default function HallieTestUserPage() {
   return (
     <div className="max-w-5xl">
       <div className="mb-6">
-        <Link href="/admin/hallie-test" className="inline-flex items-center gap-1.5 text-[13px] mb-4" style={{ color: 'var(--ink-3)' }}>
+        <Link href="/admin/hallie-test?tab=users" className="inline-flex items-center gap-1.5 text-[13px] mb-4" style={{ color: 'var(--ink-3)' }}>
           <ArrowLeft size={13} /> All users
         </Link>
         <h1 className="text-2xl font-semibold font-display" style={{ color: 'var(--ink)' }}>{user.name}</h1>
@@ -309,32 +311,29 @@ export default function HallieTestUserPage() {
           </div>
           <div className="px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-[10px] font-medium tracking-wide uppercase mb-1" style={{ color: 'var(--ink-3)' }}>
-              Membership tiers
+              Membership tier
             </p>
             <p className="text-[12px] mb-3" style={{ color: 'var(--ink-3)' }}>
-              Labels only — they grant no access, and the user never sees them.
+              One tier per user. Labels only — they grant no access, and the user never sees them.
             </p>
             <div className="flex flex-wrap gap-2">
               {TIER_ORDER.map((t) => {
-                const on = (tiers ?? []).includes(t)
-                const locked = t === 'member'
+                const on = t === tier
                 return (
                   <button
                     key={t}
-                    onClick={() => toggleTier(t)}
-                    disabled={locked || savingTiers}
-                    title={locked ? 'Everyone is a member — this cannot be removed.' : undefined}
+                    onClick={() => selectTier(t)}
+                    disabled={savingTier}
                     className="text-[12px] font-semibold px-3 py-1.5 rounded-full border transition-colors"
                     style={{
                       borderColor: on ? 'var(--clay)' : 'var(--border)',
                       background: on ? 'var(--sand-1)' : 'transparent',
                       color: on ? 'var(--ink)' : 'var(--ink-3)',
-                      borderStyle: locked ? 'dashed' : 'solid',
-                      cursor: locked ? 'default' : savingTiers ? 'wait' : 'pointer',
-                      opacity: savingTiers ? 0.6 : 1,
+                      cursor: on ? 'default' : savingTier ? 'wait' : 'pointer',
+                      opacity: savingTier ? 0.6 : 1,
                     }}
                   >
-                    {TIER_LABEL[t]}{locked ? ' · always' : ''}
+                    {TIER_LABEL[t]}
                   </button>
                 )
               })}

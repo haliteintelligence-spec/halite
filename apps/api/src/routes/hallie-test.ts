@@ -27,11 +27,12 @@ import { tryFernetDecrypt } from '../lib/fernet.js'
 // CONSENT_TYPES) — its presence meant no user could ever show as fully
 // compliant, permanently capped at 4/5.
 // Membership tiers, mirroring MEMBERSHIP_TIERS in hallie-api's
-// app/models/user.py. Descriptive labels only — no tier grants access to
-// anything, here or in the app, and Hallie never shows them to the user.
+// app/models/user.py. A user is in exactly ONE tier. Descriptive labels only —
+// no tier grants access to anything, here or in the app, and Hallie never
+// shows them to the user.
 //
 // The real guard is a CHECK constraint on the column itself
-// (hallie_testing_users_tiers_valid): two applications write this table, so a
+// (hallie_testing_users_tier_valid): two applications write this table, so a
 // list in either one's code is only a nicety. This exists to give a clear 400
 // instead of a raw constraint violation, and to drive the dashboard's pills.
 const MEMBERSHIP_TIERS = ['member', 'creator', 'internal'] as const
@@ -204,7 +205,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
         createdAt: Date
         pointsBalance: number
         haliteConsumerId: string | null
-        tiers: string[]
+        tier: string
         productCount: bigint
         logCount: bigint
         loginCount: bigint
@@ -214,7 +215,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
     >`
       SELECT
         u.id, u.name, u.email, u.phone, u.city, u.country, u."createdAt", u."pointsBalance", u."haliteConsumerId",
-        u.tiers,
+        u.tier,
         COALESCE(p.cnt, 0) AS "productCount",
         COALESCE(l.cnt, 0) AS "logCount",
         COALESCE(le.cnt, 0) AS "loginCount",
@@ -259,7 +260,7 @@ export async function hallieTestRoutes(server: FastifyInstance) {
   server.get('/users/:userId', { preHandler: requireHaliteAdmin }, async (request) => {
     const { userId } = request.params as { userId: string }
     const [user] = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT id, name, email, phone, city, country, timezone, birthday, "pointsBalance", "createdAt", "haliteConsumerId", tiers
+      SELECT id, name, email, phone, city, country, timezone, birthday, "pointsBalance", "createdAt", "haliteConsumerId", tier
       FROM hallie_testing.hallie_testing_users WHERE id = ${userId}
     `
     if (!user) throw new ApiError(404, 'User not found')
@@ -471,31 +472,23 @@ export async function hallieTestRoutes(server: FastifyInstance) {
     return { ok: true, status }
   })
 
-  // ── Membership tiers ──────────────────────────────────────────────────
-  server.patch('/users/:userId/tiers', { preHandler: requireHaliteAdmin }, async (request) => {
+  // ── Membership tier ───────────────────────────────────────────────────
+  server.patch('/users/:userId/tier', { preHandler: requireHaliteAdmin }, async (request) => {
     const { userId } = request.params as { userId: string }
-    const body = request.body as { tiers?: unknown }
+    const { tier } = request.body as { tier?: unknown }
 
-    if (!Array.isArray(body?.tiers)) throw new ApiError(400, 'tiers must be an array')
-
-    // Member is the floor: it's added back whatever the caller sent, so a user
-    // can never end up with an empty set. De-duplicated because the column is
-    // a set in meaning even though Postgres arrays don't enforce that.
-    const requested = new Set<string>(body.tiers.map(String))
-    requested.add(DEFAULT_MEMBERSHIP_TIER)
-
-    const unknown = [...requested].filter((t) => !MEMBERSHIP_TIERS.includes(t as MembershipTier))
-    if (unknown.length > 0) throw new ApiError(400, `Unknown tier: ${unknown.join(', ')}`)
-
-    // Stored in the vocabulary's own order rather than the caller's, so two
-    // users with the same tiers always read the same way in the UI.
-    const tiers = MEMBERSHIP_TIERS.filter((t) => requested.has(t))
+    // An omitted tier resets to member rather than erroring — that's what
+    // deselecting means, and it keeps the column's NOT NULL honest.
+    const next = tier === undefined || tier === null ? DEFAULT_MEMBERSHIP_TIER : String(tier)
+    if (!MEMBERSHIP_TIERS.includes(next as MembershipTier)) {
+      throw new ApiError(400, `Unknown tier: ${next}`)
+    }
 
     const result = await prisma.$executeRaw`
-      UPDATE hallie_testing.hallie_testing_users SET tiers = ${tiers}::text[] WHERE id = ${userId}
+      UPDATE hallie_testing.hallie_testing_users SET tier = ${next} WHERE id = ${userId}
     `
     if (result === 0) throw new ApiError(404, 'User not found')
-    return { ok: true, tiers }
+    return { ok: true, tier: next }
   })
 
   // ── Account deletion ──────────────────────────────────────────────────

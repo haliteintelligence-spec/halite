@@ -22,7 +22,7 @@ type User = {
   createdAt: string
   pointsBalance: number
   haliteConsumerId: string | null
-  tiers: string[]
+  tier: string
   productCount: number
   logCount: number
   loginCount: number
@@ -30,8 +30,12 @@ type User = {
   grantedRequiredConsents: number
 }
 
-// Member reads as neutral because everyone has it; Creator and Internal are
-// tinted so a non-default tier is what catches the eye when scanning the list.
+// Order matches hallie-api's MEMBERSHIP_TIERS, so the filter reads the same
+// way as the pills on a user's profile.
+const TIERS = ['member', 'creator', 'internal'] as const
+// Member reads as neutral because it's the default every account signs up
+// with; Creator and Internal are tinted so a deliberately-assigned tier is
+// what catches the eye when scanning the list.
 const TIER_LABEL: Record<string, string> = { member: 'Member', creator: 'Creator', internal: 'Internal' }
 const TIER_BADGE: Record<string, { background: string; color: string }> = {
   member: { background: 'var(--sand-1)', color: 'var(--ink-3)' },
@@ -117,6 +121,14 @@ function useHallieTestFetch<T>(path: string | null) {
 
 export default function HallieTestPage() {
   const [tab, setTab] = useState<Tab>('overview')
+  // ?tab=users lands here directly — that's how a user's profile gets back to
+  // the list it came from rather than dropping the admin on Overview. Read
+  // after mount rather than during render: the server has no query string, so
+  // seeding useState from it would mismatch on hydration.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab')
+    if (requested && (TABS as readonly string[]).includes(requested)) setTab(requested as Tab)
+  }, [])
   // Seeded from an Overview "deeper dive" button click — `token` is bumped
   // on every click (even to the same target) so UsersTab, keyed on it
   // below, fully remounts and picks up the fresh initial filter/sort
@@ -250,6 +262,7 @@ function UsersTab({
   const [search, setSearch] = useState('')
   const [cities_, setCities_] = useState<string[]>([])
   const [compliance, setCompliance] = useState<string[]>(initialCompliance === 'all' ? [] : [initialCompliance])
+  const [tiers, setTiers] = useState<string[]>([])
   const [sort, setSort] = useState<{ field: SortField; dir: 'asc' | 'desc' }>({ field: initialSort, dir: 'desc' })
 
   const cities = useMemo(() => Array.from(new Set(users.map((u) => u.city).filter(Boolean))) as string[], [users])
@@ -262,13 +275,14 @@ function UsersTab({
     }
     if (cities_.length > 0) r = r.filter((u) => u.city && cities_.includes(u.city))
     if (compliance.length > 0) r = r.filter((u) => compliance.includes(u.grantedRequiredConsents === 4 ? 'compliant' : 'incomplete'))
+    if (tiers.length > 0) r = r.filter((u) => tiers.includes(u.tier))
     return [...r].sort((a, b) => {
       const av = a[sort.field]
       const bv = b[sort.field]
       const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av as number) - (bv as number)
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [users, search, cities_, compliance, sort])
+  }, [users, search, cities_, compliance, tiers, sort])
 
   function toggleSort(field: SortField) {
     setSort((s) => (s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'desc' }))
@@ -289,6 +303,13 @@ function UsersTab({
           selected={compliance}
           onChange={setCompliance}
           formatOption={(v) => (v === 'compliant' ? 'Fully compliant' : 'Incomplete')}
+        />
+        <MultiSelectFilter
+          label="Tier"
+          options={[...TIERS]}
+          selected={tiers}
+          onChange={setTiers}
+          formatOption={(v) => TIER_LABEL[v] ?? v}
         />
       </div>
 
@@ -314,9 +335,10 @@ function UsersTab({
                     </span>
                   </th>
                 ))}
-                {/* Not sortable: a set of tiers has no natural order to sort by. */}
+                {/* Not sortable: the three tiers aren't ranked, so any sort
+                    order would be arbitrary. Filter by tier instead. */}
                 <th className="px-4 py-3 text-left text-[11px] font-semibold tracking-wide uppercase whitespace-nowrap"
-                  style={{ color: 'var(--ink-3)' }}>Tiers</th>
+                  style={{ color: 'var(--ink-3)' }}>Tier</th>
               </tr>
             </thead>
             <tbody>
@@ -342,14 +364,10 @@ function UsersTab({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(u.tiers ?? []).map((t) => (
-                        <span key={t} className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                          style={TIER_BADGE[t] ?? TIER_BADGE.member}>
-                          {TIER_LABEL[t] ?? t}
-                        </span>
-                      ))}
-                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      style={TIER_BADGE[u.tier] ?? TIER_BADGE.member}>
+                      {TIER_LABEL[u.tier] ?? u.tier}
+                    </span>
                   </td>
                 </tr>
               ))}
