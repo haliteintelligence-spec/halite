@@ -196,7 +196,15 @@ export default async function ConnectedConsumerPage({ params }: Props) {
             )}
           </InsightCard>
 
-          <InsightCard title="Since they connected" subtitle="Your own store events, and what you sent back">
+          <InsightCard
+            title="Since they connected"
+            subtitle="Your own store events, and what you sent back"
+            actions={
+              <Link href={`/${slug}/outcomes`} className="text-[11px] font-semibold" style={{ color: 'var(--clay)' }}>
+                Outcomes
+              </Link>
+            }
+          >
             {d.activity.length === 0 ? (
               <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Nothing recorded yet.</p>
             ) : (

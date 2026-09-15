@@ -7,7 +7,9 @@ import { BenchmarkMatrix } from '@/components/intelligence/BenchmarkMatrix'
 import { AIBadge } from '@/components/ui/AIBadge'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { Users, Package, FlaskConical, TrendingUp } from 'lucide-react'
-import { getAnalytics, getTokenAndBrandId, getTimeframe } from '@/lib/api'
+import { getAnalytics, getTokenAndBrandId, getTimeframe, getConnectAnalytics } from '@/lib/api'
+import Link from 'next/link'
+import { Link2, ArrowRight } from 'lucide-react'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -18,7 +20,11 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
   const { slug } = await params
   const rawSP = await searchParams
   const { days, from, to } = await getTimeframe(rawSP)
-  const [analytics, authInfo] = await Promise.all([getAnalytics(days, from, to), getTokenAndBrandId()])
+  const [analytics, authInfo, connect] = await Promise.all([
+    getAnalytics(days, from, to),
+    getTokenAndBrandId(),
+    getConnectAnalytics(days),
+  ])
   const brandId = authInfo?.brandId ?? ''
   const s = analytics?.summary
 
@@ -31,7 +37,7 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
       >
         <div>
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
-            Beauty Intelligence
+            Permissioned consumer intelligence
           </p>
           <h1 className="font-display text-xl leading-tight mt-0.5 capitalize" style={{ color: 'var(--ink)' }}>
             {slug}
@@ -44,6 +50,45 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
       </div>
 
       <div className="px-4 py-5 md:px-7 md:py-6 space-y-8">
+        {/* Halite Connect — the permissioned layer, and what it earned */}
+        <Link
+          href={`/${slug}/connect`}
+          className="block rounded-2xl border p-5 transition-opacity hover:opacity-90"
+          style={{ background: 'var(--clay)', borderColor: 'var(--clay)' }}
+        >
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <Link2 size={14} style={{ color: 'rgba(255,255,255,0.7)' }} />
+              <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                Halite Connect
+              </p>
+            </div>
+            <span className="flex items-center gap-1 text-[11.5px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
+              Open <ArrowRight size={11} strokeWidth={2.5} />
+            </span>
+          </div>
+          {connect && connect.summary.connectedConsumers > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <ConnectStat label="Connected" value={connect.summary.connectedConsumers.toLocaleString()} sub={`${connect.summary.newConnections} new`} />
+              <ConnectStat label="Consent accepted" value={`${connect.summary.acceptanceRate}%`} sub={`${connect.summary.promptsShown.toLocaleString()} asked`} />
+              <ConnectStat label="Orders" value={connect.summary.orders.toLocaleString()} sub="from recommendations" />
+              <ConnectStat
+                label="Revenue influenced"
+                value={connect.summary.revenueInfluenced
+                  ? `$${Math.round(connect.summary.revenueInfluenced).toLocaleString()}`
+                  : '—'}
+                sub={connect.summary.averageOrderValue ? `AOV $${Math.round(connect.summary.averageOrderValue)}` : 'no purchases yet'}
+              />
+            </div>
+          ) : (
+            <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              Shoppers arrive carrying a Hallie profile they own. Let them connect it and you can
+              personalise from their first visit — before you have any history of your own.
+              Nobody has connected yet.
+            </p>
+          )}
+        </Link>
+
         {/* KPI Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <MetricTile
@@ -196,6 +241,18 @@ export default async function IntelligencePage({ params, searchParams }: Props) 
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function ConnectStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        {label}
+      </p>
+      <p className="text-xl font-semibold mt-1 leading-none" style={{ color: '#fff' }}>{value}</p>
+      <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>{sub}</p>
     </div>
   )
 }

@@ -220,6 +220,18 @@ export default async function AudienceInsightsPage({ params }: Props) {
               )}
             </InsightCard>
 
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <Link href={`/${slug}/products`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                Product performance →
+              </Link>
+              <Link href={`/${slug}/catalog`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                Fix the gaps in your catalog →
+              </Link>
+              <Link href={`/${slug}/connect/consumers`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                Who these people are →
+              </Link>
+            </div>
+
             <p className="text-[11px] leading-relaxed" style={{ color: 'var(--ink-3)' }}>
               Aggregated across the {d.cohort} consumers who granted you access, and withheld entirely
               below {d.minimumCohort}. Nothing here is traceable to an individual, and nothing comes

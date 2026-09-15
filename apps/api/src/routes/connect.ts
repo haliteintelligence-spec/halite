@@ -9,6 +9,7 @@ import { buildConnectContext } from '../lib/connect-context.js'
 import { matchCatalog } from '../lib/connect-match.js'
 import { mirrorWishlistToHallie } from '../lib/hallie-wishlist.js'
 import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
+import { linkHallieAccount } from '../lib/hallie-identity.js'
 
 /**
  * Halite Connect — the public, brand-facing API.
@@ -165,6 +166,11 @@ export async function connectRoutes(server: FastifyInstance) {
       })
     }
 
+    // A consumer's identity comes from Hallie, so adopt that account's id as
+    // the one this brand will see. Provisioning above may have just created
+    // the account, which is why this runs after it.
+    const publicId = (await linkHallieAccount(consumer.id)) ?? consumer.publicId
+
     // The grant records the brand's categories as they stand right now. If
     // the brand adds a category later, this grant does not widen with it.
     const grant = await prisma.consentGrant.upsert({
@@ -225,7 +231,7 @@ export async function connectRoutes(server: FastifyInstance) {
     })
 
     return reply.send({
-      consumer_id: consumer.publicId,
+      consumer_id: publicId,
       grant: {
         id: grant.id,
         categories: grant.categories,

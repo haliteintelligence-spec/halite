@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
     "backfill:demos": "tsx --env-file=../../.env scripts/backfill-demo-data.ts",
-    "seed:connect": "tsx --env-file=../../.env scripts/seed-connect.ts"
+    "seed:connect": "tsx --env-file=../../.env scripts/seed-connect.ts",
+    "backfill:hallie-ids": "tsx --env-file=../../.env scripts/backfill-hallie-ids.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

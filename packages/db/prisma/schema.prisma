@@ -355,10 +355,17 @@ enum SkinType {
 // so returning consumers get a shorter onboarding at each new brand.
 model Consumer {
   id             String    @id @default(cuid())
-  // The identifier partner brands see. Deliberately not the cuid, so a
-  // brand never holds a handle that means anything outside Halite.
-  // Generated in Postgres so every existing create path keeps working.
+  // The identifier partner brands see.
+  //
+  // A consumer's identity originates in Hallie, so when their Hallie account
+  // is known this is hl_<hallieUserId> — one person, one id, the same in
+  // both products. The random default only covers consumers who have no
+  // Hallie account yet (synthetic demo data, or someone who reached a brand
+  // before claiming their account); linkHallieAccount rewrites it the moment
+  // the account appears.
   publicId       String    @unique @default(dbgenerated("('hl_' || substr(md5(random()::text), 1, 12))"))
+  // The Hallie account this consumer is. Null until it can be resolved.
+  hallieUserId   String?   @unique
   email          String?   @unique
   phone          String?   @unique
   birthday       DateTime?

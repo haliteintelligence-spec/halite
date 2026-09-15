@@ -193,9 +193,20 @@ export default async function ConnectPage({ params, searchParams }: Props) {
               )}
             </InsightCard>
 
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
+              <Link href={`/${slug}/connect/insights`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                What this audience wants →
+              </Link>
+              <Link href={`/${slug}/outcomes`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                What happened after they bought →
+              </Link>
+              <Link href={`/${slug}/connect/setup`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                Setup →
+              </Link>
+            </div>
             <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-              Every figure here comes from consumers who granted you access. Access runs until they
-              disconnect — see <Link href={`/${slug}/connect/consumers`} className="underline">connected consumers</Link>.
+              Every figure here comes from consumers who granted you access, and access runs until
+              they disconnect.
             </p>
           </>
         )}

@@ -4,6 +4,7 @@ import { MetricTile } from '@/components/ui/MetricTile'
 import { TimeframePicker } from '@/components/ui/TimeframePicker'
 import { Users, Activity, Star, AlertCircle, BarChart2 } from 'lucide-react'
 import { getAnalytics, getTokenAndBrandId, getTimeframe } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -31,7 +32,7 @@ export default async function ConsumersPage({ params, searchParams }: Props) {
             <div className="w-2 h-2 rounded-full animate-pulse flex-shrink-0" style={{ background: 'var(--sage)' }} title="Live data" />
           </div>
           <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-            Real-time consumer behaviour, skin profiles, compliance signals & trend intelligence
+            Everyone who has used you, connected or not — profiles, behaviour and compliance signals
           </p>
         </div>
         <TimeframePicker />

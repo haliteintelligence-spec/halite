@@ -1,9 +1,15 @@
 import { getIdentityIntelligence, getIngredientSignals, getTokenAndBrandId } from '@/lib/api'
 import { ConsumerIdentity } from '@/components/intelligence/ConsumerIdentity'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export const metadata = { title: 'Consumer Identity | Halite Intelligence' }
 
-export default async function IdentityPage() {
+interface Props {
+  params: Promise<{ slug: string }>
+}
+
+export default async function IdentityPage({ params }: Props) {
+  const { slug } = await params
   const [data, signals, authInfo] = await Promise.all([
     getIdentityIntelligence(),
     getIngredientSignals(),
@@ -13,17 +19,15 @@ export default async function IdentityPage() {
 
   return (
     <div className="px-4 py-5 md:px-7 md:py-6">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: 'var(--ink-3)' }}>
-            Intelligence
-          </p>
-          <h1 className="font-display text-2xl mt-0.5" style={{ color: 'var(--ink)' }}>Consumer Identity</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-            Who has a portable Halite profile, retention signals & cross-brand intelligence
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Portable identity"
+        title="Consumer Identity"
+        subtitle="Your shoppers arrive carrying a Hallie profile they own. This is who already has one, what it is worth to you over time, and how much of it you were permitted to read."
+        related={[
+          { href: `/${slug}/connect/consumers`, label: 'Who granted you access' },
+          { href: `/${slug}/connect`, label: 'What that access earned' },
+        ]}
+      />
       {data ? (
         <ConsumerIdentity data={data} signals={signals} brandId={brandId} />
       ) : (
