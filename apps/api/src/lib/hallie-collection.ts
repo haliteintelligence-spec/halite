@@ -3,7 +3,8 @@ import { prisma } from '@halite/db'
 import type { BeautyArea, ProductCategory } from '@halite/db'
 
 /**
- * Mirrors a save-from-storefront into the shopper's Hallie wishlist.
+ * Mirrors what a shopper does on a brand's storefront into their Hallie
+ * collection — saves onto the wishlist, purchases onto the shelf.
  *
  * Hallie owns its own tables in the `hallie_testing` schema of the same
  * database (see hallie-provisioning.ts). A shopper's whole collection lives
@@ -20,7 +21,11 @@ import type { BeautyArea, ProductCategory } from '@halite/db'
  *
  * A save carries the match score across as a Hallie rating out of 10, so the
  * shopper opens Hallie later and sees how well the thing they saved suits
- * them — not just that they saved it.
+ * them — not just that they saved it. A purchase does not: they own it now,
+ * and the rating on a shelf item is theirs to give once they have used it.
+ *
+ * Buying something already on the wishlist moves it rather than duplicating
+ * it, and records the move the way Hallie's own app would.
  *
  * Hallie also records every collection move in
  * `hallie_testing_product_collection_events` (toCollection 'shelf' |
@@ -88,7 +93,9 @@ function normalizeName(name: string): string {
     .join(' ')
 }
 
-export async function mirrorWishlistToHallie(args: {
+export type HallieCollection = 'shelf' | 'wishlist'
+
+export async function mirrorToHallieCollection(args: {
   email: string | null
   brandName: string
   productName: string
@@ -97,16 +104,15 @@ export async function mirrorWishlistToHallie(args: {
   price: number | null
   currency: string | null
   imageUrl: string | null
-  /** Hallie rates out of 10; null when no live grant could score it. */
+  collection: HallieCollection
+  /** Hallie rates out of 10. Only set for a wishlist save. */
   rating?: number | null
 }): Promise<void> {
   if (!args.email) return
 
   try {
-    // The shopper must already have a Hallie account. One is provisioned on
-    // their first Connect, so this normally resolves on the same request.
     const users = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM hallie_testing.hallie_testing_users WHERE email = ${args.email} LIMIT 1
+      SELECT id FROM hallie_testing.hallie_testing_users WHERE lower(email) = lower(${args.email}) LIMIT 1
     `
     const userId = users[0]?.id
     if (!userId) return
@@ -115,23 +121,59 @@ export async function mirrorWishlistToHallie(args: {
     const hallieType = PRODUCT_TYPE[args.category] ?? 'other'
     const normalizedBrand = normalizeBrand(args.brandName)
     const normalizedName = normalizeName(args.productName)
+    const toShelf = args.collection === 'shelf'
+
+    // Already in their collection?
+    const existing = await prisma.$queryRaw<Array<{ id: string; isWishlist: boolean; isEmpty: boolean }>>`
+      SELECT id, "isWishlist", "isEmpty"
+      FROM hallie_testing.hallie_testing_products
+      WHERE "userId" = ${userId}
+        AND "normalizedBrand" = ${normalizedBrand}
+        AND "normalizedName" = ${normalizedName}
+        AND "removedAt" IS NULL
+      LIMIT 1
+    `
+    const row = existing[0]
+
+    if (row) {
+      const from = row.isEmpty ? 'empty' : row.isWishlist ? 'wishlist' : 'shelf'
+      const to = toShelf ? 'shelf' : 'wishlist'
+      if (from === to) return
+
+      // Only ever promote wishlist → shelf. A save on something they already
+      // own should not quietly take it off their shelf.
+      if (!toShelf) return
+
+      await prisma.$executeRaw`
+        UPDATE hallie_testing.hallie_testing_products
+        SET "isWishlist" = false, "isEmpty" = false,
+            "initialLevel" = COALESCE("initialLevel", 100),
+            price = COALESCE(${args.price}, price)
+        WHERE id = ${row.id}
+      `
+      await prisma.$executeRaw`
+        INSERT INTO hallie_testing.hallie_testing_product_collection_events
+          (id, "productId", "userId", "fromCollection", "toCollection", reason, "createdAt")
+        VALUES (${randomUUID()}, ${row.id}, ${userId}, ${from},
+                ${to}, ${from === 'empty' ? 'repurchased' : 'user'}, now())
+      `
+      return
+    }
 
     const productId = randomUUID()
-
-    // Skip if it is already anywhere in their collection — a product on the
-    // shelf should not reappear as something they still want.
     const inserted = await prisma.$executeRaw`
       INSERT INTO hallie_testing.hallie_testing_products (
         id, "userId", brand, name, "normalizedBrand", "normalizedName",
-        categories, "productTypes", "isWishlist", "isEmpty",
+        categories, "productTypes", "isWishlist", "isEmpty", "initialLevel",
         price, currency, "photoUrl", rating, "createdAt"
       )
       SELECT
         ${productId}, ${userId}, ${args.brandName}, ${args.productName},
         ${normalizedBrand}, ${normalizedName},
         ${JSON.stringify([hallieCategory])}, ${JSON.stringify({ [hallieCategory]: hallieType })},
-        true, false,
-        ${args.price}, ${args.currency ?? 'USD'}, ${args.imageUrl}, ${args.rating ?? null}, now()
+        ${!toShelf}, false, ${toShelf ? 100 : null},
+        ${args.price}, ${args.currency ?? 'USD'}, ${args.imageUrl},
+        ${toShelf ? null : (args.rating ?? null)}, now()
       WHERE NOT EXISTS (
         SELECT 1 FROM hallie_testing.hallie_testing_products
         WHERE "userId" = ${userId}
@@ -141,16 +183,15 @@ export async function mirrorWishlistToHallie(args: {
       )
     `
 
-    // Only when a row was actually added — a duplicate save is not a move.
     if (inserted === 1) {
       await prisma.$executeRaw`
-        INSERT INTO hallie_testing.hallie_testing_product_collection_events (
-          id, "productId", "userId", "fromCollection", "toCollection", reason, "createdAt"
-        )
-        VALUES (${randomUUID()}, ${productId}, ${userId}, NULL, 'wishlist', 'added', now())
+        INSERT INTO hallie_testing.hallie_testing_product_collection_events
+          (id, "productId", "userId", "fromCollection", "toCollection", reason, "createdAt")
+        VALUES (${randomUUID()}, ${productId}, ${userId}, NULL,
+                ${toShelf ? 'shelf' : 'wishlist'}, 'added', now())
       `
     }
   } catch (err) {
-    console.warn('[hallie-wishlist] mirror skipped:', err)
+    console.warn('[hallie-collection] mirror skipped:', err)
   }
 }

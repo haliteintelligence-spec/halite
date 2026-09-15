@@ -7,7 +7,7 @@ import { ApiError } from '../lib/errors.js'
 import { requireBrandKey, authorizedCategories } from '../lib/connect-auth.js'
 import { buildConnectContext } from '../lib/connect-context.js'
 import { matchCatalog } from '../lib/connect-match.js'
-import { mirrorWishlistToHallie } from '../lib/hallie-wishlist.js'
+import { mirrorToHallieCollection } from '../lib/hallie-collection.js'
 import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
 import { linkHallieAccount } from '../lib/hallie-identity.js'
 import { quizFor, groupAnswers } from '../lib/hallie-quiz.js'
@@ -647,9 +647,15 @@ export async function connectRoutes(server: FastifyInstance) {
       })
       accepted.push(row.id)
 
-      // A save on the brand's storefront belongs in the shopper's Hallie
-      // wishlist — that is the whole point of connecting.
-      if (e.event === 'wishlisted' && consumerId && product) {
+      // What they do on the storefront belongs in their Hallie collection:
+      // a save goes to the wishlist, a purchase to the shelf. This is what
+      // makes a profile started on a brand page worth having later — they
+      // open Hallie and their shelf is already theirs.
+      const toCollection =
+        e.event === 'wishlisted' ? 'wishlist' as const :
+        e.event === 'purchase' ? 'shelf' as const : null
+
+      if (toCollection && consumerId && product) {
         const c = await prisma.consumer.findUnique({
           where: { id: consumerId },
           select: { email: true },
@@ -659,8 +665,9 @@ export async function connectRoutes(server: FastifyInstance) {
         // Hallie and sees how well the thing they saved actually suits them.
         // Scored here rather than taken from the request: the storefront
         // should not be able to write its own rating into someone's profile.
+        // A purchase gets none — they own it, and rating it is theirs to do.
         let rating: number | null = null
-        try {
+        if (toCollection === 'wishlist') try {
           const grant = await prisma.consentGrant.findUnique({
             where: { brandId_consumerId: { brandId: brand.id, consumerId } },
             select: { categories: true, status: true },
@@ -677,15 +684,16 @@ export async function connectRoutes(server: FastifyInstance) {
           }
         } catch { /* a save without a rating is still a save */ }
 
-        void mirrorWishlistToHallie({
+        void mirrorToHallieCollection({
           email: c?.email ?? null,
           brandName: brand.name,
           productName: product.name,
           beautyArea: product.beautyArea,
           category: product.category,
-          price: product.price,
-          currency: product.currency,
+          price: e.value ?? product.price,
+          currency: e.currency ?? product.currency,
           imageUrl: product.imageUrl,
+          collection: toCollection,
           rating,
         })
       }
