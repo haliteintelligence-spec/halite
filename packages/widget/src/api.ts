@@ -367,14 +367,15 @@ export class HaliteApi {
   }
 
   /** Scores the products on the page the shopper is looking at. */
-  async connectMatch(args: { skus?: string[]; productIds?: string[] }): Promise<ConnectMatch[]> {
+  async connectMatch(args: { refs?: string[]; skus?: string[]; productIds?: string[] }): Promise<ConnectMatch[]> {
     const consumerId = this.connectedConsumerId
     if (!consumerId) return []
-    if (!args.skus?.length && !args.productIds?.length) return []
+    if (!args.refs?.length && !args.skus?.length && !args.productIds?.length) return []
     try {
       const res = await this.post<{ matches: ConnectMatch[] }>('/v1/match', {
         apiKey: this.apiKey,
         consumer_id: consumerId,
+        ...(args.refs?.length ? { refs: args.refs } : {}),
         ...(args.skus?.length ? { skus: args.skus } : {}),
         ...(args.productIds?.length ? { product_ids: args.productIds } : {}),
       }, false)

@@ -27,6 +27,20 @@ import { writeHallieProfile } from '../lib/hallie-profile.js'
 
 const SURFACES = ['pdp', 'collection', 'quiz', 'search', 'checkout', 'account', 'agent'] as const
 
+/**
+ * A match score as a Hallie wishlist rating.
+ *
+ * Hallie rates out of 10 in half steps, so a 0-1 score rounds UP to the
+ * nearest half point — which is the same as rounding the percentage up to
+ * the nearest 5%. A 68% match is saved as 7/10. Rounding up, not to
+ * nearest, because a saved product is something the shopper already wants;
+ * the score is a hint, not a verdict.
+ */
+export function scoreToRating(score: number): number {
+  const clamped = Math.max(0, Math.min(1, score))
+  return Math.ceil(clamped * 20) / 2
+}
+
 /** Loads a live grant, or refuses with the reason the consumer would recognise. */
 async function requireGrant(brandId: string, publicConsumerId: string) {
   const consumer = await prisma.consumer.findUnique({
@@ -496,12 +510,17 @@ export async function connectRoutes(server: FastifyInstance) {
     const schema = z.object({
       apiKey: z.string().optional(),
       consumer_id: z.string(),
+      // Whatever the page tags its products with. A merchant's markup may
+      // carry a SKU or an internal id, and the widget cannot know which —
+      // so each ref is matched against both.
+      refs: z.array(z.string().max(120)).max(100).optional(),
       skus: z.array(z.string().max(120)).max(100).optional(),
       product_ids: z.array(z.string().max(60)).max(100).optional(),
       surface: z.enum(SURFACES).optional(),
-    }).refine(d => (d.skus?.length ?? 0) + (d.product_ids?.length ?? 0) > 0, {
-      message: 'skus or product_ids is required',
-    })
+    }).refine(
+      d => (d.refs?.length ?? 0) + (d.skus?.length ?? 0) + (d.product_ids?.length ?? 0) > 0,
+      { message: 'refs, skus or product_ids is required' },
+    )
     const body = schema.parse(request.body)
     const { consumer, grant } = await requireGrant(brand.id, body.consumer_id)
 
@@ -511,10 +530,14 @@ export async function connectRoutes(server: FastifyInstance) {
       brandId: brand.id, context, categories,
       options: {
         limit: 100,
-        ...(body.skus ? { skus: body.skus } : {}),
-        ...(body.product_ids ? { productIds: body.product_ids } : {}),
+        ...(body.skus || body.refs ? { skus: [...(body.skus ?? []), ...(body.refs ?? [])] } : {}),
+        ...(body.product_ids || body.refs ? { productIds: [...(body.product_ids ?? []), ...(body.refs ?? [])] } : {}),
       },
     })
+
+    // Echo the ref the caller used, so a page can look the result back up
+    // without knowing whether it tagged by SKU or by id.
+    const asked = new Set([...(body.refs ?? []), ...(body.skus ?? []), ...(body.product_ids ?? [])])
 
     await prisma.consentAccessLog.create({
       data: {
@@ -527,6 +550,7 @@ export async function connectRoutes(server: FastifyInstance) {
     return reply.send({
       consumer_id: consumer.publicId,
       matches: items.map(i => ({
+        ref: asked.has(i.productId) ? i.productId : (i.sku ?? i.productId),
         product_id: i.productId,
         sku: i.sku,
         match_score: i.score,
@@ -626,7 +650,33 @@ export async function connectRoutes(server: FastifyInstance) {
       // A save on the brand's storefront belongs in the shopper's Hallie
       // wishlist — that is the whole point of connecting.
       if (e.event === 'wishlisted' && consumerId && product) {
-        const c = await prisma.consumer.findUnique({ where: { id: consumerId }, select: { email: true } })
+        const c = await prisma.consumer.findUnique({
+          where: { id: consumerId },
+          select: { email: true },
+        })
+
+        // The match score becomes the wishlist rating, so the shopper opens
+        // Hallie and sees how well the thing they saved actually suits them.
+        // Scored here rather than taken from the request: the storefront
+        // should not be able to write its own rating into someone's profile.
+        let rating: number | null = null
+        try {
+          const grant = await prisma.consentGrant.findUnique({
+            where: { brandId_consumerId: { brandId: brand.id, consumerId } },
+            select: { categories: true, status: true },
+          })
+          if (grant?.status === 'ACTIVE') {
+            const cats = authorizedCategories(brand, grant.categories)
+            const ctx = await buildConnectContext({ consumerId, brandId: brand.id, categories: cats })
+            const { items } = await matchCatalog({
+              brandId: brand.id, context: ctx, categories: cats,
+              options: { limit: 1, productIds: [product.id] },
+            })
+            const score = items[0]?.score
+            if (score != null) rating = scoreToRating(score)
+          }
+        } catch { /* a save without a rating is still a save */ }
+
         void mirrorWishlistToHallie({
           email: c?.email ?? null,
           brandName: brand.name,
@@ -636,6 +686,7 @@ export async function connectRoutes(server: FastifyInstance) {
           price: product.price,
           currency: product.currency,
           imageUrl: product.imageUrl,
+          rating,
         })
       }
     }

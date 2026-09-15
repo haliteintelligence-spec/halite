@@ -106,6 +106,8 @@ export interface ConnectSession {
 }
 
 export interface ConnectMatch {
+  /** The identifier the page asked about — SKU or internal id. */
+  ref?: string
   sku: string | null
   product_id: string
   name?: string

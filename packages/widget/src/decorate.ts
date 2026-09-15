@@ -11,6 +11,9 @@ import type { ConnectMatch } from './types'
  *
  *   <div data-halite-product="SKU-123">…</div>
  *
+ * The value may be a SKU or an internal product id — the server tries both,
+ * because a merchant's markup carries whichever it already had.
+ *
  * Scores are fetched in one call per batch of new products, cached for the
  * page, and re-applied to anything a filter or infinite scroll adds later.
  */
@@ -77,8 +80,13 @@ export class Decorator {
       // One request per sweep, not per product.
       for (let i = 0; i < needed.length; i += 100) {
         const batch = needed.slice(i, i + 100)
-        const matches = await this.api.connectMatch({ skus: batch })
-        for (const m of matches) if (m.sku) this.cache.set(m.sku, m)
+        const matches = await this.api.connectMatch({ refs: batch })
+        // Key on what the page asked with — a merchant may tag by SKU or by
+        // internal id, and the reply says which one matched.
+        for (const m of matches) {
+          const key = m.ref ?? m.sku ?? m.product_id
+          if (key) this.cache.set(key, m)
+        }
         for (const s of batch) this.pending.delete(s)
       }
     }

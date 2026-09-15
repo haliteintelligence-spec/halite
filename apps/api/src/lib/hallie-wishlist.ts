@@ -18,6 +18,10 @@ import type { BeautyArea, ProductCategory } from '@halite/db'
  * match Halite's enums (Halite's FRAGRANCE is Hallie's `perfume`,
  * MOISTURIZER is `face_cream`, and so on).
  *
+ * A save carries the match score across as a Hallie rating out of 10, so the
+ * shopper opens Hallie later and sees how well the thing they saved suits
+ * them — not just that they saved it.
+ *
  * Hallie also records every collection move in
  * `hallie_testing_product_collection_events` (toCollection 'shelf' |
  * 'wishlist' | 'empty'). A save writes that companion row too, so a
@@ -93,6 +97,8 @@ export async function mirrorWishlistToHallie(args: {
   price: number | null
   currency: string | null
   imageUrl: string | null
+  /** Hallie rates out of 10; null when no live grant could score it. */
+  rating?: number | null
 }): Promise<void> {
   if (!args.email) return
 
@@ -118,14 +124,14 @@ export async function mirrorWishlistToHallie(args: {
       INSERT INTO hallie_testing.hallie_testing_products (
         id, "userId", brand, name, "normalizedBrand", "normalizedName",
         categories, "productTypes", "isWishlist", "isEmpty",
-        price, currency, "photoUrl", "createdAt"
+        price, currency, "photoUrl", rating, "createdAt"
       )
       SELECT
         ${productId}, ${userId}, ${args.brandName}, ${args.productName},
         ${normalizedBrand}, ${normalizedName},
         ${JSON.stringify([hallieCategory])}, ${JSON.stringify({ [hallieCategory]: hallieType })},
         true, false,
-        ${args.price}, ${args.currency ?? 'USD'}, ${args.imageUrl}, now()
+        ${args.price}, ${args.currency ?? 'USD'}, ${args.imageUrl}, ${args.rating ?? null}, now()
       WHERE NOT EXISTS (
         SELECT 1 FROM hallie_testing.hallie_testing_products
         WHERE "userId" = ${userId}
