@@ -1,0 +1,221 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#6B1E3F; text-decoration:none; } a:hover { color:#450F2A; }
+    * { box-sizing:border-box; }
+    .navitem { display:flex; align-items:center; gap:12px; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:500; color:#8B6575; }
+    .navitem.on { background:#450F2A; color:#ffffff; }
+    .navsec { font-size:9px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:0 12px; margin:0 0 8px; }
+    .card { background:#ffffff; border:1px solid #E8DDD0; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
+    .chead { padding:16px 20px; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+    .ctitle { margin:0; font-size:13px; font-weight:600; color:#1A0A12; }
+    .csub { margin:2px 0 0; font-size:11px; color:#8B6575; }
+    .cbody { padding:0 20px 20px; flex:1; }
+    .tag { font-size:11.5px; font-weight:500; padding:4px 10px; border-radius:999px; }
+    code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  </style>
+</helmet>
+
+<div style="width:1440px;height:1200px;background:#FAF6F0;display:flex">
+
+  <aside style="width:208px;flex-shrink:0;background:#1A0A12;display:flex;flex-direction:column">
+    <div style="padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.08)">
+      <p style="margin:0 0 4px;font-size:9px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Halite Intelligence</p>
+      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff">Essenza</p>
+    </div>
+    <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Overview</span></div>
+        <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.1 5.4L19.5 10l-5.4 1.6L12 17l-2.1-5.4L4.5 10l5.4-1.6z"/></svg><span>Halite AI</span></div>
+      </div>
+      <div>
+        <p class="navsec">Connect</p>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/></svg><span>Connect</span></div>
+          <div class="navitem on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M17 8.5h4M19 6.5v4"/></svg><span>Connected</span><span style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.6)"></span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11M4 12h16M4 17h8"/><circle cx="19" cy="7" r="2"/></svg><span>Recommendations</span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3"/></svg><span>Permissions</span></div>
+        </div>
+      </div>
+      <div>
+        <p class="navsec">Intelligence</p>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/></svg><span>Consumer</span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-4 4 3 8-8"/><path d="M4 20h16"/></svg><span>Outcomes</span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5l7-4 7 4v7l-7 4-7-4z"/><path d="M12 4.5v15"/></svg><span>Products</span></div>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+    <div style="height:56px;background:#ffffff;border-bottom:1px solid #E8DDD0;display:flex;align-items:center;justify-content:flex-end;padding:0 24px;flex-shrink:0">
+      <span style="font-size:12px;color:#8B6575">Sign out</span>
+    </div>
+
+    <div style="padding:16px 28px;background:#FAF6F0;border-bottom:1px solid #E8DDD0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0">
+      <div>
+        <p style="margin:0 0 2px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8B6575">Connected consumer</p>
+        <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:500;line-height:1.2;color:#1A0A12">Amara Okafor</h1>
+        <p style="margin:5px 0 0;font-size:11.5px;color:#8B6575">amara.o@gmail.com &middot; <code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace">hl_48291</code></p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:999px;background:#e9f4ec;color:#6b9e78">Permission active</span>
+      </div>
+    </div>
+
+    <div style="padding:24px 28px;display:grid;grid-template-columns:1fr 1.45fr;gap:20px;align-items:start">
+
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">What you were granted</p><p class="csub">Recorded 14 Sep 2026, 2:14pm</p></div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F2EBE0"><span style="font-size:12px;color:#8B6575">Category</span><span style="font-size:12px;font-weight:500;color:#1A0A12">Fragrance &mdash; from your account</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F2EBE0"><span style="font-size:12px;color:#8B6575">Purpose</span><span style="font-size:12px;font-weight:500;color:#1A0A12">Product recommendations</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F2EBE0"><span style="font-size:12px;color:#8B6575">Lasts</span><span style="font-size:12px;font-weight:500;color:#1A0A12">Until they disconnect</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F2EBE0"><span style="font-size:12px;color:#8B6575">You may store</span><span style="font-size:12px;font-weight:500;color:#1A0A12">Recommendations only</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0"><span style="font-size:12px;color:#8B6575">Marketing</span><span style="font-size:12px;font-weight:500;color:#c07070">Not granted</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">Preference profile</p><p class="csub">Derived by Halite &mdash; confidence 0.87</p></div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:16px">
+            <div>
+              <p style="margin:0 0 8px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#8B6575">Drawn to</p>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <span class="tag" style="background:#F5E6ED;color:#6B1E3F">vanilla</span>
+                <span class="tag" style="background:#F5E6ED;color:#6B1E3F">amber</span>
+                <span class="tag" style="background:#F5E6ED;color:#6B1E3F">caramel</span>
+                <span class="tag" style="background:#F5E6ED;color:#6B1E3F">tonka</span>
+                <span class="tag" style="background:#F5E6ED;color:#6B1E3F">warm spice</span>
+              </div>
+            </div>
+            <div>
+              <p style="margin:0 0 8px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#8B6575">Steers away from</p>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <span class="tag" style="background:#f7edec;color:#c07070">smoke</span>
+                <span class="tag" style="background:#f7edec;color:#c07070">heavy oud</span>
+                <span class="tag" style="background:#f7edec;color:#c07070">dry woods</span>
+                <span class="tag" style="background:#f7edec;color:#c07070">aquatic</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding-top:2px">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11.5px;color:#4A2A38">Sweetness</span><span style="font-size:11.5px;font-weight:600;color:#1A0A12">High</span></div>
+                <div style="height:7px;background:#F2EBE0;border-radius:3px;overflow:hidden"><div style="width:86%;height:100%;background:#450F2A;border-radius:3px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11.5px;color:#4A2A38">Intensity</span><span style="font-size:11.5px;font-weight:600;color:#1A0A12">Moderate</span></div>
+                <div style="height:7px;background:#F2EBE0;border-radius:3px;overflow:hidden"><div style="width:54%;height:100%;background:#450F2A;border-radius:3px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11.5px;color:#4A2A38">Woodiness</span><span style="font-size:11.5px;font-weight:600;color:#1A0A12">Low</span></div>
+                <div style="height:7px;background:#F2EBE0;border-radius:3px;overflow:hidden"><div style="width:18%;height:100%;background:#450F2A;border-radius:3px"></div></div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid #F2EBE0">
+              <span style="font-size:12px;color:#8B6575;padding-top:9px">Shopping for</span><span style="font-size:12px;font-weight:500;color:#1A0A12;padding-top:9px">Everyday wear, up to $150</span>
+            </div>
+            <div style="border-top:1px solid #F2EBE0;padding-top:14px">
+              <p style="margin:0 0 9px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#8B6575">Their collection &mdash; 7 bottles</p>
+              <div style="border:1px solid #E8DDD0;border-radius:10px;padding:11px 13px;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:11.5px;font-weight:600;color:#1A0A12">2 of yours &mdash; named in full</span></div>
+                <p style="margin:0;font-size:11.5px;line-height:1.5;color:#4A2A38">Amber Solstice &middot; bought Mar 2026 &middot; rated 5<br>Fig Hour &middot; bought Nov 2025 &middot; finished</p>
+              </div>
+              <div style="border:1px solid #E8DDD0;border-radius:10px;padding:11px 13px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C4B5BD" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg><span style="font-size:11.5px;font-weight:600;color:#8B6575">5 from elsewhere &mdash; ingredients only</span></div>
+                <p style="margin:0;font-size:11.5px;line-height:1.5;color:#4A2A38">3 vanilla gourmands, 1 amber floral, 1 smoky wood (given away). No brands, no product names, no prices.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">Outside your permission</p><p class="csub">Held by Halite, never returned to you</p></div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;gap:9px;align-items:flex-start"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C4B5BD" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0;margin-top:2px"><path d="M6 6l12 12M18 6L6 18"/></svg><span style="font-size:12px;line-height:1.45;color:#8B6575">Who made the other 5 bottles they own, or what they cost</span></div>
+            <div style="display:flex;gap:9px;align-items:flex-start"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C4B5BD" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0;margin-top:2px"><path d="M6 6l12 12M18 6L6 18"/></svg><span style="font-size:12px;line-height:1.45;color:#8B6575">Skincare, hair and makeup &mdash; fragrance is the only category on your account</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <div style="background:#F5E6ED;border-left:3px solid #450F2A;border-radius:12px;padding:14px;display:flex;gap:12px;align-items:flex-start">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#450F2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M12 3l2.1 5.4L19.5 10l-5.4 1.6L12 17l-2.1-5.4L4.5 10l5.4-1.6z"/></svg>
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#6B1E3F">First visit to Essenza. They finished a vanilla gourmand in July and have been looking for a replacement since &mdash; they are not browsing, they are replacing. Lead with Vanilla Amber and say plainly that it has no woody drydown; that is the objection that has stopped them twice elsewhere.</p>
+        </div>
+
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">Ranked against your catalog</p><p class="csub">248 products scored &middot; in stock only &middot; under $150</p></div><span style="font-size:11px;font-weight:600;color:#6B1E3F">Rules</span></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:10px">
+
+            <div style="border:1.5px solid #450F2A;border-radius:12px;padding:14px;display:flex;gap:14px">
+              <div style="width:44px;height:44px;border-radius:10px;background:#450F2A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:13px;font-weight:700;color:#ffffff">91</span></div>
+              <div style="flex:1">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><p style="margin:0;font-size:13.5px;font-weight:600;color:#1A0A12">Vanilla Amber</p><span style="font-size:12px;color:#8B6575">$125 &middot; ESS-2041</span></div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-top:9px">
+                  <div style="display:flex;gap:7px;align-items:flex-start"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:11.5px;line-height:1.4;color:#4A2A38">Matches the vanilla&ndash;amber profile they keep returning to</span></div>
+                  <div style="display:flex;gap:7px;align-items:flex-start"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:11.5px;line-height:1.4;color:#4A2A38">Built like two vanilla gourmands they finished and rated well</span></div>
+                  <div style="display:flex;gap:7px;align-items:flex-start"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:11.5px;line-height:1.4;color:#4A2A38">Carries none of their four avoidances</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="border:1px solid #E8DDD0;border-radius:12px;padding:14px;display:flex;gap:14px">
+              <div style="width:44px;height:44px;border-radius:10px;background:#F2EBE0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:13px;font-weight:700;color:#4A2A38">84</span></div>
+              <div style="flex:1">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><p style="margin:0;font-size:13.5px;font-weight:600;color:#1A0A12">Caramel Fig</p><span style="font-size:12px;color:#8B6575">$118 &middot; ESS-1988</span></div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-top:9px">
+                  <div style="display:flex;gap:7px;align-items:flex-start"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:11.5px;line-height:1.4;color:#4A2A38">Same sweetness, lighter sillage &mdash; a fair second bottle</span></div>
+                  <div style="display:flex;gap:7px;align-items:flex-start"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C17A47" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg><span style="font-size:11.5px;line-height:1.4;color:#8B6575">Shorter wear than they usually ask for</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="border:1px solid #E8DDD0;border-radius:12px;padding:14px;display:flex;gap:14px">
+              <div style="width:44px;height:44px;border-radius:10px;background:#F2EBE0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:13px;font-weight:700;color:#4A2A38">71</span></div>
+              <div style="flex:1">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><p style="margin:0;font-size:13.5px;font-weight:600;color:#1A0A12">Honey Tonka</p><span style="font-size:12px;color:#8B6575">$132 &middot; ESS-2107</span></div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-top:9px">
+                  <div style="display:flex;gap:7px;align-items:flex-start"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c07070" stroke-width="2.6" stroke-linecap="round" style="flex-shrink:0;margin-top:2px"><path d="M6 6l12 12M18 6L6 18"/></svg><span style="font-size:11.5px;line-height:1.4;color:#8B6575">Dry cedar in the drydown &mdash; on their avoid list</span></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">Since they connected</p><p class="csub">Your own store events, plus what you sent back</p></div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;gap:11px;align-items:flex-start"><span style="width:6px;height:6px;border-radius:50%;background:#450F2A;flex-shrink:0;margin-top:6px"></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><p style="margin:0;font-size:12.5px;color:#1A0A12">Purchased Vanilla Amber</p><span style="font-size:11.5px;color:#8B6575">2:31pm</span></div><p style="margin:2px 0 0;font-size:11.5px;color:#8B6575">$125 &middot; from recommendation rec_7291</p></div></div>
+            <div style="display:flex;gap:11px;align-items:flex-start"><span style="width:6px;height:6px;border-radius:50%;background:#C17A47;flex-shrink:0;margin-top:6px"></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><p style="margin:0;font-size:12.5px;color:#1A0A12">Added Vanilla Amber to bag</p><span style="font-size:11.5px;color:#8B6575">2:22pm</span></div></div></div>
+            <div style="display:flex;gap:11px;align-items:flex-start"><span style="width:6px;height:6px;border-radius:50%;background:#C4B5BD;flex-shrink:0;margin-top:6px"></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><p style="margin:0;font-size:12.5px;color:#1A0A12">Saw three ranked products</p><span style="font-size:11.5px;color:#8B6575">2:14pm</span></div></div></div>
+            <div style="border-top:1px solid #F2EBE0;padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <div><p style="margin:0;font-size:12.5px;font-weight:600;color:#1A0A12">Likely to need a refill</p><p style="margin:2px 0 0;font-size:11.5px;color:#8B6575">Mid-January 2027, on their usual 50ml burn rate</p></div>
+              <span style="font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:999px;background:#e9f4ec;color:#6b9e78">Still connected</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -146,6 +146,122 @@ export async function consumerRoutes(server: FastifyInstance) {
     }
   )
 
+  // ── Connected brands (Hallie's permission centre) ────────────────────
+  // What the consumer sees: who is reading their profile, what each brand
+  // can read, and the switch that stops it.
+  server.get(
+    '/consumers/me/connections',
+    { preHandler: requireConsumer },
+    async (request) => {
+      const { consumerId } = request.consumer!
+
+      const grants = await prisma.consentGrant.findMany({
+        where: { consumerId },
+        orderBy: [{ status: 'asc' }, { grantedAt: 'desc' }],
+        select: {
+          id: true, status: true, categories: true, purpose: true,
+          grantedAt: true, revokedAt: true, expiresAt: true,
+          brand: { select: { id: true, name: true, slug: true, logoUrl: true, primaryColor: true } },
+        },
+      })
+
+      // How many of the consumer's own products each brand can actually
+      // name — everything else it only ever sees as ingredients.
+      const namedCounts = new Map<string, number>()
+      for (const g of grants) {
+        const n = await prisma.checkInProduct.count({
+          where: {
+            product: { brandId: g.brand.id },
+            checkIn: { endUser: { consumerId } },
+          },
+        })
+        namedCounts.set(g.brand.id, n)
+      }
+
+      return {
+        connections: grants.map(g => ({
+          grantId: g.id,
+          brand: g.brand,
+          status: g.status.toLowerCase(),
+          categories: g.categories,
+          purpose: g.purpose,
+          connectedAt: g.grantedAt.toISOString(),
+          disconnectedAt: g.revokedAt?.toISOString() ?? null,
+          // Null means "until you disconnect" — the pilot sets no expiry.
+          expiresAt: g.expiresAt?.toISOString() ?? null,
+          namedProducts: namedCounts.get(g.brand.id) ?? 0,
+        })),
+      }
+    }
+  )
+
+  // ── Disconnect a brand ───────────────────────────────────────────────
+  // Takes effect on the brand's very next call: requireGrant in the Connect
+  // routes reads status, so there is no cache to wait out.
+  server.post(
+    '/consumers/me/connections/:brandId/revoke',
+    { preHandler: requireConsumer },
+    async (request) => {
+      const { consumerId } = request.consumer!
+      const { brandId } = z.object({ brandId: z.string() }).parse(request.params)
+
+      const grant = await prisma.consentGrant.findUnique({
+        where: { brandId_consumerId: { brandId, consumerId } },
+        select: { id: true, status: true },
+      })
+      if (!grant) throw new ApiError(404, 'Not connected to this brand')
+      if (grant.status !== 'ACTIVE') return { ok: true, status: grant.status.toLowerCase() }
+
+      const updated = await prisma.consentGrant.update({
+        where: { id: grant.id },
+        data: { status: 'REVOKED', revokedAt: new Date() },
+        select: { status: true, revokedAt: true },
+      })
+      await prisma.consentAccessLog.create({
+        data: {
+          grantId: grant.id, brandId, consumerId,
+          action: 'refused', detail: { reason: 'revoked_by_consumer' },
+        },
+      })
+
+      return { ok: true, status: updated.status.toLowerCase(), revokedAt: updated.revokedAt?.toISOString() }
+    }
+  )
+
+  // ── Access log ───────────────────────────────────────────────────────
+  // Every read a brand actually made, in the consumer's own words.
+  server.get(
+    '/consumers/me/access-log',
+    { preHandler: requireConsumer },
+    async (request) => {
+      const { consumerId } = request.consumer!
+      const { limit } = z.object({
+        limit: z.coerce.number().int().min(1).max(100).optional(),
+      }).parse(request.query ?? {})
+
+      const logs = await prisma.consentAccessLog.findMany({
+        where: { consumerId },
+        orderBy: { createdAt: 'desc' },
+        take: limit ?? 30,
+        select: {
+          id: true, action: true, scoped: true, detail: true, createdAt: true,
+          grant: { select: { brand: { select: { name: true, slug: true } } } },
+        },
+      })
+
+      return {
+        entries: logs.map(l => ({
+          id: l.id,
+          brand: l.grant.brand.name,
+          action: l.action,
+          scoped: l.scoped,
+          detail: l.detail,
+          at: l.createdAt.toISOString(),
+        })),
+      }
+    }
+  )
+
   // ── Brand admin: consumer identity intelligence ───────────────────
   // Returns aggregated, anonymised cross-brand signals for a brand's consumers.
   server.get(

@@ -157,9 +157,9 @@ export default function HallieTestPage() {
   return (
     <div className="max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold font-display" style={{ color: 'var(--ink)' }}>Hallie Test</h1>
+        <h1 className="text-2xl font-semibold font-display" style={{ color: 'var(--ink)' }}>Hallie</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-          Internal analytics for the Hallie Testing app — traction, compliance, and real-world usage.
+          Internal analytics for the Hallie app — traction, compliance, and real-world usage.
         </p>
       </div>
 

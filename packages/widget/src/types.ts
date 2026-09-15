@@ -82,3 +82,59 @@ export interface WidgetConfig {
   apiUrl: string
   accentColor: string
 }
+
+// ── Halite Connect ───────────────────────────────────────────────────
+
+export interface ConnectSession {
+  visitorId: string
+  brand: {
+    name: string
+    logoUrl: string | null
+    primaryColor: string | null
+  }
+  request: {
+    categories: string[]
+    purpose: string
+    /** Null means access runs until the consumer disconnects. */
+    durationDays: number | null
+    storage: string
+  }
+  disclosure: {
+    receives: string[]
+    withheld: string[]
+  }
+}
+
+export interface ConnectMatch {
+  sku: string | null
+  product_id: string
+  name: string
+  price: number
+  currency: string
+  image_url: string | null
+  product_url: string | null
+  match_score: number
+  reasons: string[]
+  warnings: string[]
+}
+
+export interface ConnectRecommendations {
+  recommendation_id: string
+  consumer_id: string
+  scored: number
+  summary: {
+    liked: string[]
+    avoided: string[]
+    budget_max: number | null
+    confidence: number
+  }
+  items: ConnectMatch[]
+}
+
+export type ConnectEventName =
+  | 'product_viewed'
+  | 'add_to_cart'
+  | 'wishlisted'
+  | 'purchase'
+  | 'returned'
+  | 'rated'

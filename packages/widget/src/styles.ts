@@ -310,5 +310,89 @@ export function getStyles(accent: string): string {
       padding: 6px 14px; border-radius: 100px;
       background: ${accent}15; font-size: 13px; font-weight: 600; color: ${accent};
     }
-  `
+  
+    /* ── Halite Connect consent ─────────────────────────────── */
+    .hlw-connect-marks {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    }
+    .hlw-connect-mark {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: Georgia, 'Times New Roman', serif; font-size: 19px;
+    }
+    .hlw-connect-mark-brand { background: ${accent}; color: #fff; }
+    .hlw-connect-mark-hallie { background: #FEF0E0; color: #C17A47; }
+    .hlw-connect-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase; color: #8B6575; margin: 20px 0 8px;
+    }
+    .hlw-connect-box {
+      border: 1.5px solid #e8e8e8; border-radius: 12px; padding: 14px 16px;
+    }
+    .hlw-connect-box-title {
+      font-size: 14px; font-weight: 600; color: #1a1a1a; margin: 0 0 11px;
+      text-transform: capitalize;
+    }
+    .hlw-connect-list { margin: 0; padding: 0; list-style: none;
+      display: flex; flex-direction: column; gap: 8px; }
+    .hlw-connect-list li {
+      font-size: 12.5px; line-height: 1.45; color: #4A2A38;
+      padding-left: 22px; position: relative;
+    }
+    .hlw-connect-list li::before {
+      content: ''; position: absolute; left: 0; top: 4px;
+      width: 13px; height: 8px; border-left: 2.4px solid #6b9e78;
+      border-bottom: 2.4px solid #6b9e78; transform: rotate(-45deg);
+    }
+    .hlw-connect-footnote {
+      margin: 11px 0 0; padding-top: 10px; border-top: 1px solid #f0f0f0;
+      font-size: 11.5px; line-height: 1.45; color: #999;
+    }
+    .hlw-connect-meta {
+      border: 1.5px solid #e8e8e8; border-radius: 12px;
+      overflow: hidden; margin-top: 16px;
+    }
+    .hlw-connect-meta-row {
+      display: flex; align-items: center; gap: 12px; padding: 11px 16px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .hlw-connect-meta-row:last-child { border-bottom: none; }
+    .hlw-connect-meta-k { font-size: 12px; color: #888; width: 110px; flex-shrink: 0; }
+    .hlw-connect-meta-v { font-size: 12.5px; font-weight: 500; color: #1a1a1a; }
+    .hlw-connect-not {
+      background: #F8F3EE; border-radius: 12px; padding: 14px 16px; margin-top: 16px;
+    }
+    .hlw-connect-not-label {
+      margin: 0 0 9px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #8B6575;
+    }
+    .hlw-connect-not-list { margin: 0; padding: 0; list-style: none;
+      display: flex; flex-direction: column; gap: 6px; }
+    .hlw-connect-not-list li {
+      font-size: 12px; line-height: 1.45; color: #4A2A38;
+      padding-left: 20px; position: relative;
+    }
+    .hlw-connect-not-list li::before {
+      content: '×'; position: absolute; left: 2px; top: -1px;
+      color: #C4B5BD; font-size: 15px; line-height: 1.3;
+    }
+    .hlw-connect-field {
+      display: block; margin-top: 20px;
+    }
+    .hlw-connect-field > span {
+      display: block; font-size: 12.5px; font-weight: 500;
+      color: #4A2A38; margin-bottom: 7px;
+    }
+    .hlw-connect-hint { margin: 8px 0 0; font-size: 11.5px; color: #999; }
+    .hlw-connect-error { margin: 8px 0 0; font-size: 12px; color: #c07070; }
+    .hlw-connect-done {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; padding: 28px 8px 8px;
+    }
+    .hlw-connect-tick {
+      width: 52px; height: 52px; border-radius: 50%; background: #6b9e78;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+`
 }

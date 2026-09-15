@@ -408,3 +408,142 @@ export async function getCrystalConversations(): Promise<CrystalConversation[]> 
   )
   return data?.conversations ?? []
 }
+
+// ── Halite Connect ───────────────────────────────────────────────────
+
+export interface ConnectAnalytics {
+  window: { days: number; from: string }
+  summary: {
+    connectedConsumers: number
+    newConnections: number
+    newConnectionsDelta: number | null
+    promptsShown: number
+    accepted: number
+    declined: number
+    acceptanceRate: number
+    revenueInfluenced: number
+    revenueDelta: number | null
+    orders: number
+    averageOrderValue: number
+    revoked: number
+  }
+  funnel: {
+    recommendationsShown: number
+    productViews: number
+    addToCart: number
+    saved: number
+    purchases: number
+    returns: number
+    viewToCartRate: number
+    cartToPurchaseRate: number
+    returnRate: number
+  }
+  surfaces: Array<{ surface: string; shown: number; accepted: number; acceptanceRate: number }>
+  topProducts: Array<{
+    productId: string
+    name: string
+    sku: string | null
+    shown: number
+    avgMatch: number
+    addToCartRate: number
+    purchases: number
+    revenue: number
+  }>
+}
+
+export interface ConnectedConsumerRow {
+  consumerId: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  status: string
+  categories: string[]
+  connectedVia: string | null
+  connectedAt: string
+  disconnectedAt: string | null
+  expiresAt: string | null
+  lastReadAt: string | null
+  orders: number
+  revenue: number
+}
+
+export interface ConnectedConsumerDetail {
+  consumerId: string
+  identity: { name: string | null; email: string | null; phone: string | null }
+  permission: {
+    status: string
+    categories: string[]
+    purpose: string
+    grantedAt: string
+    expiresAt: string | null
+    storage: string
+  }
+  context: {
+    preferences: { liked: string[]; avoided: string[]; concerns: string[]; skin_type: string | null }
+    outcomes: { positive: string[]; negative: string[] }
+    intent: { budget_max: number | null; currency: string }
+    confidence: number
+    collection: {
+      yours: Array<{ productId: string; name: string; sku: string | null; outcome: string | null }>
+      elsewhere: Array<{ category: string; attributes: string[]; outcome: string | null }>
+    }
+  } | null
+  recommendations: Array<{
+    productId: string; name: string; sku: string | null; price: number; currency: string
+    score: number; reasons: string[]; warnings: string[]
+  }>
+  activity: Array<{
+    type: string; sku: string | null; value: number | null; currency: string | null
+    surface: string | null; recommendationId: string | null; at: string
+  }>
+}
+
+export async function getConnectAnalytics(days = 30): Promise<ConnectAnalytics | null> {
+  const auth = await getTokenAndBrandId()
+  if (!auth) return null
+  return apiFetch<ConnectAnalytics>(`/brands/${auth.brandId}/connect/analytics?days=${days}`, auth.token, true)
+}
+
+export async function getConnectedConsumers(
+  status: 'active' | 'revoked' | 'all' = 'active',
+): Promise<ConnectedConsumerRow[]> {
+  const auth = await getTokenAndBrandId()
+  if (!auth) return []
+  const res = await apiFetch<{ consumers: ConnectedConsumerRow[] }>(
+    `/brands/${auth.brandId}/connect/consumers?status=${status}`, auth.token, true,
+  )
+  return res?.consumers ?? []
+}
+
+export async function getConnectedConsumer(publicId: string): Promise<ConnectedConsumerDetail | null> {
+  const auth = await getTokenAndBrandId()
+  if (!auth) return null
+  return apiFetch<ConnectedConsumerDetail>(
+    `/brands/${auth.brandId}/connect/consumers/${publicId}`, auth.token, true,
+  )
+}
+
+export interface ConnectPermissions {
+  counts: Record<string, number>
+  grants: Array<{
+    consumerId: string
+    status: string
+    categories: string[]
+    purpose: string
+    grantedAt: string
+    revokedAt: string | null
+    expiresAt: string | null
+  }>
+  accessLog: Array<{
+    action: string
+    scoped: number | null
+    detail: unknown
+    at: string
+  }>
+}
+
+export async function getConnectPermissions(): Promise<ConnectPermissions | null> {
+  const auth = await getTokenAndBrandId()
+  if (!auth) return null
+  return apiFetch<ConnectPermissions>(`/brands/${auth.brandId}/connect/permissions`, auth.token, true)
+}

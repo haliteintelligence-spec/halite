@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#6B1E3F; text-decoration:none; } a:hover { color:#450F2A; }
+    * { box-sizing:border-box; }
+  </style>
+</helmet>
+
+<div style="width:390px;height:900px;background:#FAF6F0;display:flex;flex-direction:column">
+
+  <div style="padding:24px 20px 16px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A2A38" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+      <p style="margin:0;font-size:15px;font-weight:600;color:#1A0A12">Connected brands</p>
+    </div>
+    <p style="margin:0;font-size:12.5px;line-height:1.55;color:#8B6575">Two brands can read part of your profile. They keep reading until you disconnect them &mdash; and none of them can see the brands or products you own outside their own range.</p>
+  </div>
+
+  <div style="flex:1;padding:0 20px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+
+    <div style="background:#ffffff;border:1px solid #E8DDD0;border-radius:16px;padding:16px">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:13px">
+        <div style="width:38px;height:38px;border-radius:11px;background:#450F2A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:'Playfair Display',Georgia,serif;font-size:16px;color:#ffffff">E</span></div>
+        <div style="flex:1">
+          <p style="margin:0;font-size:14px;font-weight:600;color:#1A0A12">Essenza</p>
+          <p style="margin:3px 0 0;font-size:11.5px;color:#8B6575">Fragrance &middot; recommendations</p>
+        </div>
+        <span style="background:#e9f4ec;color:#6b9e78;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px">Reading</span>
+      </div>
+      <div style="background:#F8F3EE;border-radius:10px;padding:11px 13px;margin-bottom:13px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:11.5px;color:#8B6575">Connected</span>
+          <span style="font-size:11.5px;font-weight:600;color:#1A0A12">14 Sep 2026</span>
+        </div>
+        <p style="margin:0;font-size:11.5px;line-height:1.5;color:#4A2A38">Your notes, ingredients and how things worked out. Of the bottles you own it can name only its own two.</p>
+      </div>
+      <div style="display:flex;gap:9px">
+        <div style="flex:1;height:40px;border-radius:10px;border:1.5px solid #E8DDD0;display:flex;align-items:center;justify-content:center"><span style="font-size:12.5px;font-weight:600;color:#4A2A38">What they see</span></div>
+        <div style="flex:1;height:40px;border-radius:10px;background:#f7edec;display:flex;align-items:center;justify-content:center"><span style="font-size:12.5px;font-weight:600;color:#c07070">Disconnect</span></div>
+      </div>
+    </div>
+
+    <div style="background:#ffffff;border:1px solid #E8DDD0;border-radius:16px;padding:16px">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:13px">
+        <div style="width:38px;height:38px;border-radius:11px;background:#6B1E3F;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:'Playfair Display',Georgia,serif;font-size:16px;color:#ffffff">L</span></div>
+        <div style="flex:1">
+          <p style="margin:0;font-size:14px;font-weight:600;color:#1A0A12">Lumen Skin</p>
+          <p style="margin:3px 0 0;font-size:11.5px;color:#8B6575">Skincare &middot; routine building</p>
+        </div>
+        <span style="background:#e9f4ec;color:#6b9e78;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px">Reading</span>
+      </div>
+      <div style="background:#F8F3EE;border-radius:10px;padding:11px 13px;margin-bottom:13px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:11.5px;color:#8B6575">Connected</span>
+          <span style="font-size:11.5px;font-weight:600;color:#1A0A12">2 Aug 2026</span>
+        </div>
+        <p style="margin:0;font-size:11.5px;line-height:1.5;color:#4A2A38">Your skin type, concerns, ingredient reactions and routine shape &mdash; as ingredients, not as shelf brands.</p>
+      </div>
+      <div style="display:flex;gap:9px">
+        <div style="flex:1;height:40px;border-radius:10px;border:1.5px solid #E8DDD0;display:flex;align-items:center;justify-content:center"><span style="font-size:12.5px;font-weight:600;color:#4A2A38">What they see</span></div>
+        <div style="flex:1;height:40px;border-radius:10px;background:#f7edec;display:flex;align-items:center;justify-content:center"><span style="font-size:12.5px;font-weight:600;color:#c07070">Disconnect</span></div>
+      </div>
+    </div>
+
+    <div style="background:#ffffff;border:1px solid #E8DDD0;border-radius:16px;padding:16px;opacity:0.7">
+      <div style="display:flex;align-items:center;gap:11px">
+        <div style="width:38px;height:38px;border-radius:11px;background:#E8DDD0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:'Playfair Display',Georgia,serif;font-size:16px;color:#8B6575">M</span></div>
+        <div style="flex:1">
+          <p style="margin:0;font-size:14px;font-weight:600;color:#1A0A12">Maison Ora</p>
+          <p style="margin:3px 0 0;font-size:11.5px;color:#8B6575">You cut this off 2 Sep &middot; no longer reading</p>
+        </div>
+        <span style="background:#F2EBE0;color:#8B6575;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px">Stopped</span>
+      </div>
+    </div>
+
+    <div style="background:#ffffff;border:1px solid #E8DDD0;border-radius:16px;padding:16px;margin-top:4px">
+      <p style="margin:0 0 10px;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8B6575">Access log</p>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="width:5px;height:5px;border-radius:50%;background:#6b9e78;flex-shrink:0;margin-top:6px"></span>
+          <div><p style="margin:0;font-size:12px;color:#1A0A12">Essenza read your fragrance profile</p><p style="margin:2px 0 0;font-size:11px;color:#8B6575">Today, 2:14pm &middot; to rank 48 products</p></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="width:5px;height:5px;border-radius:50%;background:#C17A47;flex-shrink:0;margin-top:6px"></span>
+          <div><p style="margin:0;font-size:12px;color:#1A0A12">Essenza logged a purchase back to you</p><p style="margin:2px 0 0;font-size:11px;color:#8B6575">Today, 2:31pm &middot; Vanilla Amber &middot; +40 points</p></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="width:5px;height:5px;border-radius:50%;background:#C4B5BD;flex-shrink:0;margin-top:6px"></span>
+          <div><p style="margin:0;font-size:12px;color:#1A0A12">You disconnected Maison Ora</p><p style="margin:2px 0 0;font-size:11px;color:#8B6575">2 Sep &middot; nothing shared since</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

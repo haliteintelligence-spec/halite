@@ -3,6 +3,7 @@ import { QuizController } from './quiz'
 import { CheckInController } from './checkin'
 import { ProgressController } from './progress'
 import { ReorderController } from './reorder'
+import { ConnectController } from './connect'
 import { getStyles } from './styles'
 
 interface HaliteWidgetConfig {
@@ -12,8 +13,8 @@ interface HaliteWidgetConfig {
 }
 
 class HaliteWidgetInstance {
-  private api: HaliteApi
-  private controller!: QuizController | CheckInController | ProgressController | ReorderController
+  readonly api: HaliteApi
+  private controller!: QuizController | CheckInController | ProgressController | ReorderController | ConnectController
   private overlay: HTMLElement | null = null
   private body: HTMLElement | null = null
   private progress: HTMLElement | null = null
@@ -34,15 +35,24 @@ class HaliteWidgetInstance {
     document.head.appendChild(style)
   }
 
-  open(mode: 'quiz' | 'checkin' | 'progress' | 'reorder' = 'quiz') {
+  open(mode: 'quiz' | 'checkin' | 'progress' | 'reorder' | 'connect' = 'quiz', surface = 'pdp') {
     if (this.overlay) return
     this.overlay = this.buildModal()
     document.body.appendChild(this.overlay)
     document.body.style.overflow = 'hidden'
+    document.addEventListener('halite:close', this.closeListener)
 
     const renderFn = (node: HTMLElement) => this.renderBody(node)
     const progressFn = (pct: number) => this.setProgress(pct)
     const backFn = (fn: (() => void) | null) => this.setBack(fn)
+
+    if (mode === 'connect') {
+      // Connect needs no end-user session — the brand key and the
+      // consumer's own consent are the whole authorisation.
+      this.controller = new ConnectController(this.api, renderFn, progressFn, backFn, surface)
+      void this.controller.start()
+      return
+    }
 
     if (mode === 'checkin') {
       this.controller = new CheckInController(this.api, renderFn, progressFn, backFn)
@@ -166,7 +176,10 @@ class HaliteWidgetInstance {
     }
   }
 
+  private closeListener = () => this.close()
+
   close() {
+    document.removeEventListener('halite:close', this.closeListener)
     if (!this.overlay) return
     this.overlay.remove()
     this.overlay = null
@@ -205,6 +218,14 @@ function init(config: HaliteWidgetConfig) {
       el.dataset.hlwBound = '1'
       el.addEventListener('click', () => instance.open('reorder'))
     })
+    // <button data-halite-connect="pdp"> — the value names the surface, so
+    // acceptance can be compared across placements.
+    document.querySelectorAll<HTMLElement>('[data-halite-connect]').forEach(el => {
+      if (el.dataset.hlwBound) return
+      el.dataset.hlwBound = '1'
+      const surface = el.dataset.haliteConnect || 'pdp'
+      el.addEventListener('click', () => instance.open('connect', surface))
+    })
   }
 
   attachTriggers()
@@ -212,7 +233,24 @@ function init(config: HaliteWidgetConfig) {
   const observer = new MutationObserver(attachTriggers)
   observer.observe(document.body, { childList: true, subtree: true })
 
-  return instance
+  // Storefront surface. A merchant reads recommendations and reports what
+  // happened to them without touching the modal at all.
+  const connect = {
+    isConnected: () => instance.api.connectedConsumerId != null,
+    consumerId: () => instance.api.connectedConsumerId,
+    open: (surface = 'pdp') => instance.open('connect', surface),
+    recommendations: (opts?: { surface?: string; limit?: number; maxPrice?: number }) =>
+      instance.api.connectRecommendations(opts ?? {}),
+    track: (
+      event: 'product_viewed' | 'add_to_cart' | 'wishlisted' | 'purchase' | 'returned' | 'rated',
+      payload?: {
+        sku?: string; productId?: string; recommendationId?: string
+        surface?: string; value?: number; currency?: string
+      },
+    ) => instance.api.connectEvent(event, payload ?? {}),
+  }
+
+  return Object.assign(instance, { connect })
 }
 
 // Auto-init from script tag: <script src="..." data-api-key="..." data-api-url="..." data-accent="...">

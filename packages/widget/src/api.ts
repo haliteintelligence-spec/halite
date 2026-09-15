@@ -1,4 +1,7 @@
-import type { QuizQuestion, QuizOption, Routine, CheckIn, ReorderItem } from './types'
+import type {
+  QuizQuestion, QuizOption, Routine, CheckIn, ReorderItem,
+  ConnectSession, ConnectRecommendations, ConnectEventName,
+} from './types'
 
 interface RawFlow {
   areaSelector: { question: string; options: QuizOption[] }
@@ -40,6 +43,9 @@ function flattenFlow(flow: RawFlow): QuizQuestion[] {
 
 const STORAGE_KEY = 'halite_session'
 const CONSUMER_KEY = 'halite_consumer'
+// The public hl_… id for this browser. Not a secret: it is useless without
+// a live grant, and the grant is checked on every call.
+const CONNECT_KEY = 'halite_connect'
 
 interface StoredSession {
   token: string
@@ -84,11 +90,24 @@ function saveConsumer(s: StoredConsumer) {
   localStorage.setItem(CONSUMER_KEY, JSON.stringify(s))
 }
 
+interface StoredConnect {
+  consumerId: string
+  visitorId: string
+}
+
+function loadConnect(): StoredConnect | null {
+  try {
+    const raw = localStorage.getItem(CONNECT_KEY)
+    return raw ? JSON.parse(raw) as StoredConnect : null
+  } catch { return null }
+}
+
 export class HaliteApi {
   private token = ''
   private userId = ''
   private brandId = ''
   private consumerToken = ''
+  private visitorId = ''
   isDemo = false
   shopifyShop: string | null = null
 
@@ -250,6 +269,97 @@ export class HaliteApi {
       const res = await this.get<{ items: ReorderItem[] }>(`/brands/${this.brandId}/me/reorder`)
       return res.items
     } catch { return [] }
+  }
+
+  // ── Halite Connect ──────────────────────────────────────────────────
+
+  /** The hl_… id for this browser, if the shopper has connected here before. */
+  get connectedConsumerId(): string | null {
+    return loadConnect()?.consumerId ?? null
+  }
+
+  async connectSession(surface: string): Promise<ConnectSession> {
+    const stored = loadConnect()
+    const res = await this.post<ConnectSession>('/v1/connect/session', {
+      apiKey: this.apiKey,
+      surface,
+      ...(stored?.visitorId ? { visitorId: stored.visitorId } : {}),
+    }, false)
+    this.visitorId = res.visitorId
+    return res
+  }
+
+  async connectAuthorize(args: {
+    email?: string
+    phone?: string
+    firstName?: string
+    lastName?: string
+    surface: string
+  }): Promise<{ consumer_id: string }> {
+    const res = await this.post<{ consumer_id: string }>('/v1/connect/authorize', {
+      apiKey: this.apiKey,
+      ...args,
+      ...(this.visitorId ? { visitorId: this.visitorId } : {}),
+    }, false)
+    try {
+      localStorage.setItem(CONNECT_KEY, JSON.stringify({
+        consumerId: res.consumer_id,
+        visitorId: this.visitorId,
+      }))
+    } catch { /* private browsing — the id just does not persist */ }
+    return res
+  }
+
+  async connectDecline(surface: string): Promise<void> {
+    await this.post('/v1/connect/decline', {
+      apiKey: this.apiKey,
+      surface,
+      ...(this.visitorId ? { visitorId: this.visitorId } : {}),
+    }, false).catch(() => {})
+  }
+
+  async connectRecommendations(opts: {
+    surface?: string
+    limit?: number
+    maxPrice?: number
+  } = {}): Promise<ConnectRecommendations | null> {
+    const consumerId = this.connectedConsumerId
+    if (!consumerId) return null
+    try {
+      return await this.post<ConnectRecommendations>('/v1/recommendations', {
+        apiKey: this.apiKey,
+        consumer_id: consumerId,
+        ...(opts.surface ? { surface: opts.surface } : {}),
+        ...(opts.limit ? { limit: opts.limit } : {}),
+        ...(opts.maxPrice ? { max_price: opts.maxPrice } : {}),
+      }, false)
+    } catch {
+      // A revoked grant answers 403 here. That is a normal state, not an
+      // error the storefront should surface.
+      return null
+    }
+  }
+
+  async connectEvent(event: ConnectEventName, payload: {
+    sku?: string
+    productId?: string
+    recommendationId?: string
+    surface?: string
+    value?: number
+    currency?: string
+  } = {}): Promise<void> {
+    await this.post('/v1/events', {
+      apiKey: this.apiKey,
+      event,
+      ...(this.connectedConsumerId ? { consumer_id: this.connectedConsumerId } : {}),
+      ...(payload.sku ? { sku: payload.sku } : {}),
+      ...(payload.productId ? { product_id: payload.productId } : {}),
+      ...(payload.recommendationId ? { recommendation_id: payload.recommendationId } : {}),
+      ...(payload.surface ? { surface: payload.surface } : {}),
+      ...(payload.value != null ? { value: payload.value } : {}),
+      ...(payload.currency ? { currency: payload.currency } : {}),
+      ...(this.visitorId ? { visitor_id: this.visitorId } : {}),
+    }, false).catch(() => {})
   }
 
   private async get<T>(path: string): Promise<T> {

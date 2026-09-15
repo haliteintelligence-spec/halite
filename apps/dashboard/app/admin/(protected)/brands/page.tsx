@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Building2, Users, Package, Plus, ArrowUpDown, SlidersHorizontal, Check, X } from 'lucide-react'
+import { Building2, Users, Package, Plus, ArrowUpDown, SlidersHorizontal, Check, X, ExternalLink, Loader2 } from 'lucide-react'
 import type { BrandSummary } from '@/lib/admin-api'
 import { isOldBrand } from '@/lib/brand-status'
+import { openBrandDashboard } from '@/lib/portal'
 
 type SortKey = 'name' | 'plan' | 'consumers' | 'products' | 'joined'
 type SortDir = 'asc' | 'desc'
@@ -18,6 +19,8 @@ export default function BrandsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [filterPlan, setFilterPlan] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
+  const [entering, setEntering] = useState<string | null>(null)
+  const [enterError, setEnterError] = useState('')
 
   useEffect(() => {
     const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
@@ -29,6 +32,18 @@ export default function BrandsPage() {
       .then((d: { brands: BrandSummary[] }) => setBrands((d.brands ?? []).filter(b => !isOldBrand(b))))
       .finally(() => setLoading(false))
   }, [])
+
+  async function enterDashboard(brandId: string) {
+    setEntering(brandId)
+    setEnterError('')
+    try {
+      await openBrandDashboard(brandId)
+    } catch (err) {
+      setEnterError(err instanceof Error ? err.message : 'Could not open that dashboard')
+    } finally {
+      setEntering(null)
+    }
+  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -147,6 +162,15 @@ export default function BrandsPage() {
         </div>
       </div>
 
+      {enterError && (
+        <div
+          className="rounded-lg px-3 py-2 mb-3 text-[12px]"
+          style={{ background: 'var(--blush-light)', color: 'var(--blush)' }}
+        >
+          {enterError}
+        </div>
+      )}
+
       {loading ? (
         <div className="rounded-xl p-12 text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Loading…</p>
@@ -223,9 +247,23 @@ export default function BrandsPage() {
                     {new Date(brand.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/brands/${brand.id}`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
-                      Manage →
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => enterDashboard(brand.id)}
+                        disabled={entering === brand.id}
+                        className="flex items-center gap-1 text-[12px] font-medium hover:underline disabled:opacity-50"
+                        style={{ color: 'var(--ink-2)' }}
+                        title="Open this brand's own dashboard"
+                      >
+                        {entering === brand.id
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <ExternalLink size={11} />}
+                        Dashboard
+                      </button>
+                      <Link href={`/admin/brands/${brand.id}`} className="text-[12px] font-medium hover:underline" style={{ color: 'var(--clay)' }}>
+                        Manage →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

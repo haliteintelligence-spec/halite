@@ -1,0 +1,173 @@
+import { prisma } from '@halite/db'
+import type { BeautyArea } from '@halite/db'
+import type { ConnectContext } from './connect-context.js'
+
+/**
+ * Ranks a brand's catalog against a permissioned context.
+ *
+ * The score is deliberately explainable rather than clever: every point it
+ * awards or removes comes back as a sentence a shopper can read on the
+ * product card. A black-box similarity score is worth less here than a
+ * reason a merchandiser can argue with.
+ */
+
+export interface MatchItem {
+  productId: string
+  sku: string | null
+  name: string
+  price: number
+  currency: string
+  imageUrl: string | null
+  productUrl: string | null
+  inStock: boolean
+  score: number
+  reasons: string[]
+  warnings: string[]
+}
+
+export interface MatchOptions {
+  limit?: number | undefined
+  inStockOnly?: boolean | undefined
+  maxPrice?: number | undefined
+  minScore?: number | undefined
+}
+
+function attrsOf(p: {
+  keyIngredients: string[]
+  ingredients: string[]
+  metadata: unknown
+}): string[] {
+  const out = new Set<string>()
+  for (const k of p.keyIngredients) out.add(k.toLowerCase())
+  const meta = p.metadata as Record<string, unknown> | null
+  const notes = meta?.['notes']
+  if (Array.isArray(notes)) for (const n of notes) if (typeof n === 'string') out.add(n.toLowerCase())
+  const family = meta?.['family']
+  if (typeof family === 'string') out.add(family.toLowerCase())
+  for (const i of p.ingredients.slice(0, 10)) out.add(i.toLowerCase())
+  return [...out]
+}
+
+/** Human list: ["a", "b", "c"] -> "a, b and c" */
+function phrase(items: string[]): string {
+  const parts = items.filter(Boolean)
+  if (parts.length === 0) return ''
+  if (parts.length === 1) return parts[0]!
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]!}`
+}
+
+export async function matchCatalog(opts: {
+  brandId: string
+  context: ConnectContext
+  categories: BeautyArea[]
+  options?: MatchOptions
+}): Promise<{ items: MatchItem[]; scored: number }> {
+  const { brandId, context, categories } = opts
+  const { limit = 6, inStockOnly = true, maxPrice, minScore = 0 } = opts.options ?? {}
+
+  const products = await prisma.product.findMany({
+    where: {
+      brandId,
+      beautyArea: { in: categories },
+      ...(inStockOnly ? { inStock: true } : {}),
+    },
+    select: {
+      id: true, externalId: true, name: true, price: true, currency: true,
+      imageUrl: true, productUrl: true, inStock: true, concerns: true,
+      keyIngredients: true, ingredients: true, metadata: true,
+    },
+  })
+
+  const liked = new Set(context.preferences.liked)
+  const avoided = new Set(context.preferences.avoided)
+  const positive = new Set(context.outcomes.positive)
+  const negative = new Set(context.outcomes.negative)
+  const concerns = new Set(context.preferences.concerns)
+  const budget = maxPrice ?? context.intent.budget_max ?? null
+
+  // What the shopper's own collection looks like, in attribute terms. Used
+  // to say "built like something you finished" without naming the thing.
+  const ownedAttrs = new Map<string, number>()
+  for (const item of context.collection.elsewhere) {
+    if (item.outcome === 'NEGATIVE') continue
+    for (const a of item.attributes) ownedAttrs.set(a, (ownedAttrs.get(a) ?? 0) + 1)
+  }
+
+  const scored: MatchItem[] = products.map(p => {
+    const attrs = attrsOf(p)
+    const reasons: string[] = []
+    const warnings: string[] = []
+    let score = 0.35 // every in-scope, in-stock product starts as plausible
+
+    const hitsLiked = attrs.filter(a => liked.has(a))
+    if (hitsLiked.length) {
+      score += Math.min(0.3, hitsLiked.length * 0.12)
+      reasons.push(`Built on ${phrase(hitsLiked.slice(0, 3))}, which you gravitate to`)
+    }
+
+    const hitsPositive = attrs.filter(a => positive.has(a) && !liked.has(a))
+    if (hitsPositive.length) {
+      score += Math.min(0.15, hitsPositive.length * 0.07)
+      reasons.push(`Shares ${phrase(hitsPositive.slice(0, 2))} with something that worked for you`)
+    }
+
+    const familiar = attrs.filter(a => (ownedAttrs.get(a) ?? 0) >= 2 && !liked.has(a) && !positive.has(a))
+    if (familiar.length) {
+      score += 0.08
+      reasons.push(`Built like more than one thing already in your collection`)
+    }
+
+    const hitsAvoided = attrs.filter(a => avoided.has(a))
+    if (hitsAvoided.length) {
+      score -= Math.min(0.45, hitsAvoided.length * 0.22)
+      warnings.push(`Contains ${phrase(hitsAvoided.slice(0, 2))}, which you avoid`)
+    }
+
+    const hitsNegative = attrs.filter(a => negative.has(a) && !avoided.has(a))
+    if (hitsNegative.length) {
+      score -= Math.min(0.25, hitsNegative.length * 0.12)
+      warnings.push(`Has ${phrase(hitsNegative.slice(0, 2))}, which has not worked for you before`)
+    }
+
+    const hitsConcerns = p.concerns.filter(c => concerns.has(c))
+    if (hitsConcerns.length) {
+      score += Math.min(0.2, hitsConcerns.length * 0.1)
+      reasons.push(`Targets ${phrase(hitsConcerns.map(c => c.toLowerCase().replace(/_/g, ' ')))}`)
+    }
+
+    if (budget != null) {
+      if (p.price <= budget) {
+        score += 0.06
+        reasons.push(`Within the ${context.intent.currency} ${budget} you tend to spend`)
+      } else {
+        score -= 0.18
+        warnings.push(`Above the ${context.intent.currency} ${budget} you tend to spend`)
+      }
+    }
+
+    if (!warnings.length && hitsLiked.length) {
+      reasons.push('None of your avoidances are in it')
+    }
+
+    return {
+      productId: p.id,
+      sku: p.externalId,
+      name: p.name,
+      price: p.price,
+      currency: p.currency,
+      imageUrl: p.imageUrl,
+      productUrl: p.productUrl,
+      inStock: p.inStock,
+      score: Math.max(0, Math.min(1, Math.round(score * 100) / 100)),
+      reasons: reasons.slice(0, 3),
+      warnings: warnings.slice(0, 2),
+    }
+  })
+
+  const items = scored
+    .filter(i => i.score >= minScore)
+    .sort((a, b) => b.score - a.score || a.price - b.price)
+    .slice(0, limit)
+
+  return { items, scored: products.length }
+}

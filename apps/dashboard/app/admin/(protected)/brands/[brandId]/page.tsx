@@ -6,8 +6,25 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2, Save, Power, Copy, Check, Trash2, Globe, Palette, ToggleLeft, ToggleRight, ShoppingBag, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react'
 import type { BrandDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { BrandDetailTabs } from './_tabs'
+import { PORTAL_BASE, openBrandDashboard } from '@/lib/portal'
 
 const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
+
+// A brand's categories are what Halite Connect is allowed to ask a shopper
+// for. A fragrance brand can never request a skincare profile, so getting
+// these right is what switches Connect on for them.
+const BEAUTY_AREAS: Array<{ value: string; label: string }> = [
+  { value: 'SKINCARE',  label: 'Skincare' },
+  { value: 'BODY',      label: 'Body' },
+  { value: 'HAIR',      label: 'Hair' },
+  { value: 'MAKEUP',    label: 'Makeup' },
+  { value: 'FRAGRANCE', label: 'Fragrance' },
+  { value: 'NAILS',     label: 'Nails' },
+  { value: 'WELLNESS',  label: 'Wellness' },
+  { value: 'SUN_CARE',  label: 'Sun care' },
+  { value: 'LIP_CARE',  label: 'Lip care' },
+  { value: 'EYE_CARE',  label: 'Eye care' },
+]
 
 export default function BrandDetailPage() {
   const { brandId } = useParams<{ brandId: string }>()
@@ -17,6 +34,7 @@ export default function BrandDetailPage() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', plan: '', active: true, brandUrl: '' })
+  const [focusAreas, setFocusAreas] = useState<string[]>([])
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -45,6 +63,7 @@ export default function BrandDetailPage() {
       const data = await res.json() as { brand: BrandDetail }
       setBrand(data.brand)
       setForm({ name: data.brand.name, plan: data.brand.plan, active: data.brand.active, brandUrl: data.brand.brandWebsiteUrl ?? '' })
+      setFocusAreas(data.brand.focusAreas ?? [])
       setWlEnabled(data.brand.whiteLabelEnabled ?? false)
       setWlUrl(data.brand.brandWebsiteUrl ?? '')
       setWlTheme(data.brand.brandThemeConfig ?? null)
@@ -61,7 +80,13 @@ export default function BrandDetailPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${brandId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
-        body: JSON.stringify({ name: form.name, plan: form.plan, active: form.active, brandWebsiteUrl: form.brandUrl || null }),
+        body: JSON.stringify({
+          name: form.name,
+          plan: form.plan,
+          active: form.active,
+          brandWebsiteUrl: form.brandUrl || null,
+          focusAreas,
+        }),
       })
       if (!res.ok) throw new Error('Failed to save')
       await load()
@@ -131,15 +156,9 @@ export default function BrandDetailPage() {
 
   async function enterDashboard() {
     setEntering(true)
+    setError('')
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${brandId}/impersonate`, {
-        method: 'POST',
-        headers: token() ? { Authorization: `Bearer ${token()}` } : {},
-      })
-      if (!res.ok) throw new Error('Failed to create session')
-      const data = await res.json() as { token: string; slug: string }
-      document.cookie = `halite_token=${data.token}; path=/${data.slug}; max-age=86400; SameSite=Lax; Secure`
-      window.open(`https://portal.haliteintelligence.com/${data.slug}`, '_blank')
+      await openBrandDashboard(brandId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enter dashboard')
     } finally {
@@ -155,7 +174,7 @@ export default function BrandDetailPage() {
 
   if (!brand) return <div className="p-8"><p className="text-sm" style={{ color: 'var(--ink-3)' }}>Brand not found.</p></div>
 
-  const portalBase = 'https://portal.haliteintelligence.com'
+  const portalBase = PORTAL_BASE
 
   return (
     <div className="max-w-3xl">
@@ -229,6 +248,40 @@ export default function BrandDetailPage() {
               ))}
             </div>
           </div>
+          <div>
+            <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>
+              Categories
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {BEAUTY_AREAS.map(area => {
+                const on = focusAreas.includes(area.value)
+                return (
+                  <button
+                    key={area.value}
+                    onClick={() => setFocusAreas(prev =>
+                      prev.includes(area.value)
+                        ? prev.filter(a => a !== area.value)
+                        : [...prev, area.value]
+                    )}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                    style={{
+                      background: on ? 'var(--clay)' : 'var(--sand-1)',
+                      color: on ? 'white' : 'var(--ink)',
+                      border: `1px solid ${on ? 'var(--clay)' : 'var(--border)'}`,
+                    }}
+                  >
+                    {area.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] mt-2" style={{ color: focusAreas.length ? 'var(--ink-3)' : '#b91c1c' }}>
+              {focusAreas.length
+                ? 'What Connect may ask this brand’s shoppers to share. Nothing outside these categories is ever returned.'
+                : 'No categories set — Connect will refuse to show a consent screen for this brand until at least one is chosen.'}
+            </p>
+          </div>
+
           <div className="flex items-center gap-3">
             <button onClick={() => setForm(f => ({ ...f, active: !f.active }))}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium"

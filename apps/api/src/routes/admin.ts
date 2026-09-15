@@ -28,6 +28,14 @@ async function deleteBrandSafe(brandId: string) {
   })
 }
 
+// Mirrors the BeautyArea enum. A brand's focus areas decide what Halite
+// Connect may ask its shoppers for, so an unrecognised value here would
+// surface as a 500 from Prisma rather than a validation error.
+const BEAUTY_AREAS = [
+  'SKINCARE', 'BODY', 'HAIR', 'MAKEUP', 'FRAGRANCE',
+  'NAILS', 'WELLNESS', 'SUN_CARE', 'LIP_CARE', 'EYE_CARE',
+] as const
+
 export async function adminRoutes(server: FastifyInstance) {
   // ── Platform-wide stats ───────────────────────────────────────────
   server.get(
@@ -836,7 +844,7 @@ export async function adminRoutes(server: FastifyInstance) {
         name: z.string().min(1).max(100),
         slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
         plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).default('STARTER'),
-        focusAreas: z.array(z.string()).default([]),
+        focusAreas: z.array(z.enum(BEAUTY_AREAS)).default([]),
         brandWebsiteUrl: z.preprocess(v => v === '' ? null : v, z.string().url().optional().nullable()),
         adminEmail: z.string().email(),
         adminName: z.string().min(1),
@@ -887,7 +895,7 @@ export async function adminRoutes(server: FastifyInstance) {
         name: z.string().min(1).max(100).optional(),
         plan: z.enum(['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']).optional(),
         active: z.boolean().optional(),
-        focusAreas: z.array(z.string()).optional(),
+        focusAreas: z.array(z.enum(BEAUTY_AREAS)).optional(),
         brandWebsiteUrl: z.preprocess(v => v === '' ? null : v, z.string().url().optional().nullable()),
       })
       const data = schema.parse(request.body)

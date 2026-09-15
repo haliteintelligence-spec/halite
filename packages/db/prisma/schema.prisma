@@ -29,30 +29,30 @@ model HaliteAdmin {
 // ─────────────────────────────────────────────
 
 model Brand {
-  id           String      @id @default(cuid())
-  name         String
-  slug         String      @unique
-  apiKey       String      @unique @default(cuid())
-  plan         BrandPlan   @default(STARTER)
-  active       Boolean     @default(true)
-  focusAreas   BeautyArea[]
+  id         String       @id @default(cuid())
+  name       String
+  slug       String       @unique
+  apiKey     String       @unique @default(cuid())
+  plan       BrandPlan    @default(STARTER)
+  active     Boolean      @default(true)
+  focusAreas BeautyArea[]
 
   // Shopify integration
-  shopifyShop          String? @unique
+  shopifyShop           String? @unique
   // Deprecated: legacy plaintext token, kept only as a read fallback for
   // brands that connected before shopifyTokenEncrypted existed. New writes
   // always go to the encrypted field — see apps/api/src/lib/secret-box.ts.
-  shopifyToken         String?
+  shopifyToken          String?
   shopifyTokenEncrypted String?
-  shopifyWebhookSecret String?
+  shopifyWebhookSecret  String?
 
   // Branding
   logoUrl      String?
   primaryColor String? @default("#000000")
 
   // Brand type
-  type              BrandType @default(ONBOARDED)
-  isDemo            Boolean   @default(false)
+  type   BrandType @default(ONBOARDED)
+  isDemo Boolean   @default(false)
 
   // Demo environment
   demoProspectName      String?
@@ -83,6 +83,9 @@ model Brand {
   agentWorkflows       AgentWorkflow[]
   loginEvents          LoginEvent[]
   consumerEvents       ConsumerEvent[]
+  consentGrants        ConsentGrant[]
+  recommendations      Recommendation[]
+  connectEvents        ConnectEvent[]
 
   @@map("brands")
 }
@@ -165,15 +168,15 @@ model LoginEvent {
 // ─────────────────────────────────────────────
 
 model QuizConfig {
-  id                String     @id @default(cuid())
-  brandId           String     @unique
+  id                String       @id @default(cuid())
+  brandId           String       @unique
   enabledAreas      BeautyArea[]
   // JSON: hide/reorder/relabel default questions per area
-  questionOverrides Json       @default("{}")
+  questionOverrides Json         @default("{}")
   // JSON: brand-specific add-on questions
-  customQuestions   Json       @default("[]")
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  customQuestions   Json         @default("[]")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
@@ -222,30 +225,30 @@ enum UploadStatus {
 }
 
 model Product {
-  id               String          @id @default(cuid())
+  id               String                       @id @default(cuid())
   brandId          String
   externalId       String?
   name             String
   description      String?
   category         ProductCategory
   subcategory      String?
-  beautyArea       BeautyArea      @default(SKINCARE)
+  beautyArea       BeautyArea                   @default(SKINCARE)
   concerns         SkinConcern[]
   monkSkinTones    Int[]
   skinTypes        SkinType[]
   ingredients      String[]
   keyIngredients   String[]
   price            Float
-  currency         String          @default("USD")
-  imageUrl            String?
-  productUrl          String?
-  shopifyVariantId    String?
-  inStock          Boolean         @default(true)
+  currency         String                       @default("USD")
+  imageUrl         String?
+  productUrl       String?
+  shopifyVariantId String?
+  inStock          Boolean                      @default(true)
   metadata         Json?
   /// @db.VectorType(1536) — populated async after ingestion
   embedding        Unsupported("vector(1536)")?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
 
   brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
   routineSteps    RoutineStep[]
@@ -352,6 +355,10 @@ enum SkinType {
 // so returning consumers get a shorter onboarding at each new brand.
 model Consumer {
   id             String    @id @default(cuid())
+  // The identifier partner brands see. Deliberately not the cuid, so a
+  // brand never holds a handle that means anything outside Halite.
+  // Generated in Postgres so every existing create path keeps working.
+  publicId       String    @unique @default(dbgenerated("('hl_' || substr(md5(random()::text), 1, 12))"))
   email          String?   @unique
   phone          String?   @unique
   birthday       DateTime?
@@ -361,8 +368,11 @@ model Consumer {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  endUsers       EndUser[]
-  consumerEvents ConsumerEvent[]
+  endUsers        EndUser[]
+  consumerEvents  ConsumerEvent[]
+  consentGrants   ConsentGrant[]
+  recommendations Recommendation[]
+  connectEvents   ConnectEvent[]
 
   @@map("consumers")
 }
@@ -383,12 +393,12 @@ model EndUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  consumer        Consumer?          @relation(fields: [consumerId], references: [id])
-  beautyProfile   UserBeautyProfile?
-  quizSessions    QuizSession[]
-  routines        Routine[]
-  checkIns        CheckIn[]
+  brand         Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  consumer      Consumer?          @relation(fields: [consumerId], references: [id])
+  beautyProfile UserBeautyProfile?
+  quizSessions  QuizSession[]
+  routines      Routine[]
+  checkIns      CheckIn[]
 
   @@unique([brandId, externalId])
   @@map("end_users")
@@ -409,13 +419,13 @@ model UserBeautyProfile {
   lat              Float?
   lng              Float?
   timezone         String?
-  detectedCurrency String?   @default("USD")
+  detectedCurrency String?      @default("USD")
   climateTag       ClimateType?
-  climateSnapshot  Json?     // raw 30d forecast data from WeatherAPI
+  climateSnapshot  Json? // raw 30d forecast data from WeatherAPI
 
   // ── Routine preference ─────────────────────
-  routineFormat        RoutineFormat?
-  selectedCategories   ProductCategory[]
+  routineFormat      RoutineFormat?
+  selectedCategories ProductCategory[]
 
   // ── Spend ──────────────────────────────────
   spendMin      Float?
@@ -423,15 +433,15 @@ model UserBeautyProfile {
   spendCurrency String? @default("USD")
 
   // ── Shared lifestyle ───────────────────────
-  waterIntakeMl  String?  // e.g. "1–1.5L", "Under 1L"
-  sleepHours     String?  // e.g. "5–7 hours", "Under 5 hours"
-  stressLevel    Int?     // 1–5
+  waterIntakeMl String? // e.g. "1–1.5L", "Under 1L"
+  sleepHours    String? // e.g. "5–7 hours", "Under 5 hours"
+  stressLevel   Int? // 1–5
 
   // ── Skincare profile ───────────────────────
-  ageRange        String?   // under_18 | 18_24 | 25_34 | 35_44 | 45_54 | 55_64 | 65_plus
-  monkSkinTone    Int?
-  skinType        SkinType?
-  skinConcerns    SkinConcern[]
+  ageRange     String? // under_18 | 18_24 | 25_34 | 35_44 | 45_54 | 55_64 | 65_plus
+  monkSkinTone Int?
+  skinType     SkinType?
+  skinConcerns SkinConcern[]
 
   // ── Body profile (JSON — B1–B4 answers) ────
   bodyProfile Json?
@@ -451,8 +461,8 @@ model UserBeautyProfile {
   eyeProfile       Json?
 
   // ── AI Progress Narrative ──────────────────
-  progressNarrative   String?
-  narrativeUpdatedAt  DateTime?
+  progressNarrative  String?
+  narrativeUpdatedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -487,17 +497,17 @@ enum RoutineFormat {
 // ─────────────────────────────────────────────
 
 model QuizSession {
-  id              String     @id @default(cuid())
-  brandId         String
-  endUserId       String?
-  selectedAreas   BeautyArea[]
-  answers         Json
-  completed       Boolean    @default(false)
-  completedAt     DateTime?
-  createdAt       DateTime   @default(now())
+  id            String       @id @default(cuid())
+  brandId       String
+  endUserId     String?
+  selectedAreas BeautyArea[]
+  answers       Json
+  completed     Boolean      @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime     @default(now())
 
-  brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  endUser EndUser? @relation(fields: [endUserId], references: [id])
+  brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  endUser  EndUser?  @relation(fields: [endUserId], references: [id])
   routines Routine[]
 
   @@map("quiz_sessions")
@@ -508,17 +518,17 @@ model QuizSession {
 // ─────────────────────────────────────────────
 
 model Routine {
-  id            String     @id @default(cuid())
-  endUserId     String
-  quizSessionId String
-  focusArea     BeautyArea
-  version       Int        @default(1)
-  rationale     String?
+  id             String     @id @default(cuid())
+  endUserId      String
+  quizSessionId  String
+  focusArea      BeautyArea
+  version        Int        @default(1)
+  rationale      String?
   aiPromptTokens Int?
-  reorderDue    DateTime?
-  supersededBy  String?
-  activeTo      DateTime?
-  createdAt     DateTime   @default(now())
+  reorderDue     DateTime?
+  supersededBy   String?
+  activeTo       DateTime?
+  createdAt      DateTime   @default(now())
 
   endUser     EndUser       @relation(fields: [endUserId], references: [id], onDelete: Cascade)
   quizSession QuizSession   @relation(fields: [quizSessionId], references: [id])
@@ -616,13 +626,13 @@ enum ProductReaction {
 
 // Scope: brandId set → brand Crystal; brandId null → Halite admin Crystal
 model CrystalConversation {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   brandId   String?
-  adminId   String   // BrandAdmin.id or HaliteAdmin.id
+  adminId   String // BrandAdmin.id or HaliteAdmin.id
   adminRole CrystalAdminRole
-  title     String   @default("New conversation")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  title     String           @default("New conversation")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   brand    Brand?           @relation(fields: [brandId], references: [id], onDelete: Cascade)
   messages CrystalMessage[]
@@ -701,15 +711,15 @@ enum ConsumerEventSource {
 }
 
 model ConsumerEvent {
-  id          String              @id @default(cuid())
-  brandId     String
-  consumerId  String?
-  auraUserId  String
-  type        ConsumerEventType
-  source      ConsumerEventSource @default(AURA)
-  data        Json
-  occurredAt  DateTime
-  createdAt   DateTime            @default(now())
+  id         String              @id @default(cuid())
+  brandId    String
+  consumerId String?
+  auraUserId String
+  type       ConsumerEventType
+  source     ConsumerEventSource @default(AURA)
+  data       Json
+  occurredAt DateTime
+  createdAt  DateTime            @default(now())
 
   brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
   consumer Consumer? @relation(fields: [consumerId], references: [id])
@@ -771,4 +781,139 @@ enum AgentRunStatus {
   RUNNING
   DONE
   FAILED
+}
+
+// ─────────────────────────────────────────────
+// HALITE CONNECT
+// Permissioned, portable consumer context for partner brands.
+// A grant is the unit of permission: one brand, one consumer, the
+// categories that brand sells. Pilot grants have no expiry — access
+// runs until the consumer revokes it (expiresAt stays null).
+// ─────────────────────────────────────────────
+
+enum ConsentStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model ConsentGrant {
+  id         String        @id @default(cuid())
+  brandId    String
+  consumerId String
+  // Snapshot of the brand's focus areas at grant time. The brand cannot
+  // widen its own scope later without asking the consumer again.
+  categories BeautyArea[]
+  purpose    String        @default("product_recommendations")
+  status     ConsentStatus @default(ACTIVE)
+  // Where the consumer was when they connected — pdp, quiz, collection…
+  surface    String?
+  grantedAt  DateTime      @default(now())
+  revokedAt  DateTime?
+  // Unused in the pilot. Reserved so time-limited grants do not need a
+  // second migration; a null expiry means "until revoked".
+  expiresAt  DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  consumer        Consumer           @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
+  accessLogs      ConsentAccessLog[]
+
+  @@unique([brandId, consumerId])
+  @@index([brandId, status])
+  @@index([consumerId, status])
+  @@map("consent_grants")
+}
+
+// One row per time a brand's key actually read a consumer's context.
+// This is what the consumer's access log and the brand's audit view read.
+model ConsentAccessLog {
+  id         String   @id @default(cuid())
+  grantId    String
+  brandId    String
+  consumerId String
+  // "context" | "recommendations" | "refused"
+  action     String
+  // Number of catalog products scored, when the action ranked anything.
+  scoped     Int?
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  grant ConsentGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([consumerId, createdAt(sort: Desc)])
+  @@index([brandId, createdAt(sort: Desc)])
+  @@map("consent_access_logs")
+}
+
+model Recommendation {
+  id         String   @id @default(cuid())
+  brandId    String
+  consumerId String
+  grantId    String
+  // The permissioned context snapshot the ranking was built from, so a
+  // recommendation stays explainable after the profile moves on.
+  context    Json
+  // [{ productId, sku, name, score, reasons: [] }]
+  items      Json
+  surface    String?
+  createdAt  DateTime @default(now())
+
+  brand    Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  consumer Consumer       @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  grant    ConsentGrant   @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  events   ConnectEvent[]
+
+  @@index([brandId, createdAt(sort: Desc)])
+  @@index([consumerId, createdAt(sort: Desc)])
+  @@map("recommendations")
+}
+
+enum ConnectEventType {
+  PROMPT_SHOWN
+  CONNECT_ACCEPTED
+  CONNECT_DECLINED
+  RECOMMENDATION_SHOWN
+  PRODUCT_VIEWED
+  ADD_TO_CART
+  // The shopper saved the product from the brand's storefront. Halite
+  // mirrors this into their Hallie wishlist collection.
+  WISHLISTED
+  PURCHASE
+  RETURNED
+  RATED
+}
+
+// Everything the storefront reports back. PROMPT_SHOWN and the two
+// CONNECT_* types carry no consumerId until the consumer connects —
+// that pair is what makes an acceptance rate computable per surface.
+model ConnectEvent {
+  id               String           @id @default(cuid())
+  brandId          String
+  consumerId       String?
+  recommendationId String?
+  productId        String?
+  sku              String?
+  type             ConnectEventType
+  surface          String?
+  value            Float?
+  currency         String?          @default("USD")
+  // Anonymous storefront visitor id, so a prompt shown can be tied to
+  // the acceptance that follows it without knowing who the person is.
+  visitorId        String?
+  metadata         Json?
+  occurredAt       DateTime         @default(now())
+  createdAt        DateTime         @default(now())
+
+  brand          Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  consumer       Consumer?       @relation(fields: [consumerId], references: [id])
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
+
+  @@index([brandId, type, occurredAt(sort: Desc)])
+  @@index([brandId, surface, type])
+  @@index([consumerId, occurredAt(sort: Desc)])
+  @@index([recommendationId])
+  @@map("connect_events")
 }

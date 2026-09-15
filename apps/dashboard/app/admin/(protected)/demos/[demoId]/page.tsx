@@ -7,6 +7,7 @@ import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 import { DemoDetailTabs } from './_tabs'
+import { openBrandDashboard } from '@/lib/portal'
 
 export default function DemoDetailPage() {
   const { demoId } = useParams<{ demoId: string }>()
@@ -117,16 +118,8 @@ export default function DemoDetailPage() {
   async function enterDashboard() {
     if (!demo) return
     setEntering(true)
-    const token = document.cookie.match(/halite_admin_token=([^;]+)/)?.[1]
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/brands/${demoId}/impersonate`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (!res.ok) throw new Error('Failed to create session')
-      const data = await res.json() as { token: string; slug: string }
-      document.cookie = `halite_token=${data.token}; path=/${data.slug}; max-age=86400; SameSite=Lax; Secure`
-      window.open(`https://portal.haliteintelligence.com/${data.slug}`, '_blank')
+      await openBrandDashboard(demoId)
     } finally {
       setEntering(false)
     }

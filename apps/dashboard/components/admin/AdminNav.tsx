@@ -11,7 +11,7 @@ const nav = [
   { href: '/admin/demos',       label: 'Demos',       icon: Play },
   { href: '/admin/brands',      label: 'Onboarded',   icon: Building2 },
   { href: '/admin/past-brands', label: 'Past Brands', icon: Archive },
-  { href: '/admin/hallie-test', label: 'Hallie Test', icon: FlaskConical },
+  { href: '/admin/hallie-test', label: 'Hallie', icon: FlaskConical },
 ]
 
 export function AdminNav() {

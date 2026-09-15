@@ -1,0 +1,30 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Pilot · Shopper" },
+    { "id": "page-2", "name": "Pilot · Brand" },
+    { "id": "page-3", "name": "Build later" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html",             "title": "Consent screen",           "page": "page-1", "x": 0,    "y": 0,    "w": 1280, "h": 860 },
+    { "file": "Storefront.dc.html",       "title": "Connected storefront",     "page": "page-1", "x": 1400, "y": 0,    "w": 1280, "h": 920 },
+    { "file": "ConnectMobile.dc.html",    "title": "Mobile · entry + consent", "page": "page-1", "x": 0,    "y": 1060, "w": 880,  "h": 900 },
+    { "file": "PermissionCenter.dc.html", "title": "Hallie · connected brands","page": "page-1", "x": 1040, "y": 1060, "w": 390,  "h": 900 },
+
+    { "file": "Setup.dc.html",            "title": "Connect setup",            "page": "page-2", "x": 0,    "y": 0,    "w": 1440, "h": 1320 },
+    { "file": "ConnectOverview.dc.html",  "title": "Connect performance",      "page": "page-2", "x": 1560, "y": 0,    "w": 1440, "h": 1120 },
+    { "file": "ConnectedProfile.dc.html", "title": "One connected shopper",    "page": "page-2", "x": 0,    "y": 1460, "w": 1440, "h": 1200 },
+    { "file": "AudienceInsights.dc.html", "title": "Audience insights",        "page": "page-2", "x": 1560, "y": 1460, "w": 1440, "h": 1080 },
+
+    { "file": "Roadmap.dc.html",          "title": "What ships when",          "page": "page-3", "x": 0,    "y": 0,    "w": 1460, "h": 1140 },
+    { "file": "GranularConsent.dc.html",  "title": "Field-level consent",      "page": "page-3", "x": 1580, "y": 0,    "w": 600,  "h": 1000 },
+    { "file": "Governance.dc.html",       "title": "Permissions ledger",       "page": "page-3", "x": 0,    "y": 1280, "w": 1440, "h": 980 }
+  ],
+  "annotations": [
+    { "id": "n-consent", "page": "page-1", "x": 0, "y": -180, "w": 620, "text": "Pilot consent: one decision, whole category, no timer.\nAccess runs until the shopper disconnects. The set they allow is fixed by the brand's own categories, saved at signup — Essenza sells fragrance, so fragrance is all it can ask for." },
+    { "id": "n-privacy", "page": "page-1", "x": 680, "y": -180, "w": 620, "text": "Cross-brand products never leave Hallie by name.\nA brand reads the notes and ingredients of what a shopper owns, not whose it is. Its own products it sees in full — name, purchase, rating, outcome." },
+    { "id": "n-shopper", "page": "page-1", "x": 1400, "y": -180, "w": 620, "text": "What the brand shows back is the product of the deal: a ranked catalog with plain-language reasons, and a standing reminder that the shopper can cut it off." },
+    { "id": "n-brand", "page": "page-2", "x": 0, "y": -180, "w": 700, "text": "The first dashboard only has to answer five questions: how many connected, what they want, what we recommended, whether it converted, and what the catalog is missing.\nEverything here maps to one of those." },
+    { "id": "n-later", "page": "page-3", "x": 0, "y": -180, "w": 700, "text": "Later phases. Field-level consent, durations and expiry, and the permissions ledger all extend the pilot's grant record rather than replacing it — which is why the pilot writes purpose and scope on every grant even though it only offers one scope and no timer." }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

@@ -20,6 +20,8 @@ import { agentRoutes } from './routes/agents.js'
 import { insightsRoutes } from './routes/insights.js'
 import { internalRoutes } from './routes/internal.js'
 import { hallieTestRoutes } from './routes/hallie-test.js'
+import { connectRoutes } from './routes/connect.js'
+import { connectAdminRoutes } from './routes/connect-admin.js'
 import { errorHandler } from './lib/errors.js'
 import { prisma } from '@halite/db'
 
@@ -99,6 +101,10 @@ async function bootstrap() {
   await server.register(insightsRoutes, { prefix: '/brands' })
   await server.register(internalRoutes)
   await server.register(hallieTestRoutes, { prefix: '/admin/hallie-test' })
+  // Halite Connect — public, brand-key authenticated. Paths are versioned
+  // in the route file itself, so no prefix here.
+  await server.register(connectRoutes)
+  await server.register(connectAdminRoutes, { prefix: '/brands' })
 
   server.setErrorHandler(errorHandler)
 

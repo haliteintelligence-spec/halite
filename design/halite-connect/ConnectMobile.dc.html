@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#6B1E3F; text-decoration:none; } a:hover { color:#450F2A; }
+    * { box-sizing:border-box; }
+  </style>
+</helmet>
+
+<div style="width:880px;height:900px;background:#F2EBE0;padding:28px;display:flex;gap:40px;align-items:flex-start">
+
+  <!-- ── 1. Entry point on the merchant's mobile PDP ───────────────── -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <p style="margin:0;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8B6575">1 &middot; Entry point</p>
+    <div style="width:390px;height:812px;background:#ffffff;border-radius:26px;border:1px solid #E8DDD0;overflow:hidden;display:flex;flex-direction:column">
+
+      <div style="height:52px;border-bottom:1px solid #E8DDD0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A2A38" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <span style="font-family:'Playfair Display',Georgia,serif;font-size:15px;letter-spacing:0.22em;color:#1A0A12">ESSENZA</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A2A38" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+      </div>
+
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:250px;background:#F8F3EE;display:flex;align-items:flex-end;justify-content:center;padding-bottom:28px;flex-shrink:0">
+          <svg width="62" height="128" viewBox="0 0 54 112" fill="none"><rect x="20" y="4" width="14" height="18" rx="3" fill="#C4B5BD"/><rect x="11" y="22" width="32" height="10" rx="2" fill="#E8DDD0"/><rect x="6" y="32" width="42" height="74" rx="9" fill="#E8DDD0"/><rect x="14" y="52" width="26" height="30" rx="3" fill="#FAF6F0"/></svg>
+        </div>
+
+        <div style="padding:20px 18px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <p style="margin:0 0 4px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8B6575">Eau de Parfum</p>
+            <p style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:500;color:#1A0A12">Vanilla Amber</p>
+            <p style="margin:6px 0 0;font-size:14px;color:#4A2A38">$125 &middot; 50ml</p>
+          </div>
+
+          <div style="background:#FEF0E0;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:13px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:30px;height:30px;border-radius:9px;background:#C17A47;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#ffffff">H</span></div>
+              <p style="margin:0;font-size:14px;font-weight:600;line-height:1.35;color:#1A0A12">Is this one right for you?</p>
+            </div>
+            <p style="margin:0;font-size:12.5px;line-height:1.5;color:#4A2A38">Connect your Hallie profile and Essenza will rank its fragrances against what you already like, own and wear.</p>
+            <div style="height:48px;border-radius:12px;background:#450F2A;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/></svg>
+              <span style="font-size:14px;font-weight:600;color:#ffffff">Connect with Hallie</span>
+            </div>
+            <p style="margin:0;text-align:center;font-size:11px;color:#8a5a2e">Takes one tap &middot; no new account</p>
+          </div>
+
+          <div style="display:flex;gap:9px">
+            <div style="flex:1;height:48px;border-radius:12px;border:1.5px solid #E8DDD0;display:flex;align-items:center;justify-content:center">
+              <span style="font-size:14px;font-weight:600;color:#4A2A38">Add to bag</span>
+            </div>
+            <div style="height:48px;border-radius:12px;border:1.5px solid #E8DDD0;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 16px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4A2A38" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5h12v15l-6-4.2-6 4.2z"/></svg>
+              <span style="font-size:14px;font-weight:600;color:#4A2A38">Save</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. Consent sheet ──────────────────────────────────────────── -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <p style="margin:0;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8B6575">2 &middot; Consent</p>
+    <div style="width:390px;height:812px;border-radius:26px;border:1px solid #E8DDD0;overflow:hidden;position:relative;background:#ffffff">
+
+      <div style="position:absolute;inset:0;background:#FAF6F0;filter:blur(3px)">
+        <div style="height:52px;background:#ffffff;border-bottom:1px solid #E8DDD0"></div>
+        <div style="height:250px;background:#F8F3EE"></div>
+      </div>
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55)"></div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#ffffff;border-radius:20px 20px 0 0;display:flex;flex-direction:column;max-height:96%">
+
+        <div style="padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#999">Halite Connect</span>
+          <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;color:#666">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </div>
+        </div>
+
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+
+          <div style="display:flex;align-items:center;gap:11px">
+            <div style="width:40px;height:40px;border-radius:11px;background:#450F2A;display:flex;align-items:center;justify-content:center"><span style="font-family:'Playfair Display',Georgia,serif;font-size:17px;color:#ffffff">E</span></div>
+            <svg width="20" height="13" viewBox="0 0 22 14" fill="none" stroke="#C4B5BD" stroke-width="1.8" stroke-linecap="round"><path d="M1 7h20"/><path d="M16 2.5L20.5 7 16 11.5"/></svg>
+            <div style="width:40px;height:40px;border-radius:11px;background:#FEF0E0;display:flex;align-items:center;justify-content:center"><span style="font-family:'Playfair Display',Georgia,serif;font-size:17px;color:#C17A47">H</span></div>
+          </div>
+
+          <div>
+            <p style="margin:0 0 5px;font-size:16.5px;font-weight:600;line-height:1.35;color:#1a1a1a">Essenza wants to connect your Hallie profile</p>
+            <p style="margin:0;font-size:12.5px;line-height:1.5;color:#888">For fragrance recommendations built on what you already like, own and wear.</p>
+          </div>
+
+          <div style="border:1.5px solid #e8e8e8;border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+            <p style="margin:0;font-size:13.5px;font-weight:600;color:#1a1a1a">Your fragrance profile</p>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:flex-start;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:12px;line-height:1.4;color:#4A2A38">Notes you like and avoid</span></div>
+              <div style="display:flex;align-items:flex-start;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:12px;line-height:1.4;color:#4A2A38">Your shelf, as notes and ingredients</span></div>
+              <div style="display:flex;align-items:flex-start;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:12px;line-height:1.4;color:#4A2A38">How things worked out for you</span></div>
+              <div style="display:flex;align-items:flex-start;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b9e78" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M4 12.5l5 5L20 6.5"/></svg><span style="font-size:12px;line-height:1.4;color:#4A2A38">What you're shopping for, and your budget</span></div>
+            </div>
+            <div style="border-top:1px solid #f0f0f0;padding-top:9px"><p style="margin:0;font-size:11px;line-height:1.4;color:#999">Shared as one set for fragrance. Essenza sees what your bottles are made of, never whose they are.</p></div>
+          </div>
+
+          <div style="border:1.5px solid #e8e8e8;border-radius:12px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 15px;border-bottom:1px solid #f0f0f0"><span style="font-size:11.5px;color:#888;width:74px;flex-shrink:0">Purpose</span><span style="font-size:12px;font-weight:500;color:#1a1a1a">Recommendations</span></div>
+            
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 15px"><span style="font-size:11.5px;color:#888;width:74px;flex-shrink:0">They keep</span><span style="font-size:12px;font-weight:500;color:#1a1a1a">Recommendations only</span></div>
+          </div>
+
+          <p style="margin:0;font-size:11.5px;line-height:1.5;color:#8B6575">Essenza never sees the brands you own outside its own range, where you shop, or anything outside fragrance.</p>
+
+        </div>
+
+        <div style="padding:14px 20px 22px;border-top:1px solid #f0f0f0;display:flex;flex-direction:column;gap:10px;flex-shrink:0">
+          <div style="height:48px;border-radius:12px;background:#450F2A;display:flex;align-items:center;justify-content:center"><span style="font-size:14px;font-weight:600;color:#ffffff">Allow access</span></div>
+          <div style="height:44px;border-radius:12px;background:#f5f5f5;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:500;color:#555">Not now</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -30,6 +30,8 @@ export {
   ProductReaction,
   CrystalAdminRole,
   MessageRole,
+  ConsentStatus,
+  ConnectEventType,
 } from '@prisma/client'
 export type {
   Brand,
@@ -47,4 +49,8 @@ export type {
   CheckInProduct,
   CrystalConversation,
   CrystalMessage,
+  ConsentGrant,
+  ConsentAccessLog,
+  Recommendation,
+  ConnectEvent,
 } from '@prisma/client'

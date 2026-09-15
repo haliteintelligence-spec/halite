@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#6B1E3F; text-decoration:none; } a:hover { color:#450F2A; }
+    * { box-sizing:border-box; }
+    .navitem { display:flex; align-items:center; gap:12px; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:500; color:#8B6575; }
+    .navitem.on { background:#450F2A; color:#ffffff; }
+    .navsec { font-size:9px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:0 12px; margin:0 0 8px; }
+    .tile { background:#ffffff; border:1px solid #E8DDD0; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .tlabel { margin:0; font-size:10px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8B6575; }
+    .tval { margin:0; font-size:24px; font-weight:600; line-height:1; color:#1A0A12; }
+    .tsub { margin:4px 0 0; font-size:11px; color:#8B6575; }
+    .card { background:#ffffff; border:1px solid #E8DDD0; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
+    .chead { padding:16px 20px; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+    .ctitle { margin:0; font-size:13px; font-weight:600; color:#1A0A12; }
+    .csub { margin:2px 0 0; font-size:11px; color:#8B6575; }
+    .cbody { padding:0 20px 20px; flex:1; }
+    .th { font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#8B6575; }
+    .td { font-size:12.5px; color:#4A2A38; }
+    .mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; color:#1A0A12; }
+    .pill { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; }
+    .grid7 { display:grid; grid-template-columns:1.1fr 1fr 1.5fr 1.3fr 1.1fr 1fr; gap:12px; align-items:center; }
+  </style>
+</helmet>
+
+<div style="width:1440px;height:980px;background:#FAF6F0;display:flex">
+
+  <aside style="width:208px;flex-shrink:0;background:#1A0A12;display:flex;flex-direction:column">
+    <div style="padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.08)">
+      <p style="margin:0 0 4px;font-size:9px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Halite Intelligence</p>
+      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff">Essenza</p>
+    </div>
+    <nav style="flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Overview</span></div>
+        <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.1 5.4L19.5 10l-5.4 1.6L12 17l-2.1-5.4L4.5 10l5.4-1.6z"/></svg><span>Halite AI</span></div>
+      </div>
+      <div>
+        <p class="navsec">Connect</p>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/></svg><span>Connect</span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M17 8.5h4M19 6.5v4"/></svg><span>Connected</span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11M4 12h16M4 17h8"/><circle cx="19" cy="7" r="2"/></svg><span>Recommendations</span></div>
+          <div class="navitem on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3"/></svg><span>Permissions</span><span style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.6)"></span></div>
+        </div>
+      </div>
+      <div>
+        <p class="navsec">Intelligence</p>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/></svg><span>Consumer</span></div>
+          <div class="navitem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-4 4 3 8-8"/><path d="M4 20h16"/></svg><span>Outcomes</span></div>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+    <div style="height:56px;background:#ffffff;border-bottom:1px solid #E8DDD0;display:flex;align-items:center;justify-content:flex-end;padding:0 24px;flex-shrink:0">
+      <span style="font-size:12px;color:#8B6575">Sign out</span>
+    </div>
+
+    <div style="padding:16px 28px;background:#FAF6F0;border-bottom:1px solid #E8DDD0;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0">
+      <div>
+        <p style="margin:0 0 2px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8B6575">Halite Connect</p>
+        <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:500;line-height:1.2;color:#1A0A12">Permissions</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="border:1px solid #E8DDD0;background:#ffffff;border-radius:8px;padding:7px 12px"><span style="font-size:12px;color:#4A2A38">Export audit log</span></div>
+      </div>
+    </div>
+
+    <div style="padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+
+      <div style="display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:12px">
+        <div class="tile"><p class="tlabel">Active permissions</p><div><p class="tval">1,284</p><p class="tsub">All scoped to fragrance</p></div></div>
+        <div class="tile"><p class="tlabel">Expiring in 7 days</p><div><p class="tval" style="color:#C17A47">168</p><p class="tsub">They lapse unless re-granted</p></div></div>
+        <div class="tile"><p class="tlabel">Revoked this month</p><div><p class="tval">37</p><p class="tsub">2.8% &mdash; access cut the same second</p></div></div>
+        <div class="tile"><p class="tlabel">Deletion requests</p><div><p class="tval">4</p><p class="tsub">All completed inside 24h</p></div></div>
+      </div>
+
+      <div style="background:#F8F3EE;border:1px solid #E8DDD0;border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#450F2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3"/></svg>
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#4A2A38">These rules are enforced on the token, not written in a policy. When a permission expires or is revoked, your API key stops returning that consumer's context on the next call &mdash; there is nothing for you to remember to switch off. Products outside your own catalog are stripped of brand and product identity before they ever reach you.</p>
+      </div>
+
+      <div class="card">
+        <div class="chead">
+          <div><p class="ctitle">Permission ledger</p><p class="csub">Every grant, change and revocation, in order &mdash; durations arrive with this phase</p></div>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:999px;background:#450F2A;color:#ffffff">All</span>
+            <span style="font-size:11.5px;font-weight:500;padding:5px 11px;border-radius:999px;background:#F2EBE0;color:#4A2A38">Expiring</span>
+            <span style="font-size:11.5px;font-weight:500;padding:5px 11px;border-radius:999px;background:#F2EBE0;color:#4A2A38">Revoked</span>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="grid7" style="padding:8px 0;border-bottom:1px solid #E8DDD0">
+            <span class="th">Consumer</span><span class="th">Granted</span><span class="th">Scope</span><span class="th">Purpose</span><span class="th">Expires</span><span class="th">Status</span>
+          </div>
+          <div class="grid7" style="padding:12px 0;border-bottom:1px solid #F2EBE0">
+            <span class="mono">hl_48291</span><span class="td">14 Sep 2026</span><span class="td">Fragrance &mdash; attributes</span><span class="td">Recommendations</span><span class="td">12 Oct 2026</span>
+            <span><span class="pill" style="background:#e9f4ec;color:#6b9e78">Active</span></span>
+          </div>
+          <div class="grid7" style="padding:12px 0;border-bottom:1px solid #F2EBE0">
+            <span class="mono">hl_47116</span><span class="td">2 Sep 2026</span><span class="td">Fragrance &mdash; attributes</span><span class="td">Recommendations</span><span class="td">2 Oct 2026</span>
+            <span><span class="pill" style="background:#e9f4ec;color:#6b9e78">Active</span></span>
+          </div>
+          <div class="grid7" style="padding:12px 0;border-bottom:1px solid #F2EBE0">
+            <span class="mono">hl_46802</span><span class="td">19 Aug 2026</span><span class="td">Fragrance &mdash; attributes</span><span class="td">Recommendations</span><span class="td">18 Sep 2026</span>
+            <span><span class="pill" style="background:#FEF0E0;color:#C17A47">4 days left</span></span>
+          </div>
+          <div class="grid7" style="padding:12px 0;border-bottom:1px solid #F2EBE0">
+            <span class="mono">hl_46551</span><span class="td">11 Aug 2026</span><span class="td">Fragrance &mdash; attributes</span><span class="td">Recommendations</span><span class="td">&mdash;</span>
+            <span><span class="pill" style="background:#f7edec;color:#c07070">Revoked 6 Sep</span></span>
+          </div>
+          <div class="grid7" style="padding:12px 0;border-bottom:1px solid #F2EBE0">
+            <span class="mono">hl_45930</span><span class="td">28 Jul 2026</span><span class="td">Fragrance &mdash; attributes</span><span class="td">Recommendations</span><span class="td">&mdash;</span>
+            <span><span class="pill" style="background:#F2EBE0;color:#8B6575">Expired 27 Aug</span></span>
+          </div>
+          <div class="grid7" style="padding:12px 0">
+            <span class="mono">hl_45711</span><span class="td">21 Jul 2026</span><span class="td">Fragrance &mdash; attributes</span><span class="td">Recommendations</span><span class="td">&mdash;</span>
+            <span><span class="pill" style="background:#f7edec;color:#c07070">Deleted 22 Aug</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px">
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">Access log</p><p class="csub">Every read your key made against a Halite profile</p></div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;gap:11px;align-items:flex-start"><span style="width:6px;height:6px;border-radius:50%;background:#6b9e78;flex-shrink:0;margin-top:6px"></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><p style="margin:0;font-size:12.5px;color:#1A0A12">Context read for <span class="mono">hl_48291</span></p><span style="font-size:11.5px;color:#8B6575">Today 2:14pm</span></div><p style="margin:2px 0 0;font-size:11.5px;color:#8B6575">Ranked 248 products &middot; returned 3 &middot; 41ms</p></div></div>
+            <div style="display:flex;gap:11px;align-items:flex-start"><span style="width:6px;height:6px;border-radius:50%;background:#6b9e78;flex-shrink:0;margin-top:6px"></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><p style="margin:0;font-size:12.5px;color:#1A0A12">Purchase event sent for <span class="mono">hl_48291</span></p><span style="font-size:11.5px;color:#8B6575">Today 2:31pm</span></div><p style="margin:2px 0 0;font-size:11.5px;color:#8B6575">ESS-2041 &middot; attributed to rec_7291</p></div></div>
+            <div style="display:flex;gap:11px;align-items:flex-start"><span style="width:6px;height:6px;border-radius:50%;background:#c07070;flex-shrink:0;margin-top:6px"></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><p style="margin:0;font-size:12.5px;color:#1A0A12">Read refused for <span class="mono">hl_46551</span></p><span style="font-size:11.5px;color:#8B6575">6 Sep 9:02am</span></div><p style="margin:2px 0 0;font-size:11.5px;color:#8B6575">403 permission_revoked &mdash; consumer disconnected 4 minutes earlier</p></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><div><p class="ctitle">What you must delete</p><p class="csub">Triggered by revocation or a consumer request</p></div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:11px;border-bottom:1px solid #F2EBE0">
+              <div><p style="margin:0;font-size:12.5px;color:#1A0A12"><span class="mono">hl_46551</span> &mdash; cached recommendations</p><p style="margin:3px 0 0;font-size:11.5px;color:#8B6575">Requested 6 Sep</p></div>
+              <span class="pill" style="background:#e9f4ec;color:#6b9e78">Done</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:11px;border-bottom:1px solid #F2EBE0">
+              <div><p style="margin:0;font-size:12.5px;color:#1A0A12"><span class="mono">hl_45711</span> &mdash; full erasure</p><p style="margin:3px 0 0;font-size:11.5px;color:#8B6575">Requested 22 Aug</p></div>
+              <span class="pill" style="background:#e9f4ec;color:#6b9e78">Done</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><p style="margin:0;font-size:12.5px;color:#1A0A12"><span class="mono">hl_44098</span> &mdash; cached recommendations</p><p style="margin:3px 0 0;font-size:11.5px;color:#8B6575">Requested today, 11:40am</p></div>
+              <span class="pill" style="background:#FEF0E0;color:#C17A47">Due in 23h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

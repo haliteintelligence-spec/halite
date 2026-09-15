@@ -25,6 +25,8 @@ import {
   X,
   Telescope,
   Layers,
+  Lock,
+  UserPlus,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -32,6 +34,9 @@ import { useState, useEffect } from 'react'
 const nav = [
   { href: '',              label: 'Overview',      icon: LayoutGrid,   section: null },
   { href: '/crystal',      label: 'Halite AI',     icon: Sparkles,     section: null },
+  { href: '/connect',           label: 'Connect',    icon: Link2,    section: 'Connect' },
+  { href: '/connect/consumers', label: 'Connected',  icon: UserPlus, section: 'Connect' },
+  { href: '/connect/permissions', label: 'Permissions', icon: Lock,  section: 'Connect' },
   { href: '/identity',     label: 'Identity',      icon: Link2,        section: 'Intelligence' },
   { href: '/consumers',    label: 'Consumer',      icon: Users,        section: 'Intelligence' },
   { href: '/outcomes',     label: 'Outcomes',      icon: Activity,     section: 'Intelligence' },
@@ -91,6 +96,7 @@ export function SideNav({
   }, [mobileOpen])
 
   const overview      = nav.filter(n => !n.section)
+  const connectNav    = nav.filter(n => n.section === 'Connect')
   const intelNav      = nav.filter(n => n.section === 'Intelligence')
   const predictive    = nav.filter(n => n.section === 'Predictive')
   const agents        = nav.filter(n => n.section === 'Agents')
@@ -242,6 +248,18 @@ export function SideNav({
         )}>
           <div className="space-y-0.5">
             {overview.map(item => <NavItem key={item.href} {...item} />)}
+          </div>
+
+          <div>
+            <p className={clsx(
+              'text-[9px] font-semibold tracking-[0.18em] uppercase text-white/30 px-3 mb-2',
+              collapsed && 'md:hidden'
+            )}>
+              Connect
+            </p>
+            <div className="space-y-0.5">
+              {connectNav.map(item => <NavItem key={item.href} {...item} />)}
+            </div>
           </div>
 
           <div>
