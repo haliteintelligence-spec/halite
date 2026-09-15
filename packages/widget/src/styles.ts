@@ -401,5 +401,53 @@ export function getStyles(accent: string): string {
       font-size: 12.5px; font-weight: 600; color: ${accent};
     }
     .hlw-connect-noprofile:hover { text-decoration: underline; }
+
+    /* ── The five best, shown on connect ─────────────────────── */
+    .hlw-matches { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+    .hlw-match-row {
+      display:flex; gap:12px; align-items:center; text-decoration:none;
+      border:1.5px solid #e8e8e8; border-radius:12px; padding:11px 13px;
+      transition:border-color .15s;
+    }
+    .hlw-match-row:hover { border-color:${accent}; }
+    .hlw-match-row.top { border-color:${accent}; background:${accent}0d; }
+    .hlw-match-score {
+      width:40px; height:40px; border-radius:11px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      background:${accent}; color:#fff; font-size:13px; font-weight:700;
+    }
+    .hlw-match-score.warn { background:#C17A47; }
+    .hlw-match-main { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .hlw-match-name { font-size:13.5px; font-weight:600; color:#1a1a1a; }
+    .hlw-match-price { font-size:11.5px; color:#8B6575; }
+    .hlw-match-reason {
+      font-size:11.5px; line-height:1.4; color:#4A2A38; margin-top:3px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    }
+
+    /* ── Scores injected into the brand's own pages ──────────── */
+    .hlw-match {
+      display:inline-block; background:${accent}; color:#fff;
+      font-size:11px; font-weight:700; letter-spacing:.01em;
+      padding:4px 9px; border-radius:999px; line-height:1.3;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    }
+    .hlw-match-warn { background:#C17A47; }
+    .hlw-why {
+      margin:8px 0 0; padding:0; list-style:none;
+      display:flex; flex-direction:column; gap:4px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    }
+    .hlw-why li {
+      font-size:11.5px; line-height:1.4; color:#4A2A38;
+      padding-left:15px; position:relative;
+    }
+    .hlw-why li::before {
+      content:''; position:absolute; left:0; top:4px; width:8px; height:4px;
+      border-left:2px solid #6b9e78; border-bottom:2px solid #6b9e78;
+      transform:rotate(-45deg);
+    }
+    .hlw-why-warn { color:#8B6575; }
+    .hlw-why-warn::before { border-color:#c07070 !important; }
 `
 }

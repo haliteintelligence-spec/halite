@@ -108,11 +108,11 @@ export interface ConnectSession {
 export interface ConnectMatch {
   sku: string | null
   product_id: string
-  name: string
-  price: number
-  currency: string
-  image_url: string | null
-  product_url: string | null
+  name?: string
+  price?: number
+  currency?: string
+  image_url?: string | null
+  product_url?: string | null
   match_score: number
   reasons: string[]
   warnings: string[]

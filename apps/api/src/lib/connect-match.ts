@@ -30,6 +30,9 @@ export interface MatchOptions {
   inStockOnly?: boolean | undefined
   maxPrice?: number | undefined
   minScore?: number | undefined
+  /** Score only these products — used to decorate a page the shopper is on. */
+  skus?: string[] | undefined
+  productIds?: string[] | undefined
 }
 
 function attrsOf(p: {
@@ -63,13 +66,25 @@ export async function matchCatalog(opts: {
   options?: MatchOptions
 }): Promise<{ items: MatchItem[]; scored: number }> {
   const { brandId, context, categories } = opts
-  const { limit = 6, inStockOnly = true, maxPrice, minScore = 0 } = opts.options ?? {}
+  const { limit = 6, inStockOnly = true, maxPrice, minScore = 0, skus, productIds } = opts.options ?? {}
+
+  // When specific products are named, the page is asking about those — do not
+  // hide an out-of-stock one it is already showing.
+  const named = (skus?.length ?? 0) > 0 || (productIds?.length ?? 0) > 0
 
   const products = await prisma.product.findMany({
     where: {
       brandId,
       beautyArea: { in: categories },
-      ...(inStockOnly ? { inStock: true } : {}),
+      ...(inStockOnly && !named ? { inStock: true } : {}),
+      ...(named
+        ? {
+            OR: [
+              ...(productIds?.length ? [{ id: { in: productIds } }] : []),
+              ...(skus?.length ? [{ externalId: { in: skus } }] : []),
+            ],
+          }
+        : {}),
     },
     select: {
       id: true, externalId: true, name: true, price: true, currency: true,

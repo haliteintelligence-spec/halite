@@ -36,7 +36,11 @@ function esc(s: string): string {
 
 export async function previewRoutes(server: FastifyInstance) {
   server.get('/preview', async (request, reply) => {
-    const { key } = z.object({ key: z.string().min(8) }).parse(request.query)
+    const { key, page } = z.object({
+      key: z.string().min(8),
+      page: z.enum(['home', 'collection']).optional(),
+    }).parse(request.query)
+    const view = page ?? 'home'
 
     const brand = await prisma.brand.findUnique({
       where: { apiKey: key },
@@ -50,7 +54,9 @@ export async function previewRoutes(server: FastifyInstance) {
     const products = await prisma.product.findMany({
       where: { brandId: brand.id, beautyArea: { in: brand.focusAreas }, inStock: true },
       orderBy: { price: 'asc' },
-      take: 4,
+      // The collection page shows the whole range, so the decorator has
+      // something to walk. The landing page shows a handful.
+      take: view === 'collection' ? 12 : 4,
       select: { id: true, externalId: true, name: true, price: true, currency: true, imageUrl: true, category: true },
     })
 
@@ -60,7 +66,8 @@ export async function previewRoutes(server: FastifyInstance) {
       : 'beauty'
 
     const cards = products.map(p => `
-      <article class="card" data-product-id="${esc(p.id)}" data-sku="${esc(p.externalId ?? '')}">
+      <article class="card" data-product-id="${esc(p.id)}" data-sku="${esc(p.externalId ?? '')}"
+               data-halite-product="${esc(p.externalId ?? p.id)}">
         <div class="shot">
           ${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}">` : `<div class="ph"></div>`}
           <span class="badge" hidden></span>
@@ -69,6 +76,7 @@ export async function previewRoutes(server: FastifyInstance) {
           <p class="name">${esc(p.name)}</p>
           <p class="price">${esc(money(p.price, p.currency))}</p>
           <ul class="reasons" hidden></ul>
+          <div class="hlw-slot"></div>
           <div class="actions">
             <button class="buy">Add to bag</button>
             <button class="save" title="Save to your Hallie wishlist">Save</button>
@@ -99,6 +107,9 @@ export async function previewRoutes(server: FastifyInstance) {
            display:flex; align-items:center; justify-content:space-between; padding:18px 24px; }
   .wordmark { font-family:'Playfair Display',Georgia,serif; font-size:19px; letter-spacing:.2em; }
   .status { font-size:11.5px; color:var(--ink3); }
+  .nav { display:flex; gap:22px; }
+  .nav a { font-size:12.5px; font-weight:500; color:var(--ink3); text-decoration:none; padding-bottom:2px; }
+  .nav a.on { color:var(--ink); border-bottom:1.5px solid var(--accent); }
   main { max-width:1120px; margin:0 auto; padding:32px 24px 64px; }
   .eyebrow { font-size:10px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--ink3); margin:0 0 5px; }
   h1 { font-family:'Playfair Display',Georgia,serif; font-weight:500; font-size:30px; margin:0 0 24px; }
@@ -109,6 +120,7 @@ export async function previewRoutes(server: FastifyInstance) {
   button { font:inherit; cursor:pointer; border:none; border-radius:10px; }
   .cta { background:var(--accent); color:#fff; font-size:14px; font-weight:600; padding:13px 22px; min-height:44px; }
   .cta:disabled { opacity:.5; cursor:default; }
+  .hint { font-size:12px; line-height:1.6; color:var(--ink3); margin:0 0 22px; max-width:640px; }
   .why { background:#F5E6ED; border-left:3px solid var(--accent); border-radius:12px;
          padding:14px 16px; margin-bottom:24px; font-size:12.5px; line-height:1.6; color:#6B1E3F; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; }
@@ -142,12 +154,17 @@ export async function previewRoutes(server: FastifyInstance) {
 
   <header>
     <span class="wordmark">${esc(brand.name.toUpperCase())}</span>
+    <nav class="nav">
+      <a href="?key=${encodeURIComponent(brand.apiKey)}" class="${view === 'home' ? 'on' : ''}">Featured</a>
+      <a href="?key=${encodeURIComponent(brand.apiKey)}&page=collection" class="${view === 'collection' ? 'on' : ''}">All products</a>
+    </nav>
     <span class="status" id="status">Not connected</span>
   </header>
 
   <main>
-    <p class="eyebrow">${esc(categoryLabel)}</p>
-    <h1 id="heading">Our collection</h1>
+    <p class="eyebrow">${esc(view === 'collection' ? 'Everything' : categoryLabel)}</p>
+    <h1 id="heading">${esc(view === 'collection' ? 'All products' : 'Our collection')}</h1>
+    ${view === 'collection' ? `<p class="hint">This page does nothing clever — no ranking, no re-ordering. Every score on it was put there by the widget, because the shopper is connected.</p>` : ''}
 
     <section class="connect" id="prompt">
       <p>
@@ -164,7 +181,11 @@ export async function previewRoutes(server: FastifyInstance) {
 
   <footer id="foot">Ranked by Halite once you connect. Disconnect anytime in Hallie.</footer>
 
-  <script src="${esc(WIDGET_URL)}" data-api-key="${esc(brand.apiKey)}" data-accent="${esc(accent)}"></script>
+  <script src="${esc(WIDGET_URL)}"
+          data-api-key="${esc(brand.apiKey)}"
+          data-accent="${esc(accent)}"
+          data-halite-badge=".shot"
+          data-halite-reasons=".hlw-slot"></script>
   <script>
     (function () {
       var api = window.HaliteWidget
@@ -251,9 +272,22 @@ export async function previewRoutes(server: FastifyInstance) {
       }
 
       var brandName = ${JSON.stringify(brand.name)}
-      window.addEventListener('halite:connected', function () { setTimeout(render, 300) })
-      // Already connected in this browser from a previous visit.
-      setTimeout(render, 600)
+      var isHome = ${JSON.stringify(view === 'home')}
+      if (isHome) {
+        window.addEventListener('halite:connected', function () { setTimeout(render, 300) })
+        // Already connected in this browser from a previous visit.
+        setTimeout(render, 600)
+      } else {
+        // Nothing to do — the widget decorates this page on its own.
+        if (connected()) {
+          status.textContent = 'Hallie connected'
+          document.getElementById('prompt').hidden = true
+        }
+        window.addEventListener('halite:connected', function () {
+          status.textContent = 'Hallie connected'
+          document.getElementById('prompt').hidden = true
+        })
+      }
     })()
   </script>
 </body>

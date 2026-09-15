@@ -487,6 +487,55 @@ export async function connectRoutes(server: FastifyInstance) {
     })
   })
 
+  // ── Score the products on a page ────────────────────────────────────
+  // The storefront calls this as the shopper browses, so a match score and
+  // its reasons can sit on every product they see — not only the ones a
+  // ranked list happened to return.
+  server.post('/v1/match', async (request, reply) => {
+    const brand = await requireBrandKey(request)
+    const schema = z.object({
+      apiKey: z.string().optional(),
+      consumer_id: z.string(),
+      skus: z.array(z.string().max(120)).max(100).optional(),
+      product_ids: z.array(z.string().max(60)).max(100).optional(),
+      surface: z.enum(SURFACES).optional(),
+    }).refine(d => (d.skus?.length ?? 0) + (d.product_ids?.length ?? 0) > 0, {
+      message: 'skus or product_ids is required',
+    })
+    const body = schema.parse(request.body)
+    const { consumer, grant } = await requireGrant(brand.id, body.consumer_id)
+
+    const categories = authorizedCategories(brand, grant.categories)
+    const context = await buildConnectContext({ consumerId: consumer.id, brandId: brand.id, categories })
+    const { items, scored } = await matchCatalog({
+      brandId: brand.id, context, categories,
+      options: {
+        limit: 100,
+        ...(body.skus ? { skus: body.skus } : {}),
+        ...(body.product_ids ? { productIds: body.product_ids } : {}),
+      },
+    })
+
+    await prisma.consentAccessLog.create({
+      data: {
+        grantId: grant.id, brandId: brand.id, consumerId: consumer.id,
+        action: 'context', scoped: scored,
+        detail: { kind: 'page_match', asked: (body.skus?.length ?? 0) + (body.product_ids?.length ?? 0) },
+      },
+    })
+
+    return reply.send({
+      consumer_id: consumer.publicId,
+      matches: items.map(i => ({
+        product_id: i.productId,
+        sku: i.sku,
+        match_score: i.score,
+        reasons: i.reasons,
+        warnings: i.warnings,
+      })),
+    })
+  })
+
   // ── Outcomes back from the storefront ───────────────────────────────
   server.post('/v1/events', async (request, reply) => {
     const brand = await requireBrandKey(request)

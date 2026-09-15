@@ -4,6 +4,7 @@ import { CheckInController } from './checkin'
 import { ProgressController } from './progress'
 import { ReorderController } from './reorder'
 import { ConnectController } from './connect'
+import { Decorator, type DecorateOptions } from './decorate'
 import { getStyles } from './styles'
 
 interface HaliteWidgetConfig {
@@ -233,6 +234,27 @@ function init(config: HaliteWidgetConfig) {
   const observer = new MutationObserver(attachTriggers)
   observer.observe(document.body, { childList: true, subtree: true })
 
+  // Scores follow the shopper around the site, not just the page that
+  // rendered a list. Options come off the script tag so a merchant can point
+  // at their own markup without writing any JavaScript.
+  const script = document.querySelector<HTMLScriptElement>('script[data-api-key]')
+  const decorateOptions: DecorateOptions = {
+    ...(script?.dataset['haliteBadge'] ? { badgeSelector: script.dataset['haliteBadge'] } : {}),
+    ...(script?.dataset['haliteReasons'] ? { reasonsSelector: script.dataset['haliteReasons'] } : {}),
+    ...(script?.dataset['haliteMinScore'] ? { minScore: Number(script.dataset['haliteMinScore']) } : {}),
+  }
+  const decorator = new Decorator(instance.api, decorateOptions)
+
+  // On connect, and on every later page load while the grant is live.
+  window.addEventListener('halite:connected', () => { void decorator.run() })
+  if (instance.api.connectedConsumerId) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { void decorator.run() })
+    } else {
+      void decorator.run()
+    }
+  }
+
   // Storefront surface. A merchant reads recommendations and reports what
   // happened to them without touching the modal at all.
   const connect = {
@@ -241,6 +263,10 @@ function init(config: HaliteWidgetConfig) {
     open: (surface = 'pdp') => instance.open('connect', surface),
     recommendations: (opts?: { surface?: string; limit?: number; maxPrice?: number }) =>
       instance.api.connectRecommendations(opts ?? {}),
+    /** Re-scan the page — call after rendering products yourself. */
+    decorate: (options?: DecorateOptions) =>
+      options ? new Decorator(instance.api, options).run() : decorator.run(),
+    match: (skus: string[]) => instance.api.connectMatch({ skus }),
     track: (
       event: 'product_viewed' | 'add_to_cart' | 'wishlisted' | 'purchase' | 'returned' | 'rated',
       payload?: {

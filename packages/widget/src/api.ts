@@ -1,7 +1,7 @@
 import type {
   QuizQuestion, QuizOption, Routine, CheckIn, ReorderItem,
   ConnectSession, ConnectRecommendations, ConnectEventName,
-  ConnectQuiz,
+  ConnectQuiz, ConnectMatch,
 } from './types'
 
 interface RawFlow {
@@ -363,6 +363,25 @@ export class HaliteApi {
       // A revoked grant answers 403 here. That is a normal state, not an
       // error the storefront should surface.
       return null
+    }
+  }
+
+  /** Scores the products on the page the shopper is looking at. */
+  async connectMatch(args: { skus?: string[]; productIds?: string[] }): Promise<ConnectMatch[]> {
+    const consumerId = this.connectedConsumerId
+    if (!consumerId) return []
+    if (!args.skus?.length && !args.productIds?.length) return []
+    try {
+      const res = await this.post<{ matches: ConnectMatch[] }>('/v1/match', {
+        apiKey: this.apiKey,
+        consumer_id: consumerId,
+        ...(args.skus?.length ? { skus: args.skus } : {}),
+        ...(args.productIds?.length ? { product_ids: args.productIds } : {}),
+      }, false)
+      return res.matches
+    } catch {
+      // A revoked grant answers 403. The page simply shows no scores.
+      return []
     }
   }
 

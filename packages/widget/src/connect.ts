@@ -1,5 +1,5 @@
 import type { HaliteApi } from './api'
-import type { ConnectSession, ConnectQuiz, ConnectQuizQuestion } from './types'
+import type { ConnectSession, ConnectQuiz, ConnectQuizQuestion, ConnectRecommendations } from './types'
 
 type RenderFn = (node: HTMLElement) => void
 type ProgressFn = (pct: number) => void
@@ -282,7 +282,17 @@ export class ConnectController {
   }
 
   private renderConnected(consumerId: string) {
-    const s = this.session!
+    // Tell the page immediately — it can start decorating while the shopper
+    // reads their matches.
+    window.dispatchEvent(new CustomEvent('halite:connected', { detail: { consumerId } }))
+
+    this.back(null)
+    this.progress(1)
+    this.renderLoadingMatches()
+    void this.loadTopMatches()
+  }
+
+  private renderLoadingMatches(): void {
     const node = document.createElement('div')
     node.innerHTML = `
       <div class="hlw-connect-done">
@@ -290,23 +300,63 @@ export class ConnectController {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
         </div>
         <p class="hlw-question-text" style="text-align:center">Connected</p>
-        <p class="hlw-question-sub" style="text-align:center">${escapeHtml(s.brand.name)} can now rank its ${escapeHtml(areaPhrase(s.request.categories))} against your profile. Disconnect anytime in Hallie.</p>
+        <p class="hlw-question-sub" style="text-align:center">Reading your profile and ranking the range&hellip;</p>
       </div>`
+    this.render(node)
+  }
+
+  /**
+   * The five best matches, shown the moment they connect.
+   *
+   * This is the payoff for sharing a profile. A confirmation screen makes
+   * the shopper go and look for the value themselves; this hands it over.
+   */
+  private async loadTopMatches(): Promise<void> {
+    const s = this.session!
+    let res: ConnectRecommendations | null = null
+    try {
+      res = await this.api.connectRecommendations({ surface: this.surface, limit: 5 })
+    } catch { /* falls through to the plain confirmation */ }
+
+    const node = document.createElement('div')
+
+    if (!res || res.items.length === 0) {
+      node.innerHTML = `
+        <div class="hlw-connect-done">
+          <p class="hlw-question-text" style="text-align:center">Connected</p>
+          <p class="hlw-question-sub" style="text-align:center">${escapeHtml(s.brand.name)} can now rank its ${escapeHtml(areaPhrase(s.request.categories))} against your profile. Nothing in the range matches closely yet &mdash; scores will appear as you browse.</p>
+        </div>`
+    } else {
+      const summary = res.summary as { stated_concerns?: string[]; liked?: string[]; budget_max?: number | null }
+      const concerns = (summary.stated_concerns ?? []).slice(0, 3).map(c => c.replace(/_/g, ' '))
+      const line = concerns.length
+        ? `Ranked on what you told Hallie you&rsquo;re working on &mdash; ${escapeHtml(concerns.join(', '))}.`
+        : `Ranked against your Hallie profile.`
+
+      node.innerHTML = `
+        <p class="hlw-question-text">Your best ${res.items.length} from ${escapeHtml(s.brand.name)}</p>
+        <p class="hlw-question-sub">${line} ${res.scored} products scored.</p>
+        <div class="hlw-matches">
+          ${res.items.map((item, n) => `
+            <a class="hlw-match-row${n === 0 ? ' top' : ''}" href="${escapeHtml(item.product_url ?? '#')}" data-sku="${escapeHtml(item.sku ?? '')}">
+              <span class="hlw-match-score${item.warnings.length ? ' warn' : ''}">${Math.round(item.match_score * 100)}</span>
+              <span class="hlw-match-main">
+                <span class="hlw-match-name">${escapeHtml(item.name ?? '')}</span>
+                <span class="hlw-match-price">${escapeHtml(item.currency ?? '')} ${Number(item.price ?? 0).toFixed(2)}</span>
+                <span class="hlw-match-reason">${escapeHtml(item.reasons[0] ?? item.warnings[0] ?? '')}</span>
+              </span>
+            </a>`).join('')}
+        </div>
+        <p class="hlw-connect-hint">Every other product carries its score as you browse. Disconnect anytime in Hallie.</p>`
+    }
 
     const done = document.createElement('button')
     done.className = 'hlw-btn-next'
-    done.textContent = 'See what fits'
-    done.addEventListener('click', () => {
-      document.dispatchEvent(new CustomEvent('halite:close'))
-    })
+    done.textContent = 'Start looking'
+    done.addEventListener('click', () => document.dispatchEvent(new CustomEvent('halite:close')))
     ;(node as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = done
 
-    this.back(null)
-    this.progress(1)
     this.render(node)
-
-    // The host page listens for this to re-render its grid with match scores.
-    window.dispatchEvent(new CustomEvent('halite:connected', { detail: { consumerId } }))
   }
 }
 
