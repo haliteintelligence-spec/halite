@@ -1,5 +1,5 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify'
-import { ZodError } from 'zod'
+import type { ZodIssue } from 'zod'
 
 export class ApiError extends Error {
   constructor(
@@ -9,6 +9,12 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+function isZodError(error: unknown): error is { issues: ZodIssue[] } {
+  if (typeof error !== 'object' || error === null) return false
+  const e = error as { name?: unknown; issues?: unknown }
+  return e.name === 'ZodError' && Array.isArray(e.issues)
 }
 
 export function errorHandler(
@@ -23,7 +29,11 @@ export function errorHandler(
   // A malformed request is the caller's problem, not ours. Without this a
   // brand integrating against the public API sees 500 for their own typo
   // and reasonably assumes Halite is down.
-  if (error instanceof ZodError) {
+  //
+  // Matched structurally rather than with instanceof: pnpm can resolve more
+  // than one copy of zod in a workspace, and an error thrown by one copy is
+  // not an instance of the class imported from the other.
+  if (isZodError(error)) {
     const issues = error.issues.map(i => ({
       field: i.path.join('.') || undefined,
       message: i.message,
