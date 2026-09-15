@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#6B1E3F; text-decoration:none; } a:hover { color:#450F2A; }
+    * { box-sizing:border-box; }
+    .col { background:#ffffff; border:1px solid #E8DDD0; border-radius:16px; padding:20px; }
+    .step { margin:0; font-size:10px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:#8B6575; }
+    .h { margin:5px 0 0; font-family:'Playfair Display',Georgia,serif; font-size:19px; font-weight:500; color:#1A0A12; }
+    .sub { margin:6px 0 0; font-size:11.5px; line-height:1.5; color:#8B6575; }
+    .cat { margin:0 0 7px; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#C17A47; }
+    .kv { display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:11.5px; }
+    .k { color:#8B6575; } .v { color:#1A0A12; font-weight:500; text-align:right; }
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; }
+    .chip { display:inline-block; font-size:11.5px; font-weight:500; padding:4px 10px; border-radius:999px; margin:0 5px 5px 0; }
+    .drop { opacity:.4; }
+  </style>
+</helmet>
+
+<div style="width:1560px;height:1040px;background:#FAF6F0;padding:34px 38px;display:flex;flex-direction:column;gap:20px">
+
+  <div>
+    <p style="margin:0 0 4px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#8B6575">Halite Connect</p>
+    <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:29px;font-weight:500;color:#1A0A12">How a Hallie profile becomes what a brand receives</h1>
+    <p style="margin:8px 0 0;max-width:1080px;font-size:12.5px;line-height:1.65;color:#4A2A38">A real profile, connecting to Nubian &mdash; a brand that sells <strong>skincare and body</strong>. The shopper answered Hallie&rsquo;s preference quizzes across five categories. Three of them never leave Hallie.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:18px;flex:1">
+
+    <!-- 1. What Hallie holds -->
+    <div class="col" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <p class="step">1 &middot; In Hallie</p>
+        <p class="h">What the shopper owns</p>
+        <p class="sub">Five preference quizzes, answered over time. This belongs to them, not to any brand.</p>
+      </div>
+
+      <div style="border:1.5px solid #450F2A;border-radius:12px;padding:13px">
+        <p class="cat" style="color:#450F2A">Skin care &middot; shared</p>
+        <div class="kv"><span class="k">face_type</span><span class="v mono">combination</span></div>
+        <div class="kv"><span class="k">primary_face_concern</span><span class="v mono">hyperpigmentation</span></div>
+        <div class="kv"><span class="k">secondary_face_concerns</span><span class="v mono">dehydration, pores, dullness</span></div>
+        <div class="kv"><span class="k">sensitivity</span><span class="v mono">yes</span></div>
+        <div class="kv"><span class="k">monk_skin_tone</span><span class="v mono">mst8</span></div>
+        <div class="kv"><span class="k">routine_complexity</span><span class="v mono">moderate</span></div>
+        <div class="kv"><span class="k">budget</span><span class="v mono">under_25, 25_50</span></div>
+      </div>
+
+      <div style="border:1.5px solid #450F2A;border-radius:12px;padding:13px">
+        <p class="cat" style="color:#450F2A">Body care &middot; shared</p>
+        <div class="kv"><span class="k">skin_type</span><span class="v mono">normal</span></div>
+        <div class="kv"><span class="k">primary_body_concern</span><span class="v mono">dryness</span></div>
+        <div class="kv"><span class="k">secondary_body_concerns</span><span class="v mono">uneven_tone</span></div>
+        <div class="kv"><span class="k">texture_preference</span><span class="v mono">lotion</span></div>
+        <div class="kv"><span class="k">scent_preference</span><span class="v mono">strongly_scented</span></div>
+        <div class="kv"><span class="k">budget</span><span class="v mono">under_15, 15_30, 30_60</span></div>
+      </div>
+
+      <div style="border:1px dashed #C4B5BD;border-radius:12px;padding:13px" class="drop">
+        <p class="cat" style="color:#8B6575">Hair &middot; Makeup &middot; Fragrance</p>
+        <p style="margin:0;font-size:11.5px;line-height:1.5;color:#4A2A38">4c hair, high porosity, damage &middot; warm undertone, satin finish &middot; floral, woody, gourmand</p>
+        <p style="margin:8px 0 0;font-size:11px;font-weight:600;color:#c07070">Withheld &mdash; Nubian does not sell these</p>
+      </div>
+    </div>
+
+    <!-- 2. What Halite derives -->
+    <div class="col" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <p class="step">2 &middot; In Halite</p>
+        <p class="h">Turned into signals</p>
+        <p class="sub">Answers become things a catalog can be matched on &mdash; what to target, what to avoid, what it can cost.</p>
+      </div>
+
+      <div>
+        <p class="cat">Solving for</p>
+        <span class="chip" style="background:#450F2A;color:#fff">hyperpigmentation</span>
+        <span class="chip" style="background:#F5E6ED;color:#6B1E3F">dehydration</span>
+        <span class="chip" style="background:#F5E6ED;color:#6B1E3F">pores</span>
+        <span class="chip" style="background:#F5E6ED;color:#6B1E3F">dullness</span>
+        <span class="chip" style="background:#F5E6ED;color:#6B1E3F">dryness</span>
+        <span class="chip" style="background:#F5E6ED;color:#6B1E3F">uneven tone</span>
+      </div>
+
+      <div>
+        <p class="cat">Ingredients that answer those</p>
+        <span class="chip" style="background:#e9f4ec;color:#3f6b4c">niacinamide</span>
+        <span class="chip" style="background:#e9f4ec;color:#3f6b4c">vitamin c</span>
+        <span class="chip" style="background:#e9f4ec;color:#3f6b4c">tranexamic acid</span>
+        <span class="chip" style="background:#e9f4ec;color:#3f6b4c">hyaluronic acid</span>
+        <span class="chip" style="background:#e9f4ec;color:#3f6b4c">glycerin</span>
+        <span class="chip" style="background:#e9f4ec;color:#3f6b4c">shea butter</span>
+      </div>
+
+      <div>
+        <p class="cat">Handle with care</p>
+        <span class="chip" style="background:#f7edec;color:#c07070">high-strength acids</span>
+        <span class="chip" style="background:#f7edec;color:#c07070">retinol at night only</span>
+        <span class="chip" style="background:#f7edec;color:#c07070">denatured alcohol</span>
+        <p style="margin:4px 0 0;font-size:11px;line-height:1.5;color:#8B6575">Because they told Hallie their face reacts easily.</p>
+      </div>
+
+      <div style="border-top:1px solid #F2EBE0;padding-top:12px">
+        <div class="kv"><span class="k">Skin</span><span class="v">Combination, sensitive</span></div>
+        <div class="kv"><span class="k">Body skin</span><span class="v">Normal, dry-prone</span></div>
+        <div class="kv"><span class="k">Tone</span><span class="v">Deep tan &middot; MST 8</span></div>
+        <div class="kv"><span class="k">Texture wanted</span><span class="v">Lotion</span></div>
+        <div class="kv"><span class="k">Routine</span><span class="v">Moderate &mdash; not a 10-step</span></div>
+        <div class="kv"><span class="k">Will spend</span><span class="v">Up to $50 face &middot; $60 body</span></div>
+      </div>
+
+      <div style="margin-top:auto;background:#FEF0E0;border-radius:10px;padding:12px">
+        <p style="margin:0;font-size:11.5px;line-height:1.55;color:#8a5a2e"><strong>A tension worth surfacing.</strong> They want strongly scented body products but told Hallie their skin reacts easily. Rank scented body care, but say so on the card.</p>
+      </div>
+    </div>
+
+    <!-- 3. What the brand receives -->
+    <div class="col" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <p class="step">3 &middot; What Nubian receives</p>
+        <p class="h">The summary, in plain words</p>
+        <p class="sub">What a merchandiser reads, and what the API returns beneath it.</p>
+      </div>
+
+      <div style="background:#F5E6ED;border-left:3px solid #450F2A;border-radius:12px;padding:14px">
+        <p style="margin:0;font-size:12.5px;line-height:1.65;color:#6B1E3F">Combination, sensitive skin at MST 8, working on dark marks first and dehydration underneath. Wants a moderate routine, not a long one, and spends up to about $50 a product. On the body: normal but dry-prone, uneven tone, reaches for lotion over butter, and likes it strongly scented.</p>
+      </div>
+
+      <div>
+        <p class="cat">Confidence 0.82</p>
+        <div style="height:7px;background:#F2EBE0;border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="width:82%;height:100%;background:#450F2A;border-radius:3px"></div></div>
+        <p style="margin:0;font-size:11px;line-height:1.5;color:#8B6575">Stated directly by the shopper across two categories. It climbs as they log outcomes.</p>
+      </div>
+
+      <div style="background:#2D0A1C;border-radius:12px;padding:14px;overflow:hidden">
+        <pre style="margin:0;font-size:11px;line-height:1.65;color:#E8DDD0;white-space:pre-wrap">{
+  "consumer_id": "hl_cmrlqyajc…",
+  "categories": ["SKINCARE","BODY"],
+  "preferences": {
+    "concerns": ["hyperpigmentation",
+      "dehydration","pores","dullness",
+      "dryness","uneven_tone"],
+    "liked": ["niacinamide","vitamin c",
+      "tranexamic acid","hyaluronic acid"],
+    "avoided": ["denatured alcohol"],
+    "skin_type": "COMBINATION",
+    "sensitivity": "high",
+    "texture": "lotion"
+  },
+  "intent": { "budget_max": 50 },
+  "confidence": 0.82,
+  "source": "hallie_preferences"
+}</pre>
+      </div>
+
+      <div style="margin-top:auto;background:#F8F3EE;border-radius:10px;padding:12px">
+        <p style="margin:0;font-size:11px;line-height:1.55;color:#4A2A38">No hair, makeup or fragrance answers. No other brand&rsquo;s products. No Hallie password, and nothing Nubian can keep after the shopper disconnects.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

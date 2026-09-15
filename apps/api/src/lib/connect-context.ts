@@ -1,5 +1,6 @@
 import { prisma } from '@halite/db'
 import type { BeautyArea, ProductCategory, ProductReaction } from '@halite/db'
+import { readHalliePreferences } from './hallie-preferences.js'
 
 /**
  * Builds the permissioned context a partner brand receives for a consumer.
@@ -9,7 +10,12 @@ import type { BeautyArea, ProductCategory, ProductReaction } from '@halite/db'
  *  1. Category scope. Only the beauty areas the grant authorizes are read.
  *     A fragrance brand never sees a skincare profile, whatever it asks for.
  *
- *  2. Cross-brand de-identification. A consumer's collection spans every
+ *  2. Two sources, one profile. What the shopper stated in Hallie and what
+ *     their logged outcomes revealed are merged here. Stated preferences are
+ *     most of what a new shopper has — without them a consumer who built
+ *     their profile in Hallie and walked into a brand reads as a blank page.
+ *
+ *  3. Cross-brand de-identification. A consumer's collection spans every
  *     brand they have ever used. The requesting brand sees its OWN products
  *     named in full — it sold them — and everything else as attributes only:
  *     notes, ingredients, category, outcome. No brand name, no product name,
@@ -49,10 +55,19 @@ export interface ConnectContext {
   preferences: {
     liked: string[]
     avoided: string[]
+    /** Rankable, but flagged on the card — see hallie-preferences. */
+    cautioned: string[]
     concerns: string[]
+    /** Hallie's own words for the concerns, for explanations. */
+    stated_concerns: string[]
     skin_type: string | null
+    sensitivity: string | null
+    texture: string | null
+    routine_complexity: string | null
     intensity: string | null
   }
+  /** Which of the two sources actually contributed. */
+  sources: { hallie_preferences: boolean; logged_outcomes: boolean }
   collection: {
     /** Products in the requesting brand's own catalog — named in full. */
     yours: OwnedProductNamed[]
@@ -110,6 +125,7 @@ export async function buildConnectContext(opts: {
       publicId: true,
       email: true,
       phone: true,
+      hallieUserId: true,
       prefillAnswers: true,
       endUsers: {
         select: {
@@ -142,12 +158,19 @@ export async function buildConnectContext(opts: {
   })
   if (!consumer) throw new Error(`Consumer ${consumerId} not found`)
 
+  // ── What they told Hallie ───────────────────────────────────────────
+  // Read first, because for most shoppers this is the whole profile.
+  const stated = await readHalliePreferences({
+    hallieUserId: consumer.hallieUserId,
+    areas: categories,
+  })
+
   // ── Preferences, pooled across every brand this consumer has used ───
-  const liked = new Set<string>()
-  const avoided = new Set<string>()
-  const concerns = new Set<string>()
-  let skinType: string | null = null
-  let budgetMax: number | null = null
+  const liked = new Set<string>(stated.liked)
+  const avoided = new Set<string>(stated.avoided)
+  const concerns = new Set<string>(stated.concerns)
+  let skinType: string | null = stated.skinType
+  let budgetMax: number | null = stated.budgetMax
   let currency = 'USD'
 
   for (const eu of consumer.endUsers) {
@@ -265,10 +288,13 @@ export async function buildConnectContext(opts: {
   // A stated preference wins over an inferred avoidance.
   for (const a of liked) avoided.delete(a)
 
-  // Confidence tracks how much the profile is actually built on.
+  // Confidence tracks how much the profile is actually built on. A stated
+  // profile counts for more than a single logged reaction, because the
+  // shopper said it about themselves on purpose.
   const signals =
     liked.size + avoided.size + concerns.size +
-    yours.size + elsewhere.length + (skinType ? 1 : 0) + (budgetMax ? 1 : 0)
+    yours.size + elsewhere.length + (skinType ? 1 : 0) + (budgetMax ? 1 : 0) +
+    (stated.found ? 6 : 0)
   const confidence = Math.min(0.95, Math.round((signals / 20) * 100) / 100)
 
   const named = consumer.endUsers.find(e => e.firstName || e.lastName)
@@ -283,9 +309,18 @@ export async function buildConnectContext(opts: {
     preferences: {
       liked: [...liked].slice(0, 20),
       avoided: [...avoided].slice(0, 20),
+      cautioned: stated.cautioned,
       concerns: [...concerns],
+      stated_concerns: stated.rawConcerns,
       skin_type: skinType,
+      sensitivity: stated.sensitivity,
+      texture: stated.texture,
+      routine_complexity: stated.routineComplexity,
       intensity: null,
+    },
+    sources: {
+      hallie_preferences: stated.found,
+      logged_outcomes: tally.size > 0,
     },
     collection: {
       yours: [...yours.values()],

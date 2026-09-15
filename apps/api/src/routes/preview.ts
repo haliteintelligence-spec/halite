@@ -19,6 +19,15 @@ import { ApiError } from '../lib/errors.js'
 
 const WIDGET_URL = process.env.WIDGET_URL ?? 'https://cdn.haliteintelligence.com/widget.js'
 
+/** Catalog prices are floats; nobody wants to read USD 16.59055230630241. */
+function money(value: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value)
+  } catch {
+    return `${currency} ${value.toFixed(2)}`
+  }
+}
+
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c
@@ -58,7 +67,7 @@ export async function previewRoutes(server: FastifyInstance) {
         </div>
         <div class="body">
           <p class="name">${esc(p.name)}</p>
-          <p class="price">${esc(p.currency)} ${p.price}</p>
+          <p class="price">${esc(money(p.price, p.currency))}</p>
           <ul class="reasons" hidden></ul>
           <div class="actions">
             <button class="buy">Add to bag</button>
@@ -80,6 +89,8 @@ export async function previewRoutes(server: FastifyInstance) {
   :root { --accent: ${esc(accent)}; --ink:#1A0A12; --ink2:#4A2A38; --ink3:#8B6575;
           --bg:#FAF6F0; --surface:#fff; --border:#E8DDD0; --sand:#F8F3EE; --sage:#6b9e78; }
   * { box-sizing:border-box; }
+  /* A class with display: beats the browser's [hidden] rule, so say it louder. */
+  [hidden] { display:none !important; }
   body { margin:0; background:var(--bg); color:var(--ink);
          font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; -webkit-font-smoothing:antialiased; }
   .note { background:var(--ink); color:#fff; font-size:12px; padding:9px 20px; text-align:center; }
@@ -200,10 +211,7 @@ export async function previewRoutes(server: FastifyInstance) {
         currentRec = res.recommendation_id
 
         var why = document.getElementById('why')
-        var liked = (res.summary.liked || []).slice(0, 3).join(', ')
-        why.textContent = liked
-          ? 'Ranked on what has worked for you \\u2014 ' + liked + '.'
-          : 'Ranked against your Hallie profile.'
+        why.textContent = summarise(res.summary)
         why.hidden = false
         document.getElementById('heading').textContent = 'Picked for you'
 
@@ -230,6 +238,16 @@ export async function previewRoutes(server: FastifyInstance) {
         document.getElementById('foot').textContent =
           'Ranked by Halite against your Hallie profile \\u2014 ' + res.scored +
           ' products scored. ' + brandName + ' never sees whose products are on your shelf.'
+      }
+
+      function summarise(s) {
+        var bits = []
+        var concerns = (s.stated_concerns || []).slice(0, 3).map(function (c) { return c.replace(/_/g, ' ') })
+        if (concerns.length) bits.push('You told Hallie you\u2019re working on ' + concerns.join(', ') + '.')
+        var liked = (s.liked || []).slice(0, 3)
+        if (liked.length) bits.push('Ranked on ' + liked.join(', ') + '.')
+        if (s.budget_max) bits.push('Kept under ' + s.budget_max + '.')
+        return bits.length ? bits.join(' ') : 'Ranked against your Hallie profile.'
       }
 
       var brandName = ${JSON.stringify(brand.name)}

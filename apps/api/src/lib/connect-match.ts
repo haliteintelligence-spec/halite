@@ -80,6 +80,7 @@ export async function matchCatalog(opts: {
 
   const liked = new Set(context.preferences.liked)
   const avoided = new Set(context.preferences.avoided)
+  const cautioned = new Set(context.preferences.cautioned ?? [])
   const positive = new Set(context.outcomes.positive)
   const negative = new Set(context.outcomes.negative)
   const concerns = new Set(context.preferences.concerns)
@@ -101,7 +102,10 @@ export async function matchCatalog(opts: {
 
     const hitsLiked = attrs.filter(a => liked.has(a))
     if (hitsLiked.length) {
-      score += Math.min(0.3, hitsLiked.length * 0.12)
+      // Diminishing returns: a product with six matching ingredients is not
+      // twice the answer of one with three, and a flat cap makes everything
+      // relevant tie at the ceiling.
+      score += Math.min(0.26, 0.13 * Math.sqrt(hitsLiked.length))
       reasons.push(`Built on ${phrase(hitsLiked.slice(0, 3))}, which you gravitate to`)
     }
 
@@ -123,6 +127,12 @@ export async function matchCatalog(opts: {
       warnings.push(`Contains ${phrase(hitsAvoided.slice(0, 2))}, which you avoid`)
     }
 
+    const hitsCautioned = attrs.filter(a => cautioned.has(a) && !avoided.has(a))
+    if (hitsCautioned.length) {
+      score -= 0.12
+      warnings.push(`Contains ${phrase(hitsCautioned.slice(0, 2))} — strong, and you said your skin reacts easily`)
+    }
+
     const hitsNegative = attrs.filter(a => negative.has(a) && !avoided.has(a))
     if (hitsNegative.length) {
       score -= Math.min(0.25, hitsNegative.length * 0.12)
@@ -131,8 +141,10 @@ export async function matchCatalog(opts: {
 
     const hitsConcerns = p.concerns.filter(c => concerns.has(c))
     if (hitsConcerns.length) {
-      score += Math.min(0.2, hitsConcerns.length * 0.1)
-      reasons.push(`Targets ${phrase(hitsConcerns.map(c => c.toLowerCase().replace(/_/g, ' ')))}`)
+      // A stated concern is worth more than an inferred one — the shopper
+      // told Hallie this is what they are trying to change.
+      score += Math.min(0.28, hitsConcerns.length * 0.14)
+      reasons.push(`Targets ${phrase(hitsConcerns.map(c => c.toLowerCase().replace(/_/g, ' ')))}, which you said you're working on`)
     }
 
     if (budget != null) {

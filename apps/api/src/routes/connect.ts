@@ -461,8 +461,11 @@ export async function connectRoutes(server: FastifyInstance) {
       summary: {
         liked: context.preferences.liked.slice(0, 6),
         avoided: context.preferences.avoided.slice(0, 6),
+        stated_concerns: context.preferences.stated_concerns.slice(0, 6),
+        sensitivity: context.preferences.sensitivity,
         budget_max: context.intent.budget_max,
         confidence: context.confidence,
+        sources: context.sources,
       },
       items: items.map(i => ({
         sku: i.sku,

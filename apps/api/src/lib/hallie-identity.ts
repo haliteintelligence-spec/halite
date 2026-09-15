@@ -9,8 +9,10 @@ import { prisma } from '@halite/db'
  * one person, one identifier, the same in both products, and a support
  * question about "hl_cmtds4…" is answerable in the Hallie admin.
  *
- * Matching is by email, which is what provisionHallieTestingAccount keys on
- * when it reserves an account for someone who reached a brand first.
+ * Matching is by email first — that is what provisionHallieTestingAccount
+ * keys on when it reserves an account for someone who reached a brand first
+ * — then by phone, since a shopper may connect with either and 113 of 129
+ * Hallie accounts carry a number.
  *
  * Best-effort: a consumer with no Hallie account keeps the random publicId
  * they were given, and gets rewritten the moment the account appears.
@@ -29,18 +31,44 @@ export async function linkHallieAccount(consumerId: string): Promise<string | nu
   try {
     const consumer = await prisma.consumer.findUnique({
       where: { id: consumerId },
-      select: { id: true, email: true, publicId: true, hallieUserId: true },
+      select: { id: true, email: true, phone: true, publicId: true, hallieUserId: true },
     })
     if (!consumer) return null
     if (consumer.hallieUserId) return consumer.publicId
-    if (!consumer.email) return consumer.publicId
+    if (!consumer.email && !consumer.phone) return consumer.publicId
 
-    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM hallie_testing.hallie_testing_users
-      WHERE lower(email) = lower(${consumer.email})
-      LIMIT 1
-    `
-    const hallieUserId = rows[0]?.id
+    let hallieUserId: string | undefined
+
+    if (consumer.email) {
+      const byEmail = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM hallie_testing.hallie_testing_users
+        WHERE lower(email) = lower(${consumer.email})
+        LIMIT 1
+      `
+      hallieUserId = byEmail[0]?.id
+    }
+
+    // Phone numbers are stored however the person typed them, so compare on
+    // digits. A suffix match handles +234… against 0… for the same line, but
+    // only when exactly one account matches — an ambiguous match is not an
+    // identity, and linking the wrong person is worse than not linking.
+    if (!hallieUserId && consumer.phone) {
+      const digits = consumer.phone.replace(/\D/g, '')
+      if (digits.length >= 9) {
+        const tail = digits.slice(-9)
+        const byPhone = await prisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM hallie_testing.hallie_testing_users
+          WHERE phone IS NOT NULL
+            AND right(regexp_replace(phone, '\D', '', 'g'), 9) = ${tail}
+          LIMIT 2
+        `
+        if (byPhone.length === 1) hallieUserId = byPhone[0]!.id
+        else if (byPhone.length > 1) {
+          console.warn(`[hallie-identity] phone ending ${tail} matches more than one Hallie account; not linking`)
+        }
+      }
+    }
+
     if (!hallieUserId) return consumer.publicId
 
     // Another consumer may already hold this account — two Halite records for
@@ -72,7 +100,10 @@ export async function backfillHallieIdentities(): Promise<{
   scanned: number; linked: number; conflicts: number; unmatched: number
 }> {
   const consumers = await prisma.consumer.findMany({
-    where: { hallieUserId: null, email: { not: null } },
+    where: {
+      hallieUserId: null,
+      OR: [{ email: { not: null } }, { phone: { not: null } }],
+    },
     select: { id: true },
   })
 

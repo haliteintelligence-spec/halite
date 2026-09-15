@@ -105,10 +105,10 @@ export class ConnectController {
       </div>
 
       <label class="hlw-connect-field">
-        <span>Your email</span>
-        <input class="hlw-text-input" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+        <span>Email or phone number</span>
+        <input class="hlw-text-input" type="text" inputmode="email" autocomplete="email" placeholder="you@example.com or +234 801 234 5678" />
       </label>
-      <p class="hlw-connect-hint">We use this to find your Hallie profile. No new account, no password.</p>
+      <p class="hlw-connect-hint">Whichever you used for Hallie. No new account, no password.</p>
       <button type="button" class="hlw-connect-noprofile">Don&rsquo;t have a Hallie profile? Build one in a minute &rsaquo;</button>
       <p class="hlw-connect-error" style="display:none"></p>
     `
@@ -122,20 +122,22 @@ export class ConnectController {
     allow.disabled = true
 
     input.addEventListener('input', () => {
-      allow.disabled = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.value.trim())
+      allow.disabled = identify(input.value) === null
       error.style.display = 'none'
     })
 
     allow.addEventListener('click', async () => {
+      const id = identify(input.value)
+      if (!id) return
       allow.disabled = true
       allow.textContent = 'Connecting…'
       try {
-        const res = await this.api.connectAuthorize({ email: input.value.trim(), surface: this.surface })
+        const res = await this.api.connectAuthorize({ ...id, surface: this.surface })
         this.renderConnected(res.consumer_id)
       } catch {
         allow.disabled = false
         allow.textContent = 'Allow access'
-        error.textContent = 'That didn’t go through. Nothing was shared — try again.'
+        error.textContent = 'We couldn’t find a Hallie profile for that. Nothing was shared — check it, or build a profile below.'
         error.style.display = 'block'
       }
     })
@@ -241,7 +243,7 @@ export class ConnectController {
         <span>Your email</span>
         <input class="hlw-text-input" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
       </label>
-      <p class="hlw-connect-hint">No password needed. Claim the profile in Hallie whenever you like.</p>
+      <p class="hlw-connect-hint">An email is needed to create the profile &mdash; it is how you claim it in Hallie later. No password needed.</p>
       <p class="hlw-connect-error" style="display:none"></p>`
 
     const input = node.querySelector<HTMLInputElement>('input')!
@@ -315,6 +317,23 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function categoryLabel(c: string): string {
   return CATEGORY_LABELS[c] ?? c.replace(/_/g, ' ')
+}
+
+/**
+ * A shopper may have signed up to Hallie with either, so accept either and
+ * let the shape of what they typed decide which it is. Phone numbers are
+ * sent as typed — the server compares on digits, so formatting does not
+ * have to match what Hallie stored.
+ */
+export function identify(raw: string): { email: string } | { phone: string } | null {
+  const value = raw.trim()
+  if (!value) return null
+  if (value.includes('@')) {
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value) ? { email: value } : null
+  }
+  const digits = value.replace(/\D/g, '')
+  // Short enough to be a typo rather than a number anyone actually has.
+  return digits.length >= 9 && digits.length <= 15 ? { phone: value } : null
 }
 
 function initial(name: string): string {
