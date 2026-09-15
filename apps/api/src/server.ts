@@ -86,6 +86,12 @@ async function bootstrap() {
     limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB catalog uploads
   })
 
+  // Before any route is registered: a plugin inherits the error handler that
+  // exists when it registers, so setting this afterwards left every route in
+  // this file on Fastify's default — which reports a caller's bad input as a
+  // 500 Internal Server Error.
+  server.setErrorHandler(errorHandler)
+
   // Routes
   await server.register(authRoutes, { prefix: '/auth' })
   await server.register(brandRoutes, { prefix: '/brands' })
@@ -110,8 +116,6 @@ async function bootstrap() {
   // Served at the root so cdn.haliteintelligence.com/widget.js resolves.
   await server.register(widgetRoutes)
   await server.register(previewRoutes)
-
-  server.setErrorHandler(errorHandler)
 
   server.get('/', async () => ({ name: 'Halite Intelligence API', version: '1.0.0', status: 'ok' }))
   server.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }))
