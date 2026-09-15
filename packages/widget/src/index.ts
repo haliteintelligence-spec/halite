@@ -304,7 +304,16 @@ function autoInit() {
       accentColor: script.dataset.accent,
     })
     // First script tag wins, so a page with two never swaps the handle.
-    if (!window.Halite) window.Halite = instance
+    if (!window.Halite) {
+      window.Halite = instance
+      // A storefront's own script usually runs before this one finishes, so
+      // it cannot simply read window.Halite and expect an answer. Announcing
+      // readiness is what stops a connected shopper being asked to connect
+      // again on the next page.
+      window.dispatchEvent(new CustomEvent('halite:ready', {
+        detail: { connected: instance.connect.isConnected() },
+      }))
+    }
   })
 }
 

@@ -91,10 +91,6 @@ export class ConnectController {
           <span class="hlw-connect-meta-k">Purpose</span>
           <span class="hlw-connect-meta-v">${escapeHtml(purposeLabel(s.request.purpose, areas))}</span>
         </div>
-        <div class="hlw-connect-meta-row">
-          <span class="hlw-connect-meta-k">${escapeHtml(s.brand.name)} keeps</span>
-          <span class="hlw-connect-meta-v">Its recommendations &mdash; not your profile</span>
-        </div>
       </div>
 
       <div class="hlw-connect-not">

@@ -19,6 +19,11 @@ import { ApiError } from '../lib/errors.js'
 
 const WIDGET_URL = process.env.WIDGET_URL ?? 'https://cdn.haliteintelligence.com/widget.js'
 
+// The bundle is cached for an hour, which is right for a real storefront and
+// wrong for a preview — a merchant checking a change should not have to
+// empty their cache to see it. Busted per process, so a deploy is enough.
+const WIDGET_BUILD = Date.now().toString(36)
+
 /** Catalog prices are floats; nobody wants to read USD 16.59055230630241. */
 function money(value: number, currency: string): string {
   try {
@@ -181,7 +186,7 @@ export async function previewRoutes(server: FastifyInstance) {
 
   <footer id="foot">Ranked by Halite once you connect. Disconnect anytime in Hallie.</footer>
 
-  <script src="${esc(WIDGET_URL)}"
+  <script src="${esc(WIDGET_URL)}?v=${WIDGET_BUILD}"
           data-api-key="${esc(brand.apiKey)}"
           data-accent="${esc(accent)}"
           data-halite-badge=".shot"
@@ -256,9 +261,13 @@ export async function previewRoutes(server: FastifyInstance) {
         })
         grid.style.display = 'grid'
 
-        document.getElementById('foot').textContent =
-          'Ranked by Halite against your Hallie profile \\u2014 ' + res.scored +
-          ' products scored. ' + brandName + ' never sees whose products are on your shelf.'
+        var hasProfile = (res.summary.liked || []).length > 0 ||
+                         (res.summary.stated_concerns || []).length > 0
+        document.getElementById('foot').textContent = hasProfile
+          ? 'Ranked by Halite against your Hallie profile \u2014 ' + res.scored +
+            ' products scored. ' + brandName + ' never sees whose products are on your shelf.'
+          : res.scored + ' products scored evenly \u2014 there is nothing in your profile to rank on yet. ' +
+            brandName + ' never sees whose products are on your shelf.'
       }
 
       function summarise(s) {
@@ -268,26 +277,38 @@ export async function previewRoutes(server: FastifyInstance) {
         var liked = (s.liked || []).slice(0, 3)
         if (liked.length) bits.push('Ranked on ' + liked.join(', ') + '.')
         if (s.budget_max) bits.push('Kept under ' + s.budget_max + '.')
-        return bits.length ? bits.join(' ') : 'Ranked against your Hallie profile.'
+        if (bits.length) return bits.join(' ')
+        // Connected, but the profile is empty — say that rather than implying
+        // a ranking that did not happen.
+        return 'Your profile is connected but still empty, so nothing is ranked yet. '
+             + 'Tell Hallie what you like and these will separate.'
       }
 
       var brandName = ${JSON.stringify(brand.name)}
-      var isHome = ${JSON.stringify(view === 'home')}
-      if (isHome) {
-        window.addEventListener('halite:connected', function () { setTimeout(render, 300) })
-        // Already connected in this browser from a previous visit.
-        setTimeout(render, 600)
-      } else {
-        // Nothing to do — the widget decorates this page on its own.
-        if (connected()) {
-          status.textContent = 'Hallie connected'
-          document.getElementById('prompt').hidden = true
-        }
-        window.addEventListener('halite:connected', function () {
-          status.textContent = 'Hallie connected'
-          document.getElementById('prompt').hidden = true
-        })
+      function showConnected() {
+        status.textContent = 'Hallie connected'
+        var prompt = document.getElementById('prompt')
+        if (prompt) prompt.hidden = true
       }
+
+      var isHome = ${JSON.stringify(view === 'home')}
+
+      function start() {
+        if (!connected()) return
+        showConnected()
+        // The collection page needs nothing else — the widget decorates it.
+        if (isHome) render()
+      }
+
+      // The widget publishes window.Halite asynchronously, so reading it now
+      // would say "not connected" on every page load.
+      window.addEventListener('halite:ready', start)
+      window.addEventListener('halite:connected', function () {
+        showConnected()
+        if (isHome) setTimeout(render, 300)
+      })
+      // In case the widget was already up before this script ran.
+      if (connected()) start()
     })()
   </script>
 </body>
