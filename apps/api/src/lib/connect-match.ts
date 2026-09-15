@@ -9,7 +9,21 @@ import type { ConnectContext } from './connect-context.js'
  * awards or removes comes back as a sentence a shopper can read on the
  * product card. A black-box similarity score is worth less here than a
  * reason a merchandiser can argue with.
+ *
+ * Two different starting points, because they mean different things. With a
+ * profile to work from, a product starts low and earns its way up on what it
+ * matches. With no profile at all — a brand-new account — there is nothing
+ * to earn against, and showing "35% match" on a whole catalog reads as a
+ * verdict on the range when it is really a statement about how little we
+ * know. An unprofiled shopper sees a neutral, unpromising-nothing default
+ * instead, with the reason saying plainly why.
  */
+
+/** A product's starting point when we know something about the shopper. */
+const BASE_WITH_PROFILE = 0.35
+
+/** And when we know nothing at all. */
+const BASE_WITHOUT_PROFILE = 0.8
 
 export interface MatchItem {
   productId: string
@@ -109,11 +123,18 @@ export async function matchCatalog(opts: {
     for (const a of item.attributes) ownedAttrs.set(a, (ownedAttrs.get(a) ?? 0) + 1)
   }
 
+  // Is there anything at all to rank against?
+  const hasProfile =
+    liked.size > 0 || avoided.size > 0 || positive.size > 0 || negative.size > 0 ||
+    concerns.size > 0 || ownedAttrs.size > 0 ||
+    context.collection.yours.length > 0 || budget != null
+  const base = hasProfile ? BASE_WITH_PROFILE : BASE_WITHOUT_PROFILE
+
   const scored: MatchItem[] = products.map(p => {
     const attrs = attrsOf(p)
     const reasons: string[] = []
     const warnings: string[] = []
-    let score = 0.35 // every in-scope, in-stock product starts as plausible
+    let score = base
 
     const hitsLiked = attrs.filter(a => liked.has(a))
     if (hitsLiked.length) {
@@ -174,6 +195,12 @@ export async function matchCatalog(opts: {
 
     if (!warnings.length && hitsLiked.length) {
       reasons.push('None of your avoidances are in it')
+    }
+
+    // Say why the number is what it is, rather than letting a shopper read
+    // an identical score across the range as a judgement on the products.
+    if (!hasProfile) {
+      reasons.push('Ranked evenly for now — tell Hallie what you like and these will separate')
     }
 
     return {
