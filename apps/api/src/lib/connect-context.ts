@@ -187,8 +187,18 @@ export async function buildConnectContext(opts: {
   // ── Collection, split by who sold it ────────────────────────────────
   const yours = new Map<string, OwnedProductNamed>()
   const elsewhere: OwnedProductAnonymous[] = []
-  const positive = new Set<string>()
-  const negative = new Set<string>()
+
+  // How often each attribute shows up in something that worked versus
+  // something that did not. Counted rather than collected: one bad reaction
+  // to a ten-ingredient serum is not evidence against all ten ingredients,
+  // and treating it that way marks staples like niacinamide and ceramides as
+  // avoidances, which then penalises almost every product in a catalog.
+  const tally = new Map<string, { pos: number; neg: number }>()
+  function record(attr: string, outcome: 'pos' | 'neg') {
+    const row = tally.get(attr) ?? { pos: 0, neg: 0 }
+    row[outcome]++
+    tally.set(attr, row)
+  }
 
   for (const eu of consumer.endUsers) {
     for (const ci of eu.checkIns) {
@@ -197,8 +207,8 @@ export async function buildConnectContext(opts: {
         if (!inScope(prod.beautyArea, categories)) continue
 
         const attrs = attributesOf(prod)
-        if (cp.reaction === 'POSITIVE') for (const a of attrs) positive.add(a)
-        if (cp.reaction === 'NEGATIVE') for (const a of attrs) negative.add(a)
+        if (cp.reaction === 'POSITIVE') for (const a of attrs) record(a, 'pos')
+        if (cp.reaction === 'NEGATIVE') for (const a of attrs) record(a, 'neg')
 
         if (prod.brandId === brandId) {
           // The brand's own product. It already knows this one exists.
@@ -228,8 +238,32 @@ export async function buildConnectContext(opts: {
     }
   }
 
-  // Anything a product taught us about dislikes is also an avoidance.
-  for (const n of negative) avoided.add(n)
+  // An attribute only becomes a signal when it recurs AND leans one way.
+  // A single reaction is noise; an even split means the attribute is not
+  // what drove the outcome.
+  const MIN_OCCURRENCES = 2
+  const LEAN = 1.5
+
+  const positive: string[] = []
+  const negative: string[] = []
+  for (const [attr, { pos, neg }] of tally) {
+    if (pos >= MIN_OCCURRENCES && pos > neg * LEAN) positive.push(attr)
+    else if (neg >= MIN_OCCURRENCES && neg > pos * LEAN) negative.push(attr)
+  }
+  // Strongest evidence first, so a truncated list keeps the best signals.
+  const strength = (a: string, k: 'pos' | 'neg') => {
+    const t = tally.get(a)!
+    return t[k] - t[k === 'pos' ? 'neg' : 'pos']
+  }
+  positive.sort((a, b) => strength(b, 'pos') - strength(a, 'pos'))
+  negative.sort((a, b) => strength(b, 'neg') - strength(a, 'neg'))
+
+  // What worked repeatedly is a preference; what failed repeatedly is an
+  // avoidance. Anything the consumer stated outright already sits in these.
+  for (const a of positive) liked.add(a)
+  for (const a of negative) avoided.add(a)
+  // A stated preference wins over an inferred avoidance.
+  for (const a of liked) avoided.delete(a)
 
   // Confidence tracks how much the profile is actually built on.
   const signals =
@@ -260,8 +294,8 @@ export async function buildConnectContext(opts: {
       elsewhere: dedupeAnonymous(elsewhere),
     },
     outcomes: {
-      positive: [...positive].slice(0, 20),
-      negative: [...negative].slice(0, 20),
+      positive: positive.slice(0, 20),
+      negative: negative.slice(0, 20),
     },
     intent: { budget_max: budgetMax, currency },
     confidence,

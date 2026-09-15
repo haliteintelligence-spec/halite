@@ -6,7 +6,21 @@ import { ArrowLeft, Loader2, Globe } from 'lucide-react'
 import Link from 'next/link'
 
 const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
-const FOCUS_AREAS = ['SKINCARE', 'HAIR', 'BODY', 'MAKEUP', 'FRAGRANCE', 'WELLNESS']
+// The full BeautyArea enum. These decide what Halite Connect may ask this
+// brand's shoppers to share, so a missing area means a category the brand
+// sells that Connect can never personalise.
+const FOCUS_AREAS: Array<{ value: string; label: string }> = [
+  { value: 'SKINCARE',  label: 'Skincare' },
+  { value: 'BODY',      label: 'Body' },
+  { value: 'HAIR',      label: 'Hair' },
+  { value: 'MAKEUP',    label: 'Makeup' },
+  { value: 'FRAGRANCE', label: 'Fragrance' },
+  { value: 'NAILS',     label: 'Nails' },
+  { value: 'WELLNESS',  label: 'Wellness' },
+  { value: 'SUN_CARE',  label: 'Sun care' },
+  { value: 'LIP_CARE',  label: 'Lip care' },
+  { value: 'EYE_CARE',  label: 'Eye care' },
+]
 
 export default function NewBrandPage() {
   const router = useRouter()
@@ -133,23 +147,28 @@ export default function NewBrandPage() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Focus Areas</label>
+            <label className="block text-[11px] font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Categories</label>
             <div className="flex flex-wrap gap-2">
               {FOCUS_AREAS.map(area => {
-                const active = form.focusAreas.includes(area)
+                const active = form.focusAreas.includes(area.value)
                 return (
-                  <button key={area} type="button" onClick={() => toggleArea(area)}
+                  <button key={area.value} type="button" onClick={() => toggleArea(area.value)}
                     className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
                     style={{
                       background: active ? 'var(--clay)' : 'var(--sand-1)',
                       color: active ? 'white' : 'var(--ink)',
                       border: `1px solid ${active ? 'var(--clay)' : 'var(--border)'}`,
                     }}>
-                    {area}
+                    {area.label}
                   </button>
                 )
               })}
             </div>
+            <p className="text-[11px] mt-2" style={{ color: form.focusAreas.length ? 'var(--ink-3)' : '#b91c1c' }}>
+              {form.focusAreas.length
+                ? 'What Halite Connect may ask this brand’s shoppers to share. Nothing outside these is ever returned.'
+                : 'Pick at least one — Connect refuses to show a consent screen for a brand with no categories.'}
+            </p>
           </div>
         </div>
 

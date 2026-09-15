@@ -6,6 +6,7 @@ import { runAgentWorkflow } from './agent-runner.js'
 import { withRetry } from './retry.js'
 import { encryptSecret } from './secret-box.js'
 import type { PurchaseMatrix } from './purchase-history-processor.js'
+import { seedConnectActivity } from './connect-seed.js'
 
 // ── Pre-built workflow definitions ────────────────────────────────────────────
 
@@ -503,6 +504,23 @@ export async function provisionDemoEnvironment(
 
   // 12. Seed pre-built agent workflows
   await seedAgentWorkflows(brand.id)
+
+  // 12b. Seed Halite Connect — consent grants, ranked recommendations and
+  // storefront events — so the Connect dashboard has something to show the
+  // moment a prospect opens it. The rankings come from the real matcher
+  // against this demo's own catalog, so the explanations are genuine;
+  // only the consent and the browsing are synthesised.
+  try {
+    const connect = await seedConnectActivity({
+      brandId: brand.id,
+      grants: Math.max(12, Math.round(consumerIds.length * 0.18)),
+      days: 30,
+    })
+    console.log(`[demo] Connect seeded: ${connect.grants} grants, ${connect.recommendations} recommendations, ${connect.events} events`)
+  } catch (err) {
+    // A demo without Connect data is still a usable demo.
+    console.warn('[demo] Connect seeding skipped:', err)
+  }
 
   // 13. Create catalog upload records (AI-generated ones only for data not provided by user)
   const uploadData: Array<{
