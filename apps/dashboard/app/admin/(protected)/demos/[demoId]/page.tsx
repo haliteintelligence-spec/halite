@@ -7,7 +7,7 @@ import { Copy, RefreshCw, Trash2, ExternalLink, Clock, Check, Loader2, ArrowLeft
 import type { DemoDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { CircularProgress } from '@/components/ui/CircularProgress'
 import { DemoDetailTabs } from './_tabs'
-import { openBrandDashboard } from '@/lib/portal'
+import { openBrandDashboard, PORTAL_BASE } from '@/lib/portal'
 
 export default function DemoDetailPage() {
   const { demoId } = useParams<{ demoId: string }>()
@@ -383,8 +383,8 @@ export default function DemoDetailPage() {
           <div className="px-5 pb-5 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
             <CredRow
               label="Login URL"
-              value={`https://portal.haliteintelligence.com/${demo.slug}/login`}
-              onCopy={() => copyText(`https://portal.haliteintelligence.com/${demo.slug}/login`, 'url')}
+              value={`${PORTAL_BASE}/${demo.slug}/login`}
+              onCopy={() => copyText(`${PORTAL_BASE}/${demo.slug}/login`, 'url')}
               copied={copied === 'url'}
               isLink
             />

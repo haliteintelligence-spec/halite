@@ -1,13 +1,51 @@
 /**
  * Where a brand's own dashboard lives, and how a Halite admin gets into it.
  *
- * The admin app and the brand portal are different origins, so a
- * `document.cookie` write here never reaches the portal — the session has to
- * be handed over through the portal's own /[slug]/sso route, which sets the
- * cookie server-side on the right host and then redirects in.
+ * This URL must always be ABSOLUTE and always point at the real portal. A
+ * relative link here resolves against whatever origin the admin app happens
+ * to be served from, which on a dev server means the "Enter dashboard"
+ * button sends you to localhost — the brand portal is not running there, so
+ * it just fails to connect.
+ *
+ * The admin app and the brand portal are also the same deployment today, so
+ * a same-origin link would appear to work and then quietly break the day
+ * they are split. Absolute, and validated, on purpose.
  */
-export const PORTAL_BASE =
-  process.env.NEXT_PUBLIC_PORTAL_URL ?? 'https://portal.haliteintelligence.com'
+
+const PRODUCTION_PORTAL = 'https://portal.haliteintelligence.com'
+
+function resolvePortalBase(): string {
+  const explicit = process.env.NEXT_PUBLIC_PORTAL_URL?.trim()
+  if (explicit && isUsable(explicit)) return stripTrailingSlash(explicit)
+
+  // NEXT_PUBLIC_ROOT_DOMAIN is "localhost" in local env files, which is
+  // exactly the case this guard exists for.
+  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim()
+  if (root && !isLocal(root)) return `https://portal.${stripTrailingSlash(root)}`
+
+  return PRODUCTION_PORTAL
+}
+
+function isLocal(value: string): boolean {
+  return /^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?/i.test(value)
+}
+
+/** An override is only honoured when it is absolute and not a local host. */
+function isUsable(value: string): boolean {
+  if (isLocal(value)) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+function stripTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '')
+}
+
+export const PORTAL_BASE = resolvePortalBase()
 
 export function brandDashboardUrl(slug: string): string {
   return `${PORTAL_BASE}/${slug}`
@@ -38,7 +76,13 @@ export async function openBrandDashboard(brandId: string): Promise<void> {
       throw new Error(body?.error ?? 'Could not start a session for this brand')
     }
     const { token, slug } = await res.json() as { token: string; slug: string }
+
     const url = brandSsoUrl(slug, token)
+    // Belt and braces: never navigate a viewer somewhere unreachable.
+    if (isLocal(url)) {
+      throw new Error('The brand portal URL is misconfigured — it points at localhost.')
+    }
+
     if (tab) tab.location.href = url
     else window.open(url, '_blank')
   } catch (err) {
