@@ -244,6 +244,7 @@ function init(config: HaliteWidgetConfig) {
     ...(script?.dataset['haliteReasons'] ? { reasonsSelector: script.dataset['haliteReasons'] } : {}),
     ...(script?.dataset['haliteMinScore'] ? { minScore: Number(script.dataset['haliteMinScore']) } : {}),
     ...(script?.dataset['haliteFadeBelow'] ? { fadeBelow: Number(script.dataset['haliteFadeBelow']) } : {}),
+    ...(script?.dataset['haliteSort'] != null ? { sort: script.dataset['haliteSort'] !== 'false' } : {}),
   }
   const decorator = new Decorator(instance.api, decorateOptions)
 

@@ -183,7 +183,8 @@ export async function previewRoutes(server: FastifyInstance) {
           data-api-key="${esc(brand.apiKey)}"
           data-accent="${esc(accent)}"
           data-halite-badge=".badge-slot"
-          data-halite-reasons=".hlw-slot"></script>
+          data-halite-reasons=".hlw-slot"
+          ${view === 'collection' ? 'data-halite-sort' : ''}></script>
   <script>
     (function () {
       var api = window.HaliteWidget
@@ -215,7 +216,7 @@ export async function previewRoutes(server: FastifyInstance) {
         status.textContent = 'Hallie connected'
         document.getElementById('prompt').hidden = true
 
-        var res = await window.Halite.connect.recommendations({ surface: 'pdp', limit: 8 })
+        var res = await window.Halite.connect.recommendations({ surface: 'pdp', limit: 4 })
         if (!res || !res.items || !res.items.length) return
         currentRec = res.recommendation_id
 
@@ -224,20 +225,30 @@ export async function previewRoutes(server: FastifyInstance) {
         why.hidden = false
         document.getElementById('heading').textContent = 'Picked for you'
 
-        // Scores and reasons are the widget's job on every page, including
-        // this one. All the page does is put its best match first — and it
-        // leaves the rest alone, because a product that simply was not in
-        // the top handful is not a bad match and should not look like one.
-        var rank = {}
-        res.items.forEach(function (i, n) { rank[i.product_id] = n })
-
-        var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'))
-        cards.forEach(function (card) {
-          var r = rank[card.dataset.productId]
-          card.style.order = r == null ? 99 : r
-          if (r === 0) card.classList.add('top')
-        })
+        // "Picked for you" has to actually pick. This page rendered four
+        // products before it knew who was looking — the cheapest ones — so
+        // decorating those would show a shopper their best match was 54%
+        // while a 92% sat on the next page. Replace them with the real
+        // ranking, which the response already carries in full.
+        grid.innerHTML = res.items.map(function (i, n) {
+          return '<article class="card' + (n === 0 ? ' top' : '') + '"' +
+            ' data-product-id="' + i.product_id + '"' +
+            ' data-halite-product="' + (i.sku || i.product_id) + '">' +
+            '<div class="shot"><div class="ph"></div><span class="badge-slot"></span></div>' +
+            '<div class="body">' +
+              '<p class="name">' + i.name + '</p>' +
+              '<p class="price">' + money(i.price, i.currency) + '</p>' +
+              '<div class="hlw-slot"></div>' +
+              '<div class="actions">' +
+                '<button class="buy" data-halite-cart data-halite-value="' + i.price + '">Add to bag</button>' +
+                '<button class="save" data-halite-save>Save</button>' +
+              '</div>' +
+            '</div></article>'
+        }).join('')
         grid.style.display = 'grid'
+
+        // The widget fills in badges and reasons, the same as anywhere else.
+        window.Halite.connect.decorate()
 
         var hasProfile = (res.summary.liked || []).length > 0 ||
                          (res.summary.stated_concerns || []).length > 0
@@ -246,6 +257,14 @@ export async function previewRoutes(server: FastifyInstance) {
             ' products scored. ' + brandName + ' never sees whose products are on your shelf.'
           : res.scored + ' products scored evenly \u2014 there is nothing in your profile to rank on yet. ' +
             brandName + ' never sees whose products are on your shelf.'
+      }
+
+      function money(value, currency) {
+        try {
+          return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(value)
+        } catch (e) {
+          return (currency || 'USD') + ' ' + Number(value).toFixed(2)
+        }
       }
 
       function summarise(s) {

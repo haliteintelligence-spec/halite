@@ -30,6 +30,13 @@ export interface DecorateOptions {
   minScore?: number
   /** Fade a product below this score. Off unless a merchant asks for it. */
   fadeBelow?: number
+  /**
+   * Re-order a listing best match first. Off by default: a merchant's
+   * collection order is usually a merchandising decision, and taking it
+   * over should be something they ask for. Works in a flex or grid
+   * container, which is what a product listing almost always is.
+   */
+  sort?: boolean
 }
 
 export class Decorator {
@@ -132,7 +139,25 @@ export class Decorator {
       this.apply(el, match)
       applied++
     }
+
+    if (this.options.sort) this.sort(all)
     this.report(all.length, applied)
+  }
+
+  /**
+   * Best match first, using CSS order so the DOM is left alone — a listing
+   * that re-renders from the merchant's own code is not fighting us.
+   * Anything unscored sorts to the end rather than to the front.
+   */
+  private sort(all: NodeListOf<HTMLElement>): void {
+    const scored: Array<{ el: HTMLElement; score: number }> = []
+    for (const el of Array.from(all)) {
+      const ref = el.getAttribute(ATTR)
+      const match = ref ? this.cache.get(ref) : undefined
+      scored.push({ el, score: match?.match_score ?? -1 })
+    }
+    scored.sort((a, b) => b.score - a.score)
+    scored.forEach(({ el }, i) => { el.style.order = String(i) })
   }
 
   private apply(el: HTMLElement, match: ConnectMatch): void {
