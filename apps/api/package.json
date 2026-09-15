@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=../../.env src/server.ts",
-    "build": "tsc",
+    "build": "pnpm --filter @halite/widget build && tsc && mkdir -p dist/public && cp ../../packages/widget/dist/halite-widget.js dist/public/widget.js",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
     "backfill:demos": "tsx --env-file=../../.env scripts/backfill-demo-data.ts"

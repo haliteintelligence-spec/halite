@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { WidgetConfig } from '@/lib/api'
+import { WIDGET_URL } from '@/lib/widget-url'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -64,10 +65,15 @@ export function WidgetConfigClient({
   const accent = config.primaryColor ?? '#450F2A'
 
   const embedCode = `<script
-  src="https://cdn.haliteintelligence.com/widget.js"
+  src="${WIDGET_URL}"
   data-api-key="${apiKey}"
   data-accent="${accent}"
 ></script>`
+
+  // The Connect prompt is a separate element the brand drops wherever it
+  // wants the shopper to be asked — the value names the placement, so
+  // acceptance can be compared across them.
+  const connectSnippet = `<div data-halite-connect="pdp"></div>`
 
   async function rotateKey() {
     if (!confirm('Rotate API key? Your existing embed code will stop working immediately.')) return

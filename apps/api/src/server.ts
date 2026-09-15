@@ -22,6 +22,7 @@ import { internalRoutes } from './routes/internal.js'
 import { hallieTestRoutes } from './routes/hallie-test.js'
 import { connectRoutes } from './routes/connect.js'
 import { connectAdminRoutes } from './routes/connect-admin.js'
+import { widgetRoutes } from './routes/widget.js'
 import { errorHandler } from './lib/errors.js'
 import { prisma } from '@halite/db'
 
@@ -105,6 +106,8 @@ async function bootstrap() {
   // in the route file itself, so no prefix here.
   await server.register(connectRoutes)
   await server.register(connectAdminRoutes, { prefix: '/brands' })
+  // Served at the root so cdn.haliteintelligence.com/widget.js resolves.
+  await server.register(widgetRoutes)
 
   server.setErrorHandler(errorHandler)
 

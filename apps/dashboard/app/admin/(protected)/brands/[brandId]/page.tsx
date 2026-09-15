@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Save, Power, Copy, Check, Trash2, Globe, Palette, T
 import type { BrandDetail, BrandThemeConfig } from '@/lib/admin-api'
 import { BrandDetailTabs } from './_tabs'
 import { PORTAL_BASE, openBrandDashboard } from '@/lib/portal'
+import { WIDGET_URL } from '@/lib/widget-url'
 
 const PLANS = ['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE']
 
@@ -349,7 +350,7 @@ export default function BrandDetailPage() {
       {/* Shopify Integration Instructions */}
       {(() => {
         const accent = brand.primaryColor ?? '#450F2A'
-        const embedCode = `<script\n  src="https://cdn.haliteintelligence.com/widget.js"\n  data-api-key="${brand.apiKey}"\n  data-accent="${accent}"\n></script>`
+        const embedCode = `<script\n  src="${WIDGET_URL}"\n  data-api-key="${brand.apiKey}"\n  data-accent="${accent}"\n></script>`
         return (
           <div className="rounded-xl mb-4 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <button

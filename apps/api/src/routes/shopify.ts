@@ -7,6 +7,11 @@ import { ApiError } from '../lib/errors.js'
 import { processCatalogUpload } from '../lib/catalog-processor.js'
 import { encryptSecret, tryDecryptSecret } from '../lib/secret-box.js'
 
+// Where storefronts load the widget from. The API serves the bundle itself
+// (see routes/widget.ts); cdn.haliteintelligence.com is a second domain on
+// the same service, so this only changes if that domain does.
+const WIDGET_URL = process.env.WIDGET_URL ?? 'https://cdn.haliteintelligence.com/widget.js'
+
 // ── Shared HMAC verifier ───────────────────────────────────────────────────
 function verifyShopifyHmac(query: Record<string, string>): boolean {
   const { hmac, ...rest } = query
@@ -246,7 +251,7 @@ export async function shopifyRoutes(server: FastifyInstance) {
     return {
       apiKey: brand.apiKey,
       slug: brand.slug,
-      widgetUrl: 'https://cdn.haliteintelligence.com/widget.js',
+      widgetUrl: WIDGET_URL,
       accentColor: brand.primaryColor ?? '#450F2A',
       customerId: logged_in_customer_id ?? null,
     }
