@@ -103,6 +103,19 @@ function loadConnect(): StoredConnect | null {
   } catch { return null }
 }
 
+/**
+ * Forgets the stored identity.
+ *
+ * A consumer id in localStorage outlives the grant it refers to — the
+ * shopper can disconnect in Hallie, and this browser would go on asking
+ * about a consumer the brand may no longer read. When the server says the
+ * permission is gone, the page should go back to offering to connect rather
+ * than silently doing nothing.
+ */
+function clearConnect(): void {
+  try { localStorage.removeItem(CONNECT_KEY) } catch { /* nothing to clear */ }
+}
+
 export class HaliteApi {
   private token = ''
   private userId = ''
@@ -274,6 +287,22 @@ export class HaliteApi {
 
   // ── Halite Connect ──────────────────────────────────────────────────
 
+  /**
+   * A permission that has gone away is a normal state; anything else is a
+   * bug the merchant needs to see. Both were silently swallowed before, so
+   * an integration that returned nothing gave no clue why.
+   */
+  private handleGrantError(err: unknown, what: string): void {
+    const status = (err as { status?: number } | undefined)?.status
+    if (status === 403 || status === 404) {
+      clearConnect()
+      window.dispatchEvent(new CustomEvent('halite:disconnected', { detail: { reason: status } }))
+      console.info(`[halite] no live permission for this shopper — clearing the stored connection (${what})`)
+      return
+    }
+    console.warn(`[halite] ${what} failed:`, err)
+  }
+
   /** The hl_… id for this browser, if the shopper has connected here before. */
   get connectedConsumerId(): string | null {
     return loadConnect()?.consumerId ?? null
@@ -380,8 +409,8 @@ export class HaliteApi {
         ...(args.productIds?.length ? { product_ids: args.productIds } : {}),
       }, false)
       return res.matches
-    } catch {
-      // A revoked grant answers 403. The page simply shows no scores.
+    } catch (err) {
+      this.handleGrantError(err, 'match')
       return []
     }
   }
@@ -424,7 +453,12 @@ export class HaliteApi {
       headers,
       body: JSON.stringify(body),
     })
-    if (!res.ok) throw new Error(`POST ${path} → ${res.status}`)
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      const err = new Error(`POST ${path} → ${res.status}${detail ? ` ${detail.slice(0, 200)}` : ''}`)
+      ;(err as Error & { status?: number }).status = res.status
+      throw err
+    }
     return res.json() as Promise<T>
   }
 

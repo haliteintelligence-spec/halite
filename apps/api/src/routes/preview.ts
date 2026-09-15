@@ -83,8 +83,8 @@ export async function previewRoutes(server: FastifyInstance) {
           <ul class="reasons" hidden></ul>
           <div class="hlw-slot"></div>
           <div class="actions">
-            <button class="buy">Add to bag</button>
-            <button class="save" title="Save to your Hallie wishlist">Save</button>
+            <button class="buy" data-halite-cart data-halite-value="${p.price}">Add to bag</button>
+            <button class="save" data-halite-save title="Save to your Hallie wishlist">Save</button>
           </div>
         </div>
       </article>`).join('')
@@ -201,29 +201,19 @@ export async function previewRoutes(server: FastifyInstance) {
         return window.Halite && window.Halite.connect && window.Halite.connect.isConnected()
       }
 
-      function track(event, card, recId) {
-        if (!window.Halite || !window.Halite.connect) return
-        window.Halite.connect.track(event, {
-          productId: card.dataset.productId,
-          sku: card.dataset.sku || undefined,
-          recommendationId: recId || undefined,
-          surface: 'pdp',
-        })
-      }
-
       var currentRec = null
 
+      // The widget reports these itself, from the data attributes on the
+      // buttons — this only handles how the page looks afterwards.
       grid.addEventListener('click', function (e) {
         var card = e.target.closest('.card')
         if (!card) return
         if (e.target.classList.contains('buy')) {
-          track('add_to_cart', card, currentRec)
           card.classList.add('done')
           e.target.textContent = 'In your bag'
         }
         if (e.target.classList.contains('save')) {
-          track('wishlisted', card, currentRec)
-          e.target.textContent = 'Saved'
+          e.target.textContent = 'Saved to Hallie'
         }
       })
 
@@ -257,7 +247,6 @@ export async function previewRoutes(server: FastifyInstance) {
             .concat(i.warnings.map(function (w) { return '<li class="warn">' + w + '</li>' })).join('')
           ul.hidden = false
           card.style.order = hit.rank
-          track('product_viewed', card, currentRec)
         })
         grid.style.display = 'grid'
 

@@ -5,6 +5,7 @@ import { ProgressController } from './progress'
 import { ReorderController } from './reorder'
 import { ConnectController } from './connect'
 import { Decorator, type DecorateOptions } from './decorate'
+import { attachActions } from './actions'
 import { getStyles } from './styles'
 
 interface HaliteWidgetConfig {
@@ -245,8 +246,12 @@ function init(config: HaliteWidgetConfig) {
   }
   const decorator = new Decorator(instance.api, decorateOptions)
 
+  // Saves and purchases report from any page, not just a widget-rendered one.
+  attachActions(instance.api, script?.dataset['haliteSurface'] ?? 'pdp')
+
   // On connect, and on every later page load while the grant is live.
   window.addEventListener('halite:connected', () => { void decorator.run() })
+  window.addEventListener('halite:disconnected', () => { decorator.stop() })
   if (instance.api.connectedConsumerId) {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => { void decorator.run() })

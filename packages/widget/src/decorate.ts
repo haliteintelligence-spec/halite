@@ -35,6 +35,7 @@ export class Decorator {
   private pending = new Set<string>()
   private observer: MutationObserver | null = null
   private scheduled = 0
+  private reported = false
 
   constructor(private api: HaliteApi, private options: DecorateOptions = {}) {}
 
@@ -43,6 +44,31 @@ export class Decorator {
     if (!this.api.connectedConsumerId) return
     await this.sweep()
     this.watch()
+  }
+
+  /**
+   * Says what happened, once per page.
+   *
+   * Silence is the worst outcome for a merchant integrating this: no badges
+   * and no reason why. The usual causes are a page that tagged nothing and
+   * SKUs the catalog does not carry, and neither is visible without saying
+   * so out loud.
+   */
+  private report(found: number, scored: number): void {
+    if (this.reported) return
+    this.reported = true
+    if (found === 0) {
+      console.info('[halite] nothing to score — no elements carry data-halite-product')
+      return
+    }
+    if (scored === 0) {
+      console.warn(
+        `[halite] ${found} tagged product(s) on this page, none matched the catalog. ` +
+        'Check that data-halite-product carries the SKU or product id Halite holds.',
+      )
+      return
+    }
+    console.info(`[halite] scored ${scored} of ${found} products on this page`)
   }
 
   stop(): void {
@@ -62,9 +88,12 @@ export class Decorator {
   }
 
   private async sweep(): Promise<void> {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(`[${ATTR}]`))
-      .filter(el => !el.dataset[MARK])
-    if (elements.length === 0) return
+    const all = document.querySelectorAll<HTMLElement>(`[${ATTR}]`)
+    const elements = Array.from(all).filter(el => !el.dataset[MARK])
+    if (elements.length === 0) {
+      this.report(all.length, this.cache.size)
+      return
+    }
 
     const needed: string[] = []
     for (const el of elements) {
@@ -91,6 +120,7 @@ export class Decorator {
       }
     }
 
+    let applied = 0
     for (const el of elements) {
       const sku = el.getAttribute(ATTR)
       if (!sku) continue
@@ -98,7 +128,9 @@ export class Decorator {
       if (!match) continue
       el.dataset[MARK] = '1'
       this.apply(el, match)
+      applied++
     }
+    this.report(all.length, applied)
   }
 
   private apply(el: HTMLElement, match: ConnectMatch): void {

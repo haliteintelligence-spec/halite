@@ -613,11 +613,12 @@ export async function connectRoutes(server: FastifyInstance) {
         }
       }
 
-      const productWhere = e.product_id
-        ? { brandId: brand.id, id: e.product_id }
-        : e.sku
-          ? { brandId: brand.id, externalId: e.sku }
-          : null
+      // A storefront tags products with whatever identifier it already has,
+      // so try both rather than making the merchant know which we hold.
+      const refs = [e.product_id, e.sku].filter((v): v is string => Boolean(v))
+      const productWhere = refs.length
+        ? { brandId: brand.id, OR: [{ id: { in: refs } }, { externalId: { in: refs } }] }
+        : null
       const product = productWhere
         ? await prisma.product.findFirst({
             where: productWhere,
