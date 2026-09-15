@@ -547,3 +547,46 @@ export async function getConnectPermissions(): Promise<ConnectPermissions | null
   if (!auth) return null
   return apiFetch<ConnectPermissions>(`/brands/${auth.brandId}/connect/permissions`, auth.token, true)
 }
+
+export interface ConnectSetup {
+  brand: { name: string; apiKey: string; accentColor: string; categories: string[] }
+  steps: Array<{ key: string; label: string; done: boolean; detail: string }>
+  catalog: {
+    total: number
+    inStock: number
+    source: { kind: 'shopify' | 'upload' | 'none'; label: string; connected: boolean }
+    lastSyncAt: string | null
+    coverage: Array<{ field: string; filled: number; total: number }>
+  }
+  placements: Array<{ surface: string; shown: number }>
+  events: Record<string, number>
+}
+
+export interface ConnectInsights {
+  cohort: number
+  minimumCohort: number
+  suppressed: boolean
+  catalogSize?: number
+  demand: Array<{ attribute: string; wantedPct: number; stockedPct: number; people: number; products: number }>
+  unmet: Array<{ attribute: string; wantedPct: number; stockedPct: number; people: number; products: number }>
+  overstocked?: Array<{ attribute: string; stockedPct: number; wantedPct: number }>
+  avoided?: Array<{ attribute: string; pct: number; people: number }>
+  concerns?: Array<{ concern: string; pct: number; people: number }>
+  budget: { median: number; sample: number } | null
+  outcomes: Array<{
+    productId: string; name: string; purchases: number; revenue: number
+    addedToCart: number; returns: number; keptPct: number
+  }>
+}
+
+export async function getConnectSetup(): Promise<ConnectSetup | null> {
+  const auth = await getTokenAndBrandId()
+  if (!auth) return null
+  return apiFetch<ConnectSetup>(`/brands/${auth.brandId}/connect/setup`, auth.token, true)
+}
+
+export async function getConnectInsights(): Promise<ConnectInsights | null> {
+  const auth = await getTokenAndBrandId()
+  if (!auth) return null
+  return apiFetch<ConnectInsights>(`/brands/${auth.brandId}/connect/insights`, auth.token, true)
+}

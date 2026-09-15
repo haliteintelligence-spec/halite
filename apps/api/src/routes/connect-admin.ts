@@ -344,6 +344,274 @@ export async function connectAdminRoutes(server: FastifyInstance) {
     }
   )
 
+
+  // ── Setup ───────────────────────────────────────────────────────────
+  // Everything a brand needs to get Connect live, and an honest reading of
+  // how far along it is.
+  server.get(
+    '/:brandId/connect/setup',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        select: {
+          id: true, name: true, apiKey: true, focusAreas: true, primaryColor: true,
+          shopifyShop: true, shopifyTokenEncrypted: true, shopifyToken: true,
+        },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+
+      const [products, lastUpload, grants, events, surfaces] = await Promise.all([
+        prisma.product.findMany({
+          where: { brandId, beautyArea: { in: brand.focusAreas } },
+          select: { inStock: true, keyIngredients: true, ingredients: true, concerns: true, price: true, metadata: true },
+        }),
+        prisma.catalogUpload.findFirst({
+          where: { brandId },
+          orderBy: { createdAt: 'desc' },
+          select: { fileName: true, source: true, status: true, rowCount: true, createdAt: true },
+        }),
+        prisma.consentGrant.count({ where: { brandId, status: 'ACTIVE' } }),
+        prisma.connectEvent.groupBy({
+          by: ['type'],
+          where: { brandId },
+          _count: { _all: true },
+        }),
+        prisma.connectEvent.groupBy({
+          by: ['surface'],
+          where: { brandId, type: 'PROMPT_SHOWN' },
+          _count: { _all: true },
+        }),
+      ])
+
+      const total = products.length
+      const has = (fn: (p: typeof products[number]) => boolean) => products.filter(fn).length
+      const noteCount = has(p => {
+        const meta = p.metadata as Record<string, unknown> | null
+        return Array.isArray(meta?.['notes']) && (meta!['notes'] as unknown[]).length > 0
+      })
+
+      const eventCounts = Object.fromEntries(events.map(e => [e.type, e._count._all]))
+      const hasPurchases = (eventCounts['PURCHASE'] ?? 0) > 0
+
+      // The four things that have to be true, in the order they unblock
+      // each other.
+      const steps = [
+        {
+          key: 'categories',
+          label: 'Set your categories',
+          done: brand.focusAreas.length > 0,
+          detail: brand.focusAreas.length
+            ? brand.focusAreas.join(', ').toLowerCase()
+            : 'Connect cannot ask a shopper for anything until at least one is set',
+        },
+        {
+          key: 'catalog',
+          label: 'Connect your catalog',
+          done: total > 0,
+          detail: total
+            ? `${total} products in your categories${brand.shopifyShop ? ` · Shopify (${brand.shopifyShop})` : lastUpload ? ` · ${lastUpload.fileName}` : ''}`
+            : 'No products to rank yet',
+        },
+        {
+          key: 'prompt',
+          label: 'Place the Connect prompt',
+          done: (eventCounts['PROMPT_SHOWN'] ?? 0) > 0,
+          detail: (eventCounts['PROMPT_SHOWN'] ?? 0) > 0
+            ? `${eventCounts['PROMPT_SHOWN']} prompts shown · ${grants} connected`
+            : 'No prompt has been shown yet',
+        },
+        {
+          key: 'events',
+          label: 'Send outcomes back',
+          done: hasPurchases,
+          detail: hasPurchases
+            ? `${eventCounts['PURCHASE']} purchases attributed`
+            : 'Without purchase events there is no conversion reporting',
+        },
+      ]
+
+      return {
+        brand: {
+          name: brand.name,
+          apiKey: brand.apiKey,
+          accentColor: brand.primaryColor ?? '#450F2A',
+          categories: brand.focusAreas,
+        },
+        steps,
+        catalog: {
+          total,
+          inStock: has(p => p.inStock),
+          source: brand.shopifyShop
+            ? { kind: 'shopify' as const, label: brand.shopifyShop, connected: Boolean(brand.shopifyTokenEncrypted ?? brand.shopifyToken) }
+            : lastUpload
+              ? { kind: 'upload' as const, label: lastUpload.fileName, connected: lastUpload.status === 'DONE' }
+              : { kind: 'none' as const, label: 'Nothing connected', connected: false },
+          lastSyncAt: lastUpload?.createdAt?.toISOString() ?? null,
+          // What Halite could actually read off the catalog. Thin coverage
+          // here is the usual reason matches come back weak.
+          coverage: [
+            { field: 'Key ingredients', filled: has(p => p.keyIngredients.length > 0), total },
+            { field: 'Full ingredient list', filled: has(p => p.ingredients.length > 0), total },
+            { field: 'Concerns targeted', filled: has(p => p.concerns.length > 0), total },
+            { field: 'Notes / scent profile', filled: noteCount, total },
+            { field: 'Price', filled: has(p => p.price > 0), total },
+          ],
+        },
+        placements: surfaces.map(s => ({ surface: s.surface ?? 'unspecified', shown: s._count._all })),
+        events: eventCounts,
+      }
+    }
+  )
+
+  // ── Audience insights ───────────────────────────────────────────────
+  // Aggregated across consumers who granted this brand access. Individual
+  // profiles never appear here, and the whole view is withheld until the
+  // group is large enough that a row cannot be traced back to one person.
+  server.get(
+    '/:brandId/connect/insights',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const MIN_COHORT = 20
+
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        select: { focusAreas: true },
+      })
+      if (!brand) throw new ApiError(404, 'Brand not found')
+
+      // One context per consumer — the most recent ranking we built for them.
+      const recs = await prisma.recommendation.findMany({
+        where: { brandId },
+        orderBy: { createdAt: 'desc' },
+        select: { consumerId: true, context: true },
+      })
+      const latest = new Map<string, unknown>()
+      for (const r of recs) if (!latest.has(r.consumerId)) latest.set(r.consumerId, r.context)
+
+      const cohort = latest.size
+      if (cohort < MIN_COHORT) {
+        return {
+          cohort,
+          minimumCohort: MIN_COHORT,
+          suppressed: true,
+          demand: [], unmet: [], outcomes: [], budget: null,
+        }
+      }
+
+      // What connected shoppers want, counted per person.
+      const wanted = new Map<string, number>()
+      const avoided = new Map<string, number>()
+      const concerns = new Map<string, number>()
+      const budgets: number[] = []
+      for (const ctx of latest.values()) {
+        const c = ctx as {
+          preferences?: { liked?: string[]; avoided?: string[]; concerns?: string[] }
+          intent?: { budget_max?: number | null }
+        }
+        for (const a of new Set(c.preferences?.liked ?? [])) wanted.set(a, (wanted.get(a) ?? 0) + 1)
+        for (const a of new Set(c.preferences?.avoided ?? [])) avoided.set(a, (avoided.get(a) ?? 0) + 1)
+        for (const a of new Set(c.preferences?.concerns ?? [])) concerns.set(a, (concerns.get(a) ?? 0) + 1)
+        const b = c.intent?.budget_max
+        if (typeof b === 'number' && b > 0) budgets.push(b)
+      }
+
+      // What the catalog actually offers.
+      const products = await prisma.product.findMany({
+        where: { brandId, beautyArea: { in: brand.focusAreas } },
+        select: { id: true, name: true, keyIngredients: true, ingredients: true, concerns: true, price: true, metadata: true },
+      })
+      const catalogAttr = new Map<string, number>()
+      for (const p of products) {
+        const attrs = new Set<string>()
+        for (const k of p.keyIngredients) attrs.add(k.toLowerCase())
+        for (const i of p.ingredients) attrs.add(i.toLowerCase())
+        const meta = p.metadata as Record<string, unknown> | null
+        const notes = meta?.['notes']
+        if (Array.isArray(notes)) for (const n of notes) if (typeof n === 'string') attrs.add(n.toLowerCase())
+        for (const a of attrs) catalogAttr.set(a, (catalogAttr.get(a) ?? 0) + 1)
+      }
+
+      const pctOf = (n: number, d: number) => (d === 0 ? 0 : Math.round((n / d) * 1000) / 10)
+
+      const demand = [...wanted.entries()]
+        .map(([attribute, people]) => ({
+          attribute,
+          wantedPct: pctOf(people, cohort),
+          stockedPct: pctOf(catalogAttr.get(attribute) ?? 0, products.length),
+          people,
+          products: catalogAttr.get(attribute) ?? 0,
+        }))
+        .sort((a, b) => (b.wantedPct - b.stockedPct) - (a.wantedPct - a.stockedPct))
+        .slice(0, 12)
+
+      // Wanted by a real share of the audience, and barely stocked.
+      const unmet = demand
+        .filter(d => d.wantedPct >= 10 && d.stockedPct < d.wantedPct / 2)
+        .slice(0, 6)
+
+      // Over-stocked relative to demand — the other half of an assortment gap.
+      const overstocked = [...catalogAttr.entries()]
+        .map(([attribute, count]) => ({
+          attribute,
+          stockedPct: pctOf(count, products.length),
+          wantedPct: pctOf(wanted.get(attribute) ?? 0, cohort),
+        }))
+        .filter(x => x.stockedPct >= 20 && x.wantedPct < x.stockedPct / 2)
+        .sort((a, b) => (b.stockedPct - b.wantedPct) - (a.stockedPct - a.wantedPct))
+        .slice(0, 6)
+
+      // What actually happened to what we recommended.
+      const [purchases, returns, carts] = await Promise.all([
+        prisma.connectEvent.groupBy({ by: ['productId'], where: { brandId, type: 'PURCHASE', productId: { not: null } }, _count: { _all: true }, _sum: { value: true } }),
+        prisma.connectEvent.groupBy({ by: ['productId'], where: { brandId, type: 'RETURNED', productId: { not: null } }, _count: { _all: true } }),
+        prisma.connectEvent.groupBy({ by: ['productId'], where: { brandId, type: 'ADD_TO_CART', productId: { not: null } }, _count: { _all: true } }),
+      ])
+      const nameOf = new Map(products.map(p => [p.id, p.name]))
+      const returnBy = new Map(returns.map(r => [r.productId, r._count._all]))
+      const cartBy = new Map(carts.map(r => [r.productId, r._count._all]))
+
+      const outcomes = purchases
+        .map(p => ({
+          productId: p.productId!,
+          name: nameOf.get(p.productId!) ?? 'Unknown product',
+          purchases: p._count._all,
+          revenue: Math.round((p._sum.value ?? 0) * 100) / 100,
+          addedToCart: cartBy.get(p.productId!) ?? 0,
+          returns: returnBy.get(p.productId!) ?? 0,
+          keptPct: pctOf(p._count._all - (returnBy.get(p.productId!) ?? 0), p._count._all),
+        }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 8)
+
+      budgets.sort((a, b) => a - b)
+      const median = budgets.length ? budgets[Math.floor(budgets.length / 2)]! : null
+
+      return {
+        cohort,
+        minimumCohort: MIN_COHORT,
+        suppressed: false,
+        catalogSize: products.length,
+        demand,
+        unmet,
+        overstocked,
+        avoided: [...avoided.entries()]
+          .map(([attribute, people]) => ({ attribute, pct: pctOf(people, cohort), people }))
+          .sort((a, b) => b.pct - a.pct)
+          .slice(0, 8),
+        concerns: [...concerns.entries()]
+          .map(([concern, people]) => ({ concern, pct: pctOf(people, cohort), people }))
+          .sort((a, b) => b.pct - a.pct)
+          .slice(0, 8),
+        budget: median != null ? { median, sample: budgets.length } : null,
+        outcomes,
+      }
+    }
+  )
+
   // ── Permission ledger ───────────────────────────────────────────────
   server.get(
     '/:brandId/connect/permissions',
