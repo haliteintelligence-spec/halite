@@ -75,12 +75,11 @@ export async function previewRoutes(server: FastifyInstance) {
                data-halite-product="${esc(p.externalId ?? p.id)}">
         <div class="shot">
           ${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}">` : `<div class="ph"></div>`}
-          <span class="badge" hidden></span>
+          <span class="badge-slot"></span>
         </div>
         <div class="body">
           <p class="name">${esc(p.name)}</p>
           <p class="price">${esc(money(p.price, p.currency))}</p>
-          <ul class="reasons" hidden></ul>
           <div class="hlw-slot"></div>
           <div class="actions">
             <button class="buy" data-halite-cart data-halite-value="${p.price}">Add to bag</button>
@@ -135,17 +134,11 @@ export async function previewRoutes(server: FastifyInstance) {
   .shot { position:relative; height:190px; background:var(--sand); display:flex; align-items:center; justify-content:center; }
   .shot img { max-height:150px; max-width:80%; object-fit:contain; }
   .ph { width:54px; height:104px; border-radius:9px; background:var(--border); }
-  .badge { position:absolute; top:12px; left:12px; background:var(--accent); color:#fff;
-           font-size:10.5px; font-weight:700; padding:5px 10px; border-radius:999px; }
+  /* The widget injects its badge in here; the page decides where that is. */
+  .badge-slot { position:absolute; top:12px; left:12px; }
   .body { padding:16px; display:flex; flex-direction:column; gap:9px; flex:1; }
   .name { margin:0; font-size:13.5px; font-weight:600; }
   .price { margin:0; font-size:12px; color:var(--ink3); }
-  .reasons { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
-  .reasons li { font-size:11.5px; line-height:1.4; color:var(--ink2); padding-left:16px; position:relative; }
-  .reasons li::before { content:''; position:absolute; left:0; top:4px; width:9px; height:5px;
-                        border-left:2px solid var(--sage); border-bottom:2px solid var(--sage); transform:rotate(-45deg); }
-  .reasons li.warn { color:var(--ink3); }
-  .reasons li.warn::before { border-color:#c07070; transform:rotate(-45deg) scaleX(.8); }
   .actions { margin-top:auto; padding-top:10px; display:flex; gap:8px; }
   .buy { flex:1; background:var(--accent); color:#fff; font-size:13px; font-weight:600; height:44px; }
   .save { border:1.5px solid var(--border); background:transparent; color:var(--ink2);
@@ -189,7 +182,7 @@ export async function previewRoutes(server: FastifyInstance) {
   <script src="${esc(WIDGET_URL)}?v=${WIDGET_BUILD}"
           data-api-key="${esc(brand.apiKey)}"
           data-accent="${esc(accent)}"
-          data-halite-badge=".shot"
+          data-halite-badge=".badge-slot"
           data-halite-reasons=".hlw-slot"></script>
   <script>
     (function () {
@@ -231,22 +224,18 @@ export async function previewRoutes(server: FastifyInstance) {
         why.hidden = false
         document.getElementById('heading').textContent = 'Picked for you'
 
-        var byId = {}
-        res.items.forEach(function (i, n) { byId[i.product_id] = { item: i, rank: n } })
+        // Scores and reasons are the widget's job on every page, including
+        // this one. All the page does is put its best match first — and it
+        // leaves the rest alone, because a product that simply was not in
+        // the top handful is not a bad match and should not look like one.
+        var rank = {}
+        res.items.forEach(function (i, n) { rank[i.product_id] = n })
 
         var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'))
         cards.forEach(function (card) {
-          var hit = byId[card.dataset.productId]
-          if (!hit) { card.style.opacity = '.45'; return }
-          var i = hit.item
-          card.querySelector('.badge').textContent = Math.round(i.match_score * 100) + '% match'
-          card.querySelector('.badge').hidden = false
-          if (hit.rank === 0) card.classList.add('top')
-          var ul = card.querySelector('.reasons')
-          ul.innerHTML = i.reasons.map(function (r) { return '<li>' + r + '</li>' })
-            .concat(i.warnings.map(function (w) { return '<li class="warn">' + w + '</li>' })).join('')
-          ul.hidden = false
-          card.style.order = hit.rank
+          var r = rank[card.dataset.productId]
+          card.style.order = r == null ? 99 : r
+          if (r === 0) card.classList.add('top')
         })
         grid.style.display = 'grid'
 

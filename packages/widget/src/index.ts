@@ -243,6 +243,7 @@ function init(config: HaliteWidgetConfig) {
     ...(script?.dataset['haliteBadge'] ? { badgeSelector: script.dataset['haliteBadge'] } : {}),
     ...(script?.dataset['haliteReasons'] ? { reasonsSelector: script.dataset['haliteReasons'] } : {}),
     ...(script?.dataset['haliteMinScore'] ? { minScore: Number(script.dataset['haliteMinScore']) } : {}),
+    ...(script?.dataset['haliteFadeBelow'] ? { fadeBelow: Number(script.dataset['haliteFadeBelow']) } : {}),
   }
   const decorator = new Decorator(instance.api, decorateOptions)
 

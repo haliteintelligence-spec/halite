@@ -28,6 +28,8 @@ export interface DecorateOptions {
   reasonsSelector?: string
   /** Hide the badge below this score — a weak match is noise on a listing. */
   minScore?: number
+  /** Fade a product below this score. Off unless a merchant asks for it. */
+  fadeBelow?: number
 }
 
 export class Decorator {
@@ -134,6 +136,11 @@ export class Decorator {
   }
 
   private apply(el: HTMLElement, match: ConnectMatch): void {
+    // Fading is a judgement about fit, so it follows the score rather than
+    // whether a product happened to make some top-N list.
+    const fade = this.options.fadeBelow
+    if (fade != null && match.match_score < fade) el.style.opacity = '0.55'
+
     const min = this.options.minScore ?? 0
     if (match.match_score < min) return
 
