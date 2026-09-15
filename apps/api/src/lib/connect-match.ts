@@ -108,6 +108,12 @@ export async function matchCatalog(opts: {
   })
 
   const liked = new Set(context.preferences.liked)
+  // Ingredients inferred from a concern, rather than asked for. They are
+  // evidence that a product addresses that concern — which the concern match
+  // already pays for — so they earn about half as much. Without this a
+  // product is scored twice for one fit, and the size of the second payment
+  // depends on how many ingredients its listing happens to name.
+  const derived = new Set(context.preferences.liked_derived ?? [])
   const avoided = new Set(context.preferences.avoided)
   const cautioned = new Set(context.preferences.cautioned ?? [])
   const positive = new Set(context.outcomes.positive)
@@ -138,11 +144,18 @@ export async function matchCatalog(opts: {
 
     const hitsLiked = attrs.filter(a => liked.has(a))
     if (hitsLiked.length) {
-      // Diminishing returns: a product with six matching ingredients is not
-      // twice the answer of one with three, and a flat cap makes everything
-      // relevant tie at the ceiling.
-      score += Math.min(0.26, 0.13 * Math.sqrt(hitsLiked.length))
-      reasons.push(`Built on ${phrase(hitsLiked.slice(0, 3))}, which you gravitate to`)
+      const stated = hitsLiked.filter(a => !derived.has(a)).length
+      const inferred = hitsLiked.length - stated
+      // Diminishing returns on both: a product naming six useful ingredients
+      // is not twice the answer of one naming three.
+      score +=
+        Math.min(0.26, 0.13 * Math.sqrt(stated)) +
+        Math.min(0.13, 0.07 * Math.sqrt(inferred))
+      reasons.push(
+        stated > 0
+          ? `Built on ${phrase(hitsLiked.slice(0, 3))}, which you gravitate to`
+          : `Built on ${phrase(hitsLiked.slice(0, 3))}, which answers what you're working on`,
+      )
     }
 
     const hitsPositive = attrs.filter(a => positive.has(a) && !liked.has(a))

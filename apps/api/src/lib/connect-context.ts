@@ -54,6 +54,8 @@ export interface ConnectContext {
   categories: BeautyArea[]
   preferences: {
     liked: string[]
+    /** The subset of `liked` inferred from a concern rather than stated. */
+    liked_derived: string[]
     avoided: string[]
     /** Rankable, but flagged on the card — see hallie-preferences. */
     cautioned: string[]
@@ -308,6 +310,10 @@ export async function buildConnectContext(opts: {
     categories,
     preferences: {
       liked: [...liked].slice(0, 20),
+      // Anything the outcomes proved is a real preference, whatever its
+      // origin — so a derived ingredient that then worked stops being
+      // derived.
+      liked_derived: stated.likedDerived.filter(a => !positive.includes(a)),
       avoided: [...avoided].slice(0, 20),
       cautioned: stated.cautioned,
       concerns: [...concerns],

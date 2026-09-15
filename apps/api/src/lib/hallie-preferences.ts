@@ -83,6 +83,15 @@ export interface HalliePreferenceSignals {
   concerns: string[]        // Halite SkinConcern values, for catalog matching
   rawConcerns: string[]     // Hallie's own words, for explanations
   liked: string[]
+  /**
+   * The subset of `liked` inferred from a concern rather than stated.
+   *
+   * These are what usually solves the problem the shopper named, not
+   * something they asked for — so they are evidence that a product
+   * addresses a concern, not a second preference on top of it. The matcher
+   * weights them lower to avoid paying twice for one fit.
+   */
+  likedDerived: string[]
   avoided: string[]
   /** Fine for most people, worth a word of warning for this one. */
   cautioned: string[]
@@ -97,7 +106,7 @@ export interface HalliePreferenceSignals {
 }
 
 const EMPTY: HalliePreferenceSignals = {
-  concerns: [], rawConcerns: [], liked: [], avoided: [], cautioned: [],
+  concerns: [], rawConcerns: [], liked: [], likedDerived: [], avoided: [], cautioned: [],
   skinType: null, sensitivity: null, texture: null, routineComplexity: null,
   budgetMax: null, categories: [], found: false,
 }
@@ -172,9 +181,15 @@ export async function readHalliePreferences(args: {
     }
 
     // Concerns become the ingredients that answer them. This is the step that
-    // turns a stated worry into something a catalog can be ranked against.
+    // turns a stated worry into something a catalog can be ranked against —
+    // and it is tracked separately, because these are inferred from the
+    // concern rather than asked for.
+    const derived = new Set<string>()
     for (const c of rawConcerns) {
-      for (const ing of CONCERN_INGREDIENTS[c] ?? []) liked.add(ing)
+      for (const ing of CONCERN_INGREDIENTS[c] ?? []) {
+        liked.add(ing)
+        derived.add(ing)
+      }
     }
 
     // Reactive skin is a constraint, not a preference. Fragrance is only an
@@ -198,6 +213,7 @@ export async function readHalliePreferences(args: {
       concerns: [...new Set(concerns)],
       rawConcerns: [...rawConcerns],
       liked: [...liked],
+      likedDerived: [...derived],
       avoided: [...avoided],
       cautioned: [...cautioned],
       skinType,
