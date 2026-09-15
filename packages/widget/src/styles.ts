@@ -394,5 +394,12 @@ export function getStyles(accent: string): string {
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 10px;
     }
+
+    .hlw-connect-noprofile {
+      display: block; width: 100%; margin-top: 14px; padding: 0;
+      background: none; border: none; cursor: pointer; text-align: left;
+      font-size: 12.5px; font-weight: 600; color: ${accent};
+    }
+    .hlw-connect-noprofile:hover { text-decoration: underline; }
 `
 }

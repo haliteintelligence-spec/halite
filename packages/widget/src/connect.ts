@@ -1,5 +1,5 @@
 import type { HaliteApi } from './api'
-import type { ConnectSession } from './types'
+import type { ConnectSession, ConnectQuiz, ConnectQuizQuestion } from './types'
 
 type RenderFn = (node: HTMLElement) => void
 type ProgressFn = (pct: number) => void
@@ -28,6 +28,10 @@ function areaPhrase(areas: string[]): string {
 export class ConnectController {
   private session: ConnectSession | null = null
   private surface: string
+  private quiz: ConnectQuiz | null = null
+  private answers: Record<string, string[]> = {}
+  private step = 0
+  private email = ''
 
   constructor(
     private api: HaliteApi,
@@ -105,6 +109,7 @@ export class ConnectController {
         <input class="hlw-text-input" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
       </label>
       <p class="hlw-connect-hint">We use this to find your Hallie profile. No new account, no password.</p>
+      <button type="button" class="hlw-connect-noprofile">Don&rsquo;t have a Hallie profile? Build one in a minute &rsaquo;</button>
       <p class="hlw-connect-error" style="display:none"></p>
     `
 
@@ -137,6 +142,9 @@ export class ConnectController {
 
     ;(node as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = allow
 
+    const noProfile = node.querySelector<HTMLButtonElement>('.hlw-connect-noprofile')
+    noProfile?.addEventListener('click', () => { void this.startQuiz() })
+
     this.back(() => {
       void this.api.connectDecline(this.surface)
       window.dispatchEvent(new CustomEvent('halite:connect:declined'))
@@ -144,6 +152,130 @@ export class ConnectController {
     })
 
     this.progress(0.5)
+    this.render(node)
+  }
+
+
+  /**
+   * The preference quiz, for a shopper with no Hallie profile yet.
+   *
+   * These are Hallie's own questions, narrowed to the categories this brand
+   * sells. The answers create a profile the shopper owns and takes with
+   * them — the brand is just where they happened to fill it in.
+   */
+  private async startQuiz(): Promise<void> {
+    this.back(() => this.renderConsent())
+    try {
+      this.quiz = await this.api.connectQuiz()
+      this.step = 0
+      this.answers = {}
+      this.renderQuestion()
+    } catch {
+      this.renderError()
+    }
+  }
+
+  private get questions(): ConnectQuizQuestion[] {
+    return this.quiz?.questions ?? []
+  }
+
+  private renderQuestion(): void {
+    const q = this.questions[this.step]
+    if (!q) return this.renderQuizEmail()
+
+    const node = document.createElement('div')
+    const chosen = this.answers[q.key] ?? []
+
+    node.innerHTML = `
+      <p class="hlw-connect-label">${escapeHtml(categoryLabel(q.category))} &middot; ${this.step + 1} of ${this.questions.length}</p>
+      <p class="hlw-question-text">${escapeHtml(q.prompt)}</p>
+      <p class="hlw-question-sub">${escapeHtml(q.help ?? (q.multi ? 'Choose as many as apply.' : 'Choose one.'))}</p>
+      <div class="hlw-options">
+        ${q.options.map(o => `
+          <div class="hlw-option${chosen.includes(o.value) ? ' selected' : ''}" data-value="${escapeHtml(o.value)}">
+            <div class="hlw-option-label">${escapeHtml(o.label)}</div>
+          </div>`).join('')}
+      </div>`
+
+    const next = document.createElement('button')
+    next.className = 'hlw-btn-next'
+    next.textContent = this.step === this.questions.length - 1 ? 'Last one' : 'Next'
+    next.disabled = chosen.length === 0 && !q.optional
+
+    node.querySelectorAll<HTMLElement>('.hlw-option').forEach(el => {
+      el.addEventListener('click', () => {
+        const value = el.dataset['value']!
+        const current = this.answers[q.key] ?? []
+        if (q.multi) {
+          this.answers[q.key] = current.includes(value)
+            ? current.filter(v => v !== value)
+            : [...current, value]
+          el.classList.toggle('selected')
+        } else {
+          this.answers[q.key] = [value]
+          node.querySelectorAll('.hlw-option').forEach(o => o.classList.remove('selected'))
+          el.classList.add('selected')
+        }
+        next.disabled = (this.answers[q.key]?.length ?? 0) === 0 && !q.optional
+      })
+    })
+
+    next.addEventListener('click', () => { this.step++; this.renderQuestion() })
+    ;(node as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = next
+
+    this.back(() => {
+      if (this.step === 0) return this.renderConsent()
+      this.step--
+      this.renderQuestion()
+    })
+    this.progress((this.step + 1) / (this.questions.length + 1))
+    this.render(node)
+  }
+
+  private renderQuizEmail(): void {
+    const node = document.createElement('div')
+    node.innerHTML = `
+      <p class="hlw-question-text">Where should we keep this?</p>
+      <p class="hlw-question-sub">${escapeHtml(this.quiz?.disclosure ?? '')}</p>
+      <label class="hlw-connect-field">
+        <span>Your email</span>
+        <input class="hlw-text-input" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+      </label>
+      <p class="hlw-connect-hint">No password needed. Claim the profile in Hallie whenever you like.</p>
+      <p class="hlw-connect-error" style="display:none"></p>`
+
+    const input = node.querySelector<HTMLInputElement>('input')!
+    const error = node.querySelector<HTMLParagraphElement>('.hlw-connect-error')!
+    const done = document.createElement('button')
+    done.className = 'hlw-btn-next'
+    done.textContent = 'Create my profile'
+    done.disabled = true
+
+    input.addEventListener('input', () => {
+      this.email = input.value.trim()
+      done.disabled = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.email)
+      error.style.display = 'none'
+    })
+
+    done.addEventListener('click', async () => {
+      done.disabled = true
+      done.textContent = 'Creating…'
+      try {
+        const res = await this.api.connectSubmitQuiz({
+          email: this.email, answers: this.answers, surface: this.surface,
+        })
+        this.renderConnected(res.consumer_id)
+      } catch {
+        done.disabled = false
+        done.textContent = 'Create my profile'
+        error.textContent = 'That didn\u2019t go through. Nothing was saved — try again.'
+        error.style.display = 'block'
+      }
+    })
+
+    ;(node as HTMLElement & { _nextBtn?: HTMLButtonElement })._nextBtn = done
+    this.back(() => { this.step = this.questions.length - 1; this.renderQuestion() })
+    this.progress(0.95)
     this.render(node)
   }
 
@@ -174,6 +306,15 @@ export class ConnectController {
     // The host page listens for this to re-render its grid with match scores.
     window.dispatchEvent(new CustomEvent('halite:connected', { detail: { consumerId } }))
   }
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  skin_care: 'Skincare', body_care: 'Body', hair_care: 'Hair',
+  makeup: 'Makeup', perfume: 'Fragrance',
+}
+
+function categoryLabel(c: string): string {
+  return CATEGORY_LABELS[c] ?? c.replace(/_/g, ' ')
 }
 
 function initial(name: string): string {

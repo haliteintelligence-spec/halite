@@ -3,6 +3,8 @@ import { InsightCard } from '@/components/ui/InsightCard'
 import { getConnectSetup } from '@/lib/api'
 import { WIDGET_URL } from '@/lib/widget-url'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.haliteintelligence.com'
+
 export const metadata = { title: 'Connect setup | Halite Intelligence' }
 
 interface Props { params: Promise<{ slug: string }> }
@@ -170,7 +172,25 @@ export default async function ConnectSetupPage({ params }: Props) {
           </div>
 
           <div className="space-y-6">
-            <InsightCard title="Place the prompt" subtitle="One script, then a div wherever you want to ask">
+            <InsightCard
+              title="Place the prompt"
+              subtitle="One script, then a div wherever you want to ask"
+              actions={
+                <a
+                  href={`${API_URL}/preview?key=${encodeURIComponent(d.brand.apiKey)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11.5px] font-semibold whitespace-nowrap"
+                  style={{ color: 'var(--clay)' }}
+                >
+                  Preview storefront ↗
+                </a>
+              }
+            >
+              <p className="text-[11.5px] mb-3 leading-relaxed" style={{ color: 'var(--ink-2)' }}>
+                Preview opens a working storefront using your real catalog and this key — the same
+                consent screen and ranking your shoppers would get.
+              </p>
               <Code>{embed}</Code>
               <p className="text-[11.5px] mt-3 mb-2" style={{ color: 'var(--ink-2)' }}>
                 Then drop this where the shopper should be asked. The value names the placement, so

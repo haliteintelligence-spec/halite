@@ -10,6 +10,8 @@ import { matchCatalog } from '../lib/connect-match.js'
 import { mirrorWishlistToHallie } from '../lib/hallie-wishlist.js'
 import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
 import { linkHallieAccount } from '../lib/hallie-identity.js'
+import { quizFor, groupAnswers } from '../lib/hallie-quiz.js'
+import { writeHallieProfile } from '../lib/hallie-profile.js'
 
 /**
  * Halite Connect — the public, brand-facing API.
@@ -236,6 +238,103 @@ export async function connectRoutes(server: FastifyInstance) {
         id: grant.id,
         categories: grant.categories,
         purpose: grant.purpose,
+        granted_at: grant.grantedAt.toISOString(),
+        expires_at: null,
+        revocable: true,
+      },
+    })
+  })
+
+  // ── The quiz, for shoppers with no Hallie profile yet ───────────────
+  // Scoped to the brand's categories: a skincare and body brand asks the
+  // skincare and body questions and nothing else.
+  server.get('/v1/connect/quiz', async (request, reply) => {
+    const { key } = z.object({ key: z.string().min(8) }).parse(request.query)
+    const brand = await prisma.brand.findUnique({
+      where: { apiKey: key },
+      select: { name: true, active: true, focusAreas: true },
+    })
+    if (!brand || !brand.active) throw new ApiError(401, 'Invalid API key')
+    if (brand.focusAreas.length === 0) throw new ApiError(400, 'This brand has no categories set.')
+
+    const { categories, questions } = quizFor(brand.focusAreas)
+    return reply.send({
+      brand: { name: brand.name },
+      categories,
+      questions,
+      // Said plainly because it is the point: the profile is the shopper's,
+      // not the brand's, and it outlives this storefront.
+      disclosure: 'Your answers create a Hallie profile you own. You can take it to any brand, change it anytime, and disconnect this one whenever you like.',
+    })
+  })
+
+  // Answers come back here, create the Hallie profile, and connect in one go.
+  server.post('/v1/connect/quiz', async (request, reply) => {
+    const brand = await requireBrandKey(request)
+    const schema = z.object({
+      apiKey: z.string().optional(),
+      email: z.string().email(),
+      firstName: z.string().max(80).optional(),
+      lastName: z.string().max(80).optional(),
+      answers: z.record(z.array(z.string().max(64)).max(20)),
+      surface: z.enum(SURFACES).optional(),
+      visitorId: z.string().max(128).optional(),
+    })
+    const body = schema.parse(request.body)
+
+    if (brand.focusAreas.length === 0) throw new ApiError(400, 'This brand has no categories set.')
+
+    const grouped = groupAnswers(brand.focusAreas, body.answers)
+    if (grouped.length === 0) throw new ApiError(400, 'No usable answers were provided')
+
+    // The Hallie account comes first — it is the identity everything else
+    // hangs off, including the id this brand will be given.
+    await provisionHallieTestingAccount({
+      email: body.email,
+      phone: null,
+      firstName: body.firstName ?? null,
+      lastName: body.lastName ?? null,
+    })
+    await writeHallieProfile({ email: body.email, responses: grouped })
+
+    let consumer = await prisma.consumer.findFirst({
+      where: { email: body.email },
+      select: { id: true, publicId: true },
+    })
+    if (!consumer) {
+      consumer = await prisma.consumer.create({
+        data: { email: body.email },
+        select: { id: true, publicId: true },
+      })
+    }
+
+    const publicId = (await linkHallieAccount(consumer.id)) ?? consumer.publicId
+
+    const grant = await prisma.consentGrant.upsert({
+      where: { brandId_consumerId: { brandId: brand.id, consumerId: consumer.id } },
+      create: {
+        brandId: brand.id, consumerId: consumer.id,
+        categories: brand.focusAreas, purpose: 'product_recommendations',
+        status: 'ACTIVE', surface: body.surface ?? 'quiz',
+      },
+      update: { status: 'ACTIVE', revokedAt: null, categories: brand.focusAreas },
+      select: { id: true, grantedAt: true },
+    })
+
+    await prisma.connectEvent.create({
+      data: {
+        brandId: brand.id, consumerId: consumer.id, type: 'CONNECT_ACCEPTED',
+        surface: body.surface ?? 'quiz', visitorId: body.visitorId ?? null,
+        metadata: { via: 'quiz', categories: grouped.map(g => g.category) },
+      },
+    })
+
+    return reply.send({
+      consumer_id: publicId,
+      created_profile: true,
+      categories: grouped.map(g => g.category),
+      grant: {
+        id: grant.id,
         granted_at: grant.grantedAt.toISOString(),
         expires_at: null,
         revocable: true,

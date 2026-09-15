@@ -138,3 +138,22 @@ export type ConnectEventName =
   | 'purchase'
   | 'returned'
   | 'rated'
+
+export interface ConnectQuizOption { value: string; label: string }
+
+export interface ConnectQuizQuestion {
+  key: string
+  category: string
+  prompt: string
+  help?: string
+  multi: boolean
+  optional?: boolean
+  options: ConnectQuizOption[]
+}
+
+export interface ConnectQuiz {
+  brand: { name: string }
+  categories: string[]
+  questions: ConnectQuizQuestion[]
+  disclosure: string
+}

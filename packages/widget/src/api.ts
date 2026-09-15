@@ -1,6 +1,7 @@
 import type {
   QuizQuestion, QuizOption, Routine, CheckIn, ReorderItem,
   ConnectSession, ConnectRecommendations, ConnectEventName,
+  ConnectQuiz,
 } from './types'
 
 interface RawFlow {
@@ -310,6 +311,31 @@ export class HaliteApi {
     return res
   }
 
+  /** The preference quiz for this brand's categories. */
+  async connectQuiz(): Promise<ConnectQuiz> {
+    return this.get<ConnectQuiz>(`/v1/connect/quiz?key=${encodeURIComponent(this.apiKey)}`, false)
+  }
+
+  /** Creates a Hallie profile from quiz answers, and connects in one step. */
+  async connectSubmitQuiz(args: {
+    email: string
+    answers: Record<string, string[]>
+    surface: string
+  }): Promise<{ consumer_id: string; categories: string[] }> {
+    const res = await this.post<{ consumer_id: string; categories: string[] }>('/v1/connect/quiz', {
+      apiKey: this.apiKey,
+      ...args,
+      ...(this.visitorId ? { visitorId: this.visitorId } : {}),
+    }, false)
+    try {
+      localStorage.setItem(CONNECT_KEY, JSON.stringify({
+        consumerId: res.consumer_id,
+        visitorId: this.visitorId,
+      }))
+    } catch { /* private browsing — the id just does not persist */ }
+    return res
+  }
+
   async connectDecline(surface: string): Promise<void> {
     await this.post('/v1/connect/decline', {
       apiKey: this.apiKey,
@@ -362,9 +388,9 @@ export class HaliteApi {
     }, false).catch(() => {})
   }
 
-  private async get<T>(path: string): Promise<T> {
+  private async get<T>(path: string, auth = true): Promise<T> {
     const res = await fetch(`${this.apiUrl}${path}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: auth ? { Authorization: `Bearer ${this.token}` } : {},
     })
     if (!res.ok) throw new Error(`GET ${path} → ${res.status}`)
     return res.json() as Promise<T>

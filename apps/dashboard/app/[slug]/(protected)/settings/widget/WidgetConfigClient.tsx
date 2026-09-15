@@ -20,6 +20,7 @@ const FOCUS_AREAS = [
 ]
 
 const TRIGGERS = [
+  { attr: 'data-halite-connect',  label: 'Connect with Hallie', desc: 'Asks the shopper to connect the Hallie profile they already own, then ranks your catalog against it. Set the value to the placement — pdp, collection, quiz, checkout.' },
   { attr: 'data-halite-quiz',     label: 'Quiz + routine',      desc: 'Opens the skin quiz and generates a personalised routine.' },
   { attr: 'data-halite-checkin',  label: 'Weekly check-in',     desc: 'Lets consumers log skin ratings and product reactions.' },
   { attr: 'data-halite-progress', label: 'Progress view',       desc: 'Shows the AI-generated skin progress narrative.' },
@@ -64,16 +65,14 @@ export function WidgetConfigClient({
 
   const accent = config.primaryColor ?? '#450F2A'
 
+  const previewUrl = `${API_URL}/preview?key=${encodeURIComponent(apiKey)}`
+
   const embedCode = `<script
   src="${WIDGET_URL}"
   data-api-key="${apiKey}"
   data-accent="${accent}"
 ></script>`
 
-  // The Connect prompt is a separate element the brand drops wherever it
-  // wants the shopper to be asked — the value names the placement, so
-  // acceptance can be compared across them.
-  const connectSnippet = `<div data-halite-connect="pdp"></div>`
 
   async function rotateKey() {
     if (!confirm('Rotate API key? Your existing embed code will stop working immediately.')) return
@@ -147,8 +146,19 @@ export function WidgetConfigClient({
 
       {/* Embed code */}
       <div className={cardCls}>
-        <h2 className="text-[13px] font-semibold text-ink mb-1">Embed code</h2>
-        <p className="text-[12px] text-ink-3 mb-4">Paste this once in your storefront's <code className="bg-sand-1 px-1 rounded">&lt;head&gt;</code> or before <code className="bg-sand-1 px-1 rounded">&lt;/body&gt;</code>.</p>
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <h2 className="text-[13px] font-semibold text-ink">Embed code</h2>
+          <a
+            href={previewUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[11.5px] font-semibold whitespace-nowrap hover:underline"
+            style={{ color: 'var(--clay)' }}
+          >
+            Preview storefront ↗
+          </a>
+        </div>
+        <p className="text-[12px] text-ink-3 mb-4">Paste this once in your storefront's <code className="bg-sand-1 px-1 rounded">&lt;head&gt;</code> or before <code className="bg-sand-1 px-1 rounded">&lt;/body&gt;</code>. Preview opens a working page using your real catalog, so you can see exactly what a shopper gets.</p>
         <div className="relative">
           <pre
             className="rounded-xl p-4 text-[12px] leading-relaxed overflow-x-auto"

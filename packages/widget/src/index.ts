@@ -253,17 +253,32 @@ function init(config: HaliteWidgetConfig) {
   return Object.assign(instance, { connect })
 }
 
+type HaliteInstance = ReturnType<typeof init>
+
+declare global {
+  interface Window {
+    Halite?: HaliteInstance
+  }
+}
+
 // Auto-init from script tag: <script src="..." data-api-key="..." data-api-url="..." data-accent="...">
+//
+// The instance is published as window.Halite. Without it a merchant using
+// the documented snippet has no handle on the widget at all — the storefront
+// API (Halite.connect.recommendations / .track) would be unreachable, which
+// is most of what Connect is for.
 function autoInit() {
   const scripts = document.querySelectorAll<HTMLScriptElement>('script[data-api-key]')
   scripts.forEach(script => {
     const apiKey = script.dataset.apiKey
     if (!apiKey) return
-    init({
+    const instance = init({
       apiKey,
       apiUrl: script.dataset.apiUrl,
       accentColor: script.dataset.accent,
     })
+    // First script tag wins, so a page with two never swaps the handle.
+    if (!window.Halite) window.Halite = instance
   })
 }
 
@@ -273,5 +288,6 @@ if (document.readyState === 'loading') {
   autoInit()
 }
 
-// Expose for manual init: HaliteWidget.init({ apiKey: '...' })
+// Manual init: HaliteWidget.init({ apiKey: '...' }) — returns the same shape
+// that auto-init publishes as window.Halite.
 export { init }
