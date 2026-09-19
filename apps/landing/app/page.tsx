@@ -483,7 +483,7 @@ export default function Landing() {
               ))}
             </div>
             <p className="text-[13px] mt-8" style={{ color: 'rgba(250,246,240,0.4)' }}>
-              Or email <span style={{ color: 'rgba(250,246,240,0.7)' }}>marie@haliteintelligence.com</span>
+              Or email <span style={{ color: 'rgba(250,246,240,0.7)' }}>demo@haliteintelligence.com</span>
             </p>
           </div>
 

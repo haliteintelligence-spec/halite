@@ -38,10 +38,6 @@ const GROUPS: Group[] = [
         q: 'What do you need to know before quoting?',
         a: 'Roughly: how many products you sell and in which categories, how many people visit your store in a month, what you already run for quizzes and email, and what you want the first 90 days to prove. That is most of a demo conversation anyway.',
       },
-      {
-        q: 'Who is this a bad fit for?',
-        a: "Brands with a handful of SKUs where every shopper buys the same thing — there is nothing to personalize. It also works less well if fit is not really why people choose you, because the whole product is built on matching a person to the right item out of many.",
-      },
     ],
   },
   {
@@ -51,7 +47,7 @@ const GROUPS: Group[] = [
     items: [
       {
         q: 'How long until it is live?',
-        a: 'About a week from the point we have your catalog. Send it as a spreadsheet or connect Shopify, and we build and install everything — you review the whole thing before it goes anywhere near your customers. The design-partner pilot then runs 6 to 8 weeks, which is how long it takes for real outcome data to be worth reading.',
+        a: 'About a week from the point we have your catalog. Send it as a spreadsheet or connect Shopify, and we build and install everything — you review the whole thing before it goes anywhere near your customers.',
       },
       {
         q: 'Do we need a developer?',
@@ -59,11 +55,11 @@ const GROUPS: Group[] = [
       },
       {
         q: 'Does it work with our stack?',
-        a: 'Shopify, Webflow, WordPress, or any site you can add a link to. On Shopify the catalog syncs on its own.',
+        a: "Shopify, Webflow, WordPress, or any site you can add a link to \u2014 on Shopify the catalog syncs on its own. We're progressively adding integrations with more of the platforms already in your stack, so tell us what you run and we'll tell you where it sits.",
       },
       {
         q: 'Do we have to replace our quiz?',
-        a: "No, and for now you shouldn't. Quiz tools like Digioh, Typeform and Octane read out cleanly, so a connected shopper's answers enrich what you already run. None of them documents a way to pre-fill questions from the outside, so the first version adds to your quiz rather than replacing it. We would rather say that plainly than promise a pre-fill nobody supports yet.",
+        a: "You can keep it \u2014 you just won't need a standalone one. Almost every question a quiz asks is already answered on a connected shopper's profile, so running yours on top mostly means asking people for what you already have. And a shopper who arrives without a profile can take the Halite quiz right inside the plug-in, which builds their profile as they answer. Either way the quiz stops being a separate thing for you to maintain.",
       },
     ],
   },
@@ -78,11 +74,7 @@ const GROUPS: Group[] = [
       },
       {
         q: 'What if they have never heard of Hallie?',
-        a: "Then nothing changes for them — your store behaves exactly as it does today, and your own quiz still runs. The connected experience is an upgrade for people who have a profile, not a gate in front of people who don't.",
-      },
-      {
-        q: 'Can they disconnect?',
-        a: 'At any moment, from your site or from Hallie. Sharing stops immediately and nothing new flows after that.',
+        a: 'Then they take the Halite onboarding quiz, right there in the plug-in on your site. It builds their profile as they answer, so they get the same personalized picks on that first visit \u2014 and the profile is theirs to carry to the next brand. Nothing for them to install, nothing for you to build.',
       },
       {
         q: 'Why would a shopper bother?',
@@ -237,8 +229,8 @@ export default function Pricing() {
 
           <p className="text-[13px] mt-10 text-center" style={{ color: '#C4B5BD' }}>
             Something we haven&rsquo;t answered? Email{' '}
-            <a href="mailto:marie@haliteintelligence.com" className="underline" style={{ color: '#8B6575' }}>
-              marie@haliteintelligence.com
+            <a href="mailto:info@haliteintelligence.com" className="underline" style={{ color: '#8B6575' }}>
+              info@haliteintelligence.com
             </a>
             .
           </p>

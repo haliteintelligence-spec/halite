@@ -67,9 +67,16 @@ export function Footer() {
               Company
             </p>
             <div className="space-y-2.5">
-              {['About', 'Privacy Policy', 'Terms of Service', 'Contact'].map(l => (
+              {['About', 'Privacy Policy', 'Terms of Service'].map(l => (
                 <p key={l} className="text-[13px]" style={{ color: 'rgba(250,246,240,0.5)' }}>{l}</p>
               ))}
+              <a
+                href="mailto:info@haliteintelligence.com"
+                className="block text-[13px] transition-opacity hover:opacity-80"
+                style={{ color: 'rgba(250,246,240,0.5)' }}
+              >
+                info@haliteintelligence.com
+              </a>
             </div>
           </div>
         </div>
