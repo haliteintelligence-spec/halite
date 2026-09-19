@@ -127,7 +127,7 @@ export default function Pricing() {
       <Nav />
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
-      <section className="relative pt-24 pb-[3.75rem] px-6 overflow-hidden" style={{ background: '#450F2A' }}>
+      <section className="relative pt-20 pb-[1.875rem] px-6 overflow-hidden" style={{ background: '#450F2A' }}>
         <div
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' opacity=\'1\'/%3E%3C/svg%3E")' }}
@@ -173,7 +173,7 @@ export default function Pricing() {
           Native <details> rather than a state-driven accordion: it opens
           without JavaScript, it is keyboard- and screen-reader-correct for
           free, and browser find-in-page can reach a closed answer. */}
-      <section id="faq" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="faq" className="py-6 md:py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-3xl mx-auto">
           {GROUPS.map((g, gi) => (
             <div key={g.id} id={g.id} className={`scroll-mt-20 ${gi > 0 ? 'mt-14' : ''}`}>
@@ -238,7 +238,7 @@ export default function Pricing() {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section className="py-12 md:py-[4.5rem] px-6" style={{ background: '#450F2A' }}>
+      <section className="py-6 md:py-[2.25rem] px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="font-display text-3xl md:text-[38px] font-semibold leading-tight mb-4" style={{ color: '#FAF6F0' }}>
             Let&rsquo;s put a real number on it.

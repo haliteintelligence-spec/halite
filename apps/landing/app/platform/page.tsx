@@ -82,7 +82,7 @@ export default function Platform() {
       <Nav />
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
-      <section className="relative pt-24 pb-[3.75rem] px-6 overflow-hidden" style={{ background: '#450F2A' }}>
+      <section className="relative pt-20 pb-[1.875rem] px-6 overflow-hidden" style={{ background: '#450F2A' }}>
         <div
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' opacity=\'1\'/%3E%3C/svg%3E")' }}
@@ -124,7 +124,7 @@ export default function Platform() {
       </section>
 
       {/* ── THE FOUR PIECES ──────────────────────────────────────────────── */}
-      <section className="py-12 px-6" style={{ background: '#2D0A1C' }}>
+      <section className="py-6 px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row items-stretch gap-0 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(250,246,240,0.08)' }}>
             {PILLARS.map((step, i) => (
@@ -150,7 +150,7 @@ export default function Platform() {
       </section>
 
       {/* ── 1: THE PROFILE ───────────────────────────────────────────────── */}
-      <section id="profile" className="py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="profile" className="py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <ModuleHead
             icon="◈"
@@ -217,7 +217,7 @@ export default function Platform() {
       </section>
 
       {/* ── 2: THE RANKING ───────────────────────────────────────────────── */}
-      <section id="ranking" className="py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
+      <section id="ranking" className="py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <ModuleHead
             dark
@@ -257,7 +257,7 @@ export default function Platform() {
       </section>
 
       {/* ── 3: THE OUTCOMES ──────────────────────────────────────────────── */}
-      <section id="outcomes" className="py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="outcomes" className="py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <ModuleHead
             icon="◉"
@@ -326,7 +326,7 @@ export default function Platform() {
       </section>
 
       {/* ── 4: YOUR DASHBOARD ────────────────────────────────────────────── */}
-      <section id="dashboard" className="py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
+      <section id="dashboard" className="py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <ModuleHead
             dark
@@ -396,7 +396,7 @@ export default function Platform() {
       </section>
 
       {/* ── GETTING SET UP ───────────────────────────────────────────────── */}
-      <section id="setup" className="py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="setup" className="py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <ModuleHead
             icon="◇"
@@ -477,7 +477,7 @@ export default function Platform() {
       </section>
 
       {/* ── HOW IT ALL FITS TOGETHER ─────────────────────────────────────── */}
-      <section className="py-[4.5rem] px-6" style={{ background: '#450F2A' }}>
+      <section className="py-[2.25rem] px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto text-center">
           <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
             How it all fits together
@@ -519,7 +519,7 @@ export default function Platform() {
       </section>
 
       {/* ── DEMO CTA ─────────────────────────────────────────────────────── */}
-      <section id="demo" className="py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
+      <section id="demo" className="py-[2.25rem] px-6 scroll-mt-16" style={{ background: '#2D0A1C' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>

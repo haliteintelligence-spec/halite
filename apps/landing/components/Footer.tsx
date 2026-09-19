@@ -5,10 +5,10 @@ import { HALLIE_URL, EXTERNAL_LINK_PROPS } from '@/lib/links'
 // wrong side of the business goes looking for the right one.
 export function Footer() {
   return (
-    <footer className="py-[2.625rem] px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
+    <footer className="py-[1.3125rem] px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-9 mb-12">
+          <div className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <span className="font-display text-lg font-semibold" style={{ color: '#FAF6F0' }}>Halite</span>
               <span className="text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5" style={{ color: 'rgba(250,246,240,0.4)' }}>Intelligence</span>
@@ -42,7 +42,7 @@ export function Footer() {
           {/* The copper rule separates this column from the brand links beside it.
               Once the grid stacks there is nothing to its left to separate, so it
               becomes a top rule instead of a stray vertical line. */}
-          <div className="pt-6 lg:pt-0 lg:pl-[22px] border-t lg:border-t-0 lg:border-l" style={{ borderColor: 'rgba(193,122,71,0.3)' }}>
+          <div className="pl-5 lg:pl-[22px] border-l" style={{ borderColor: 'rgba(193,122,71,0.3)' }}>
             <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-4" style={{ color: '#C17A47' }}>
               Hallie · for you
             </p>
