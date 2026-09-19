@@ -74,7 +74,7 @@ const GROUPS: Group[] = [
       },
       {
         q: 'What if they have never heard of Hallie?',
-        a: 'Then they take the Halite onboarding quiz, right there in the plug-in on your site. It builds their profile as they answer, so they get the same personalized picks on that first visit \u2014 and the profile is theirs to carry to the next brand. Nothing for them to install, nothing for you to build.',
+        a: 'Then they take the Halite onboarding quiz, right there in the plug-in on your site. It builds their profile as they answer, so they get the same personalized picks on that first visit. Nothing for them to install, nothing for you to build.',
       },
       {
         q: 'Why would a shopper bother?',
