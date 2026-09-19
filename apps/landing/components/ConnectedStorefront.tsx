@@ -292,7 +292,7 @@ export function HeroProductCards() {
         <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase mb-0.5 text-white/75">Questions asked</p>
         <p className="font-display text-2xl font-semibold leading-none text-white">0</p>
       </div>
-      <div className="hidden sm:block absolute -bottom-9 left-5 rounded-2xl px-5 py-3.5 shadow-xl" style={{ background: '#FAF6F0' }}>
+      <div className="hidden sm:block animate-float absolute -bottom-9 -left-6 rounded-2xl px-5 py-3.5 shadow-xl" style={{ background: '#FAF6F0' }}>
         <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase mb-0.5" style={{ color: '#8B6575' }}>More customers stay</p>
         <p className="font-display text-2xl font-semibold leading-none" style={{ color: '#450F2A' }}>30%</p>
       </div>

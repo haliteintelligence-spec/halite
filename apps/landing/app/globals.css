@@ -28,4 +28,15 @@
 
 @layer utilities {
   .font-display { font-family: var(--font-playfair), Georgia, serif; }
+
+  /* The hero's floating stat tag. Motion is opt-in: readers who ask for less
+     of it get the tag sitting still, which is the same design either way. */
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-float { animation: float-bob 3.4s ease-in-out infinite; }
+  }
+}
+
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 }
