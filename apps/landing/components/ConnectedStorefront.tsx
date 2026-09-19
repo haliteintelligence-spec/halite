@@ -278,7 +278,7 @@ export function HeroProductCards() {
   return (
     // One card on a phone, where two would be two unreadable slivers; the
     // second joins from 640px up.
-    <div className="relative mx-auto w-full max-w-[300px] sm:max-w-none">
+    <div className="animate-float relative mx-auto w-full max-w-[300px] sm:max-w-none">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-[26px] p-4" style={{ background: 'rgba(250,246,240,0.07)', border: '1px solid rgba(250,246,240,0.12)', boxShadow: '0 40px 70px -30px rgba(26,10,18,0.75)' }}>
         <ProductCard p={PRODUCTS[0]} layout="plain" />
         <div className="hidden sm:block">
@@ -286,13 +286,14 @@ export function HeroProductCards() {
         </div>
       </div>
 
-      {/* The tags break the frame's corners, so they only make sense once the
-          frame has room around it. */}
-      <div className="hidden sm:block absolute -top-6 -right-5 rounded-2xl px-5 py-3.5 shadow-xl" style={{ background: '#C17A47' }}>
+      {/* The tags overhang the frame, so they need gutter to overhang into —
+          which only exists once the hero splits into two columns. Below that
+          they would sit flush against the edge of the screen. */}
+      <div className="hidden lg:block absolute -top-6 -right-5 rounded-2xl px-5 py-3.5 shadow-xl" style={{ background: '#C17A47' }}>
         <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase mb-0.5 text-white/75">Questions asked</p>
         <p className="font-display text-2xl font-semibold leading-none text-white">0</p>
       </div>
-      <div className="hidden sm:block animate-float absolute -bottom-9 -left-6 rounded-2xl px-5 py-3.5 shadow-xl" style={{ background: '#FAF6F0' }}>
+      <div className="hidden lg:block absolute -bottom-9 -left-6 rounded-2xl px-5 py-3.5 shadow-xl" style={{ background: '#FAF6F0' }}>
         <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase mb-0.5" style={{ color: '#8B6575' }}>More customers stay</p>
         <p className="font-display text-2xl font-semibold leading-none" style={{ color: '#450F2A' }}>30%</p>
       </div>

@@ -153,13 +153,15 @@ export default function Landing() {
           this says what the profile is built to carry instead of implying
           customers we can't name. */}
       <section className="pt-14 md:pt-20 pb-2 px-6" style={{ background: '#FAF6F0' }}>
-        <div className="max-w-5xl mx-auto text-center">
-          <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-6" style={{ color: '#C4B5BD' }}>
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-7" style={{ color: '#C4B5BD' }}>
             Built for the categories where fit decides the sale
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-9 gap-y-4">
+          {/* Spread edge to edge once there is room for one row; below that the
+              names wrap and centre, which is the only thing that reads. */}
+          <div className="flex flex-wrap items-center justify-center md:justify-between gap-x-8 gap-y-4">
             {['Skincare', 'Haircare', 'Fragrance', 'Body & bath', 'Colour cosmetics', 'Wellness'].map(c => (
-              <span key={c} className="font-display text-[17px] md:text-[19px]" style={{ color: '#8B6575' }}>{c}</span>
+              <span key={c} className="font-display text-[18px] md:text-[22px] whitespace-nowrap" style={{ color: '#8B6575' }}>{c}</span>
             ))}
           </div>
         </div>
