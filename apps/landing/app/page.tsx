@@ -94,7 +94,7 @@ export default function Landing() {
           style={{ background: 'radial-gradient(620px 460px at 82% -10%, rgba(193,122,71,0.20), transparent 62%), radial-gradient(460px 440px at 8% 100%, rgba(193,122,71,0.12), transparent 60%)' }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-28 pb-24 md:pt-32 md:pb-28 grid grid-cols-1 lg:grid-cols-[1.06fr_0.94fr] gap-12 lg:gap-14 items-center w-full">
+        <div className="relative max-w-7xl mx-auto px-6 pt-[5.25rem] pb-[4.5rem] md:pt-24 md:pb-[5.25rem] grid grid-cols-1 lg:grid-cols-[1.06fr_0.94fr] gap-12 lg:gap-14 items-center w-full">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mb-6" style={{ color: 'rgba(250,246,240,0.55)' }}>
               For beauty &amp; fragrance brands
@@ -152,7 +152,7 @@ export default function Landing() {
           Gleame's slot for customer logos. We don't have a wall of them yet, so
           this says what the profile is built to carry instead of implying
           customers we can't name. */}
-      <section className="pt-14 md:pt-20 pb-2 px-6" style={{ background: '#FAF6F0' }}>
+      <section className="pt-[2.625rem] md:pt-[3.75rem] pb-2 px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-7" style={{ color: '#C4B5BD' }}>
             Built for the categories where fit decides the sale
@@ -170,7 +170,7 @@ export default function Landing() {
       {/* ── HOW IT WORKS ─────────────────────────────────────────────────
           The one-pager's three steps, verbatim in structure: Build, Access,
           Personalize. */}
-      <section id="how" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="how" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
@@ -204,7 +204,7 @@ export default function Landing() {
       </section>
 
       {/* ── WHAT BRANDS GET ──────────────────────────────────────────────── */}
-      <section id="get" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
+      <section id="get" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-4xl mb-12 md:mb-16">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: 'rgba(193,122,71,0.9)' }}>
@@ -236,7 +236,7 @@ export default function Landing() {
 
       {/* ── STATS STRIP ──────────────────────────────────────────────────── */}
       <section style={{ background: '#F2EBE0', borderBottom: '1px solid #E8DDD0' }}>
-        <div className="max-w-7xl mx-auto px-6 py-14 grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-8">
+        <div className="max-w-7xl mx-auto px-6 py-[2.625rem] grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-8">
           {[
             { n: '30%',    label: 'More customers come back and buy again after a personalized recommendation.' },
             { n: '15–18%', label: 'More people buy when they get a match built for them, instead of browsing alone.' },
@@ -252,7 +252,7 @@ export default function Landing() {
       </section>
 
       {/* ── THE PORTABLE PROFILE ─────────────────────────────────────────── */}
-      <section id="profile" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="profile" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-12">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
@@ -328,7 +328,7 @@ export default function Landing() {
       </section>
 
       {/* ── COMPARISON ───────────────────────────────────────────────────── */}
-      <section id="compare" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0' }}>
+      <section id="compare" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0' }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-3" style={{ color: '#C17A47' }}>
@@ -428,7 +428,7 @@ export default function Landing() {
       </section>
 
       {/* ── THE LOOP — handover to the consumer side ─────────────────────── */}
-      <section id="loop" className="py-14 md:py-16 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="loop" className="py-[2.625rem] md:py-12 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="max-w-xl">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-2.5" style={{ color: '#C17A47' }}>
@@ -454,7 +454,7 @@ export default function Landing() {
       </section>
 
       {/* ── FINAL CTA ────────────────────────────────────────────────────── */}
-      <section id="demo" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
+      <section id="demo" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>

@@ -5,7 +5,7 @@ import { HALLIE_URL, EXTERNAL_LINK_PROPS } from '@/lib/links'
 // wrong side of the business goes looking for the right one.
 export function Footer() {
   return (
-    <footer className="py-14 px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
+    <footer className="py-[2.625rem] px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
           <div className="lg:col-span-2">

@@ -55,7 +55,7 @@ export default function HalliePage() {
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
       <section
-        className="relative min-h-screen flex items-center overflow-hidden"
+        className="relative min-h-[75vh] flex items-center overflow-hidden"
         style={{ background: '#FAF6F0' }}
       >
         <div
@@ -63,7 +63,7 @@ export default function HalliePage() {
           style={{ background: 'radial-gradient(620px 460px at 88% 0%, rgba(193,122,71,0.16), transparent 62%), radial-gradient(420px 420px at 0% 100%, rgba(69,15,42,0.06), transparent 60%)' }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-24 md:pt-28 pb-16 grid grid-cols-1 lg:grid-cols-[1.32fr_0.68fr] gap-12 items-center w-full">
+        <div className="relative max-w-7xl mx-auto px-6 pt-[4.5rem] md:pt-[5.25rem] pb-12 grid grid-cols-1 lg:grid-cols-[1.32fr_0.68fr] gap-12 items-center w-full">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mb-6" style={{ color: '#C17A47' }}>
               For consumers · Beauty first, the whole shelf next
@@ -145,7 +145,7 @@ export default function HalliePage() {
       </section>
 
       {/* ── ONE PROFILE, EVERY BRAND ─────────────────────────────────────── */}
-      <section className="py-16 md:py-24 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0' }}>
+      <section className="py-12 md:py-[4.5rem] px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: '#C17A47' }}>
@@ -194,7 +194,7 @@ export default function HalliePage() {
       </section>
 
       {/* ── WHAT YOU DO ──────────────────────────────────────────────────── */}
-      <section id="what" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
+      <section id="what" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-semibold mb-3" style={{ color: '#1A0A12' }}>
             Four things. None of them take long.
@@ -225,7 +225,7 @@ export default function HalliePage() {
       </section>
 
       {/* ── CATEGORIES & SCOPE ───────────────────────────────────────────── */}
-      <section className="py-16 md:py-24 px-6" style={{ background: '#F2EBE0' }}>
+      <section className="py-12 md:py-[4.5rem] px-6" style={{ background: '#F2EBE0' }}>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mb-12">
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: '#C17A47' }}>
@@ -300,7 +300,7 @@ export default function HalliePage() {
       </section>
 
       {/* ── POINTS & REWARDS ─────────────────────────────────────────────── */}
-      <section id="rewards" className="py-16 md:py-24 px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
+      <section id="rewards" className="py-12 md:py-[4.5rem] px-6 scroll-mt-16" style={{ background: '#450F2A' }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
@@ -357,7 +357,7 @@ export default function HalliePage() {
       </section>
 
       {/* ── PRIVACY + APP CTA ────────────────────────────────────────────── */}
-      <section className="py-16 md:py-24 px-6" style={{ background: '#2D0A1C' }}>
+      <section className="py-12 md:py-[4.5rem] px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
@@ -420,7 +420,7 @@ export default function HalliePage() {
       </section>
 
       {/* ── BACK TO THE BRAND SIDE ───────────────────────────────────────── */}
-      <section className="py-14 md:py-16 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0' }}>
+      <section className="py-[2.625rem] md:py-12 px-6" style={{ background: '#F2EBE0', borderTop: '1px solid #E8DDD0' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <p className="font-display text-2xl font-semibold mb-1" style={{ color: '#1A0A12' }}>

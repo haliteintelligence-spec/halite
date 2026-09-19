@@ -29,13 +29,18 @@ export function Nav() {
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
+  // The brand and platform heroes are burgundy, the consumer hero is ivory.
+  // Ink that only looked at `scrolled` went invisible over the latter, so the
+  // nav asks the broader question: is there something light behind me?
+  const dark = scrolled || isConsumer
+
   const links = isConsumer ? CONSUMER_LINKS : BRAND_LINKS
 
   // Both segments are always links to the other side's page — the "active" one
   // just points at its own page, so clicking it is a harmless no-op rather than
   // a dead control.
   const segment = 'px-3 sm:px-4 py-1.5 rounded-full text-[11.5px] sm:text-[12px] font-semibold transition-all whitespace-nowrap'
-  const inactive = { background: 'transparent', color: scrolled ? '#8B6575' : 'rgba(250,246,240,0.7)' }
+  const inactive = { background: 'transparent', color: dark ? '#8B6575' : 'rgba(250,246,240,0.7)' }
 
   return (
     <header
@@ -52,19 +57,19 @@ export function Nav() {
         <a href="/" className="flex items-center gap-2 flex-shrink-0">
           <span
             className="text-[10px] font-bold tracking-[0.25em] uppercase"
-            style={{ color: scrolled ? '#450F2A' : '#FAF6F0' }}
+            style={{ color: dark ? '#450F2A' : '#FAF6F0' }}
           >
             ✦
           </span>
           <span
             className="font-display text-[17px] sm:text-lg font-semibold leading-none"
-            style={{ color: scrolled ? '#1A0A12' : '#FAF6F0' }}
+            style={{ color: dark ? '#1A0A12' : '#FAF6F0' }}
           >
             Halite
           </span>
           <span
             className="hidden sm:inline text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5"
-            style={{ color: scrolled ? '#8B6575' : 'rgba(250,246,240,0.7)' }}
+            style={{ color: dark ? '#8B6575' : 'rgba(250,246,240,0.7)' }}
           >
             Intelligence
           </span>
@@ -75,8 +80,8 @@ export function Nav() {
         <div
           className="flex p-[3px] rounded-full flex-shrink-0"
           style={{
-            background: scrolled ? '#F2EBE0' : 'rgba(250,246,240,0.12)',
-            border: scrolled ? '1px solid #E8DDD0' : '1px solid rgba(250,246,240,0.22)',
+            background: dark ? '#F2EBE0' : 'rgba(250,246,240,0.12)',
+            border: dark ? '1px solid #E8DDD0' : '1px solid rgba(250,246,240,0.22)',
           }}
         >
           <a
@@ -114,7 +119,7 @@ export function Nav() {
               key={l.href}
               href={l.href}
               className="text-[13px] font-medium transition-opacity hover:opacity-70 whitespace-nowrap"
-              style={{ color: scrolled ? '#4A2A38' : 'rgba(250,246,240,0.85)' }}
+              style={{ color: dark ? '#4A2A38' : 'rgba(250,246,240,0.85)' }}
             >
               {l.label}
             </a>
@@ -137,9 +142,9 @@ export function Nav() {
               href="/#demo"
               className="text-[13px] font-semibold px-5 py-2.5 rounded-full transition-all whitespace-nowrap"
               style={{
-                background: scrolled ? '#450F2A' : 'rgba(250,246,240,0.15)',
+                background: dark ? '#450F2A' : 'rgba(250,246,240,0.15)',
                 color: '#FAF6F0',
-                border: scrolled ? 'none' : '1px solid rgba(250,246,240,0.4)',
+                border: dark ? 'none' : '1px solid rgba(250,246,240,0.4)',
               }}
             >
               Book a demo
@@ -153,7 +158,7 @@ export function Nav() {
           onClick={() => setOpen(!open)}
           aria-label="Menu"
           aria-expanded={open}
-          style={{ color: scrolled ? '#450F2A' : '#FAF6F0' }}
+          style={{ color: dark ? '#450F2A' : '#FAF6F0' }}
         >
           <div className="space-y-1.5">
             <span className="block w-5 h-0.5 bg-current rounded" />

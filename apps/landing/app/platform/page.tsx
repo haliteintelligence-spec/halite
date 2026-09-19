@@ -21,7 +21,7 @@ export default function Platform() {
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
       <section
-        className="relative pt-32 pb-20 px-6 overflow-hidden"
+        className="relative pt-24 pb-[3.75rem] px-6 overflow-hidden"
         style={{ background: '#450F2A' }}
       >
         <div
@@ -69,7 +69,7 @@ export default function Platform() {
       </section>
 
       {/* ── HOW THE PIECES CONNECT ───────────────────────────────────────── */}
-      <section className="py-16 px-6" style={{ background: '#2D0A1C' }}>
+      <section className="py-12 px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row items-stretch gap-0 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(250,246,240,0.08)' }}>
             {[
@@ -99,7 +99,7 @@ export default function Platform() {
       </section>
 
       {/* ── MODULE 1: THE QUIZ ───────────────────────────────────────────── */}
-      <section id="quiz" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
+      <section id="quiz" className="py-[4.5rem] px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(69,15,42,0.08)' }}>
@@ -166,7 +166,7 @@ export default function Platform() {
       </section>
 
       {/* ── MODULE 2: CHECK-INS ──────────────────────────────────────────── */}
-      <section id="checkins" className="py-24 px-6" style={{ background: '#2D0A1C' }}>
+      <section id="checkins" className="py-[4.5rem] px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(193,122,71,0.15)' }}>
@@ -247,7 +247,7 @@ export default function Platform() {
       </section>
 
       {/* ── MODULE 3: YOUR DASHBOARD ─────────────────────────────────────── */}
-      <section id="dashboard" className="py-24 px-6" style={{ background: '#FAF6F0' }}>
+      <section id="dashboard" className="py-[4.5rem] px-6" style={{ background: '#FAF6F0' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(69,15,42,0.08)' }}>
@@ -329,7 +329,7 @@ export default function Platform() {
       </section>
 
       {/* ── MODULE 4: GETTING SET UP ─────────────────────────────────────── */}
-      <section id="setup" className="py-24 px-6" style={{ background: '#2D0A1C' }}>
+      <section id="setup" className="py-[4.5rem] px-6" style={{ background: '#2D0A1C' }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-start gap-6 mb-16">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'rgba(193,122,71,0.15)' }}>
@@ -422,7 +422,7 @@ export default function Platform() {
       </section>
 
       {/* ── HOW IT ALL FITS TOGETHER ─────────────────────────────────────── */}
-      <section className="py-24 px-6" style={{ background: '#450F2A' }}>
+      <section className="py-[4.5rem] px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto text-center">
           <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
             How it all fits together
@@ -462,7 +462,7 @@ export default function Platform() {
       </section>
 
       {/* ── DEMO CTA ─────────────────────────────────────────────────────── */}
-      <section id="demo" className="py-24 px-6" style={{ background: '#450F2A' }}>
+      <section id="demo" className="py-[4.5rem] px-6" style={{ background: '#450F2A' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: 'rgba(193,122,71,0.9)' }}>
@@ -496,7 +496,7 @@ export default function Platform() {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer className="py-14 px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
+      <footer className="py-[2.625rem] px-6" style={{ background: '#2D0A1C', borderTop: '1px solid rgba(250,246,240,0.08)' }}>
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
