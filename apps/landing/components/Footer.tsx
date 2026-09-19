@@ -27,6 +27,7 @@ export function Footer() {
               {[
                 { label: 'The portable profile', href: '/#profile' },
                 { label: 'How it works', href: '/platform' },
+                { label: 'Pricing & FAQ', href: '/pricing' },
                 { label: 'Compare', href: '/#compare' },
                 { label: 'Your dashboard', href: '/platform#dashboard' },
                 { label: 'Getting set up', href: '/platform#setup' },

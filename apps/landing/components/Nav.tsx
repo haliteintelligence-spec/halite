@@ -9,6 +9,7 @@ const BRAND_LINKS = [
   { label: 'What you get', href: '/#get' },
   { label: 'Compare', href: '/#compare' },
   { label: 'Platform', href: '/platform' },
+  { label: 'Pricing & FAQ', href: '/pricing' },
 ]
 
 const CONSUMER_LINKS = [
@@ -68,7 +69,7 @@ export function Nav() {
             Halite
           </span>
           <span
-            className="hidden sm:inline text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5"
+            className="hidden xl:inline text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5"
             style={{ color: dark ? '#8B6575' : 'rgba(250,246,240,0.7)' }}
           >
             Intelligence
@@ -113,7 +114,7 @@ export function Nav() {
         </div>
 
         {/* Desktop links */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
           {links.map(l => (
             <a
               key={l.href}
