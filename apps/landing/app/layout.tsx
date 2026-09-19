@@ -17,10 +17,10 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL('https://haliteintelligence.com'),
   title: {
-    default: 'Halite Intelligence — The Portable Consumer Profile for CPG Brands',
+    default: 'Halite Intelligence — Turn Every Shopper Into a Known Customer',
     template: '%s — Halite Intelligence',
   },
-  description: 'Halite gives every CPG brand one consented, portable consumer profile — built by the shopper in Hallie and carried from brand to brand. Customers arrive already known, so you skip the onboarding quiz and personalize precisely from the first visit.',
+  description: 'For beauty and fragrance brands. Your customers build one profile — their full routine, preferences and goals — and your brand gets to access it in one tap. So from their very first visit, your store already knows them.',
   keywords: [
     'portable consumer profile',
     'consented data sharing CPG',
@@ -55,8 +55,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haliteintelligence.com',
     siteName: 'Halite Intelligence',
-    title: 'Halite Intelligence — The Portable Consumer Profile for CPG Brands',
-    description: 'Your next customer already has a profile. One consented profile per person, built by the shopper and carried from brand to brand — so CPG brands never start a customer from zero.',
+    title: 'Halite Intelligence — Turn Every Shopper Into a Known Customer',
+    description: 'Your customers build one profile — routine, preferences and goals — and your brand accesses it in one tap. Consumer-permissioned, one link on your site, live in a week.',
     images: [
       {
         url: '/og-image.png',
@@ -68,8 +68,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Halite Intelligence — The Portable Consumer Profile for CPG Brands',
-    description: 'Your next customer already has a profile. Consented, portable, and built by the shopper themselves.',
+    title: 'Halite Intelligence — Turn Every Shopper Into a Known Customer',
+    description: 'One profile, built by the shopper, shared with your brand in one tap. Your store knows them from the first visit.',
     images: ['/og-image.png'],
   },
   alternates: {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Nav } from '@/components/Nav'
 import { Footer } from '@/components/Footer'
 import { HALLIE_URL, EXTERNAL_LINK_PROPS } from '@/lib/links'
+import { ShelfMockup, LogMockup, AskMockup, QuizMockup } from '@/components/StepMockups'
 
 // Its own metadata rather than the root layout's — this page sells an app to a
 // shopper, and inheriting the B2B title would have it competing for consumer
@@ -203,21 +204,19 @@ export default function HalliePage() {
             everywhere else you shop.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-5">
             {[
-              { icon: '◫', title: 'Build your shelf', body: 'Snap the bottle — Hallie reads the brand, name and size off the packaging. Or type it. Keep a Wishlist and a graveyard of Empties too.' },
-              { icon: '◷', title: 'Log your day', body: 'Tick what you used, rate it, say how it went. Makeup gets two extras — how long it lasted, how it looked by the end of the day.' },
-              { icon: '✦', title: 'Ask Hallie anything', body: 'She reads your profile, your quiz answers, your products and every log before she replies — so “what should I use tonight?” gets a real answer.' },
-              { icon: '◎', title: 'Take the quiz', body: 'One per category — skin type, hair type, undertone, concerns, and your shade on the 10-tone Monk scale. This is the part that travels.' },
+              { n: '01', title: 'Build your shelf',   mockup: <ShelfMockup />, body: 'Snap the bottle — Hallie reads the brand, name and size off the packaging. Or type it. Wishlist and Empties too.' },
+              { n: '02', title: 'Log your day',       mockup: <LogMockup />,   body: 'Tick what you used, rate it, say how it went. Makeup gets two extras — how long it lasted, and how it looked by the end of the day.' },
+              { n: '03', title: 'Ask Hallie anything',mockup: <AskMockup />,   body: 'She reads your profile, your quiz answers, your products and every log before she replies — so the answer is actually yours.' },
+              { n: '04', title: 'Take the quiz',      mockup: <QuizMockup />,  body: 'One per category — skin type, hair type, undertone, concerns, and your shade on the 10-tone Monk scale. This is the part that travels.' },
             ].map(c => (
-              <div key={c.title} className="rounded-2xl p-6 md:p-7" style={{ background: '#F2EBE0', border: '1px solid #E8DDD0' }}>
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-4"
-                  style={{ background: 'rgba(193,122,71,0.15)', color: '#450F2A' }}
-                >
-                  {c.icon}
+              <div key={c.title}>
+                <div className="mb-5">{c.mockup}</div>
+                <div className="flex items-baseline gap-2.5 mb-2.5">
+                  <span className="font-display text-[15px] font-semibold" style={{ color: '#C17A47' }}>{c.n}</span>
+                  <h3 className="font-display text-lg font-semibold" style={{ color: '#1A0A12' }}>{c.title}</h3>
                 </div>
-                <h3 className="font-display text-lg font-semibold mb-2.5" style={{ color: '#1A0A12' }}>{c.title}</h3>
                 <p className="text-[13.5px] leading-relaxed" style={{ color: '#8B6575' }}>{c.body}</p>
               </div>
             ))}

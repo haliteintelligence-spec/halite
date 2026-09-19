@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation'
 import { HALLIE_URL, EXTERNAL_LINK_PROPS } from '@/lib/links'
 
 const BRAND_LINKS = [
-  { label: 'How it works', href: '/platform' },
-  { label: 'The profile', href: '/#profile' },
+  { label: 'How it works', href: '/#how' },
+  { label: 'What you get', href: '/#get' },
   { label: 'Compare', href: '/#compare' },
+  { label: 'Platform', href: '/platform' },
 ]
 
 const CONSUMER_LINKS = [
