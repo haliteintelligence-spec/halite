@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma, Prisma } from '@halite/db'
 import { requireConsumer, requireBrandAdmin } from '../lib/auth.js'
 import { ApiError } from '../lib/errors.js'
+import { purgeMirrorFor } from '../lib/hallie-sync.js'
 
 // Questions that are about the person (brand-agnostic) — safe to pre-fill
 const PREFILL_QUESTION_IDS = new Set([
@@ -223,6 +224,14 @@ export async function consumerRoutes(server: FastifyInstance) {
           action: 'refused', detail: { reason: 'revoked_by_consumer' },
         },
       })
+
+
+      // The mirror exists to serve connected brands. With none left, there is
+      // nothing it is for, so it goes rather than sitting on disk.
+      const stillConnected = await prisma.consentGrant.count({
+        where: { consumerId: consumerId, status: 'ACTIVE' },
+      })
+      if (stillConnected === 0) await purgeMirrorFor(consumerId)
 
       return { ok: true, status: updated.status.toLowerCase(), revokedAt: updated.revokedAt?.toISOString() }
     }

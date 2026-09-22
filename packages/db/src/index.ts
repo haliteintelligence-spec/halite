@@ -31,6 +31,8 @@ export {
   CrystalAdminRole,
   MessageRole,
   ConsentStatus,
+  ConsentSignal,
+  AttributeSource,
   ConnectEventType,
 } from '@prisma/client'
 export type {

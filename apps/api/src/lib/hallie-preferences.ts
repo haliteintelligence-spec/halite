@@ -41,6 +41,24 @@ const CONCERN_INGREDIENTS: Record<string, string[]> = {
   large_pores:       ['niacinamide', 'salicylic acid'],
 }
 
+/**
+ * What a scent family is built from.
+ *
+ * The fragrance equivalent of CONCERN_INGREDIENTS. A shopper picking
+ * "gourmand, sweet" is telling us vanilla and praline, the same way picking
+ * "hyperpigmentation" tells us niacinamide — so families derive notes, and
+ * the notes are what a catalog can actually be ranked against.
+ */
+const FAMILY_NOTES: Record<string, string[]> = {
+  floral:         ['rose', 'jasmine', 'tuberose', 'peony', 'orange blossom', 'iris'],
+  gourmand_sweet: ['vanilla', 'tonka', 'praline', 'caramel', 'brown sugar', 'pistachio', 'cocoa'],
+  woody:          ['sandalwood', 'cedar', 'vetiver', 'patchouli', 'oud'],
+  fresh_citrus:   ['bergamot', 'neroli', 'lemon', 'mandarin', 'petitgrain'],
+  aquatic:        ['marine', 'sea salt', 'calone', 'water lily'],
+  oriental_spicy: ['cardamom', 'cinnamon', 'clove', 'pink pepper', 'saffron'],
+  spicy_ambery:   ['amber', 'benzoin', 'labdanum', 'incense', 'saffron'],
+}
+
 /** Hallie's concern vocabulary onto Halite's SkinConcern enum. */
 const CONCERN_ENUM: Record<string, string> = {
   acne: 'ACNE', hyperpigmentation: 'HYPERPIGMENTATION', dark_spots: 'HYPERPIGMENTATION',
@@ -99,6 +117,16 @@ export interface HalliePreferenceSignals {
   sensitivity: 'yes' | 'somewhat' | 'no' | null
   texture: string | null
   routineComplexity: string | null
+  /** Fragrance: the families they picked, in Hallie's own vocabulary. */
+  families: string[]
+  /** How strongly they wear it — light | moderate | strong. */
+  intensity: string | null
+  /** Whether they want it to hold or to evolve. */
+  longevity: string | null
+  /** When they wear it: everyday, date night, bedtime… */
+  occasions: string[]
+  /** How fast they get through a product. Drives replenishment timing. */
+  usageIntensity: string | null
   budgetMax: number | null
   categories: HallieCategory[]
   /** True when a profile was actually found — otherwise nothing was read. */
@@ -108,6 +136,7 @@ export interface HalliePreferenceSignals {
 const EMPTY: HalliePreferenceSignals = {
   concerns: [], rawConcerns: [], liked: [], likedDerived: [], avoided: [], cautioned: [],
   skinType: null, sensitivity: null, texture: null, routineComplexity: null,
+  families: [], intensity: null, longevity: null, occasions: [], usageIntensity: null,
   budgetMax: null, categories: [], found: false,
 }
 
@@ -138,6 +167,11 @@ export async function readHalliePreferences(args: {
     let texture: string | null = null
     let routineComplexity: string | null = null
     let wantsScent = false
+    const families = new Set<string>()
+    const occasions = new Set<string>()
+    let intensity: string | null = null
+    let longevity: string | null = null
+    let usageIntensity: string | null = null
 
     for (const row of rows) {
       let answers: Record<string, string[]>
@@ -177,6 +211,14 @@ export async function readHalliePreferences(args: {
 
       if (take('scent_preference').includes('strongly_scented')) wantsScent = true
 
+      // Fragrance answers. These were collected by the quiz and then dropped
+      // on the floor — for a perfume house they are the entire profile.
+      for (const f of take('scent_families')) families.add(f)
+      for (const o of take('when_worn')) occasions.add(o)
+      if (!intensity) intensity = take('intensity')[0] ?? null
+      if (!longevity) longevity = take('longevity')[0] ?? null
+      if (!usageIntensity) usageIntensity = take('usage_intensity')[0] ?? null
+
       budgets.push(...take('budget'))
     }
 
@@ -189,6 +231,16 @@ export async function readHalliePreferences(args: {
       for (const ing of CONCERN_INGREDIENTS[c] ?? []) {
         liked.add(ing)
         derived.add(ing)
+      }
+    }
+
+    // Same move for fragrance. Note that an unpicked family is not an
+    // avoidance — plenty of people simply did not think of it — so nothing
+    // is written to `avoided` here.
+    for (const f of families) {
+      for (const note of FAMILY_NOTES[f] ?? []) {
+        liked.add(note)
+        derived.add(note)
       }
     }
 
@@ -220,6 +272,11 @@ export async function readHalliePreferences(args: {
       sensitivity,
       texture,
       routineComplexity,
+      families: [...families],
+      intensity,
+      longevity,
+      occasions: [...occasions],
+      usageIntensity,
       budgetMax: budgetCeiling(budgets),
       categories,
       found: true,

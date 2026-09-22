@@ -250,9 +250,10 @@ model Product {
   createdAt        DateTime                     @default(now())
   updatedAt        DateTime                     @updatedAt
 
-  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand           Brand                @relation(fields: [brandId], references: [id], onDelete: Cascade)
   routineSteps    RoutineStep[]
   checkInProducts CheckInProduct[]
+  hallieShelf     HallieShelfProduct[]
 
   @@unique([brandId, externalId])
   @@map("products")
@@ -380,6 +381,13 @@ model Consumer {
   consentGrants   ConsentGrant[]
   recommendations Recommendation[]
   connectEvents   ConnectEvent[]
+  hallieShelf     HallieShelfProduct[]
+  hallieLogs      HallieLog[]
+  hallieSyncRuns  HallieSyncRun[]
+
+  /// When the Hallie mirror last completed for this consumer. Null means
+  /// never synced, which the job treats as due.
+  lastHallieSyncAt DateTime?
 
   @@map("consumers")
 }
@@ -804,24 +812,61 @@ enum ConsentStatus {
   EXPIRED
 }
 
+/// What a grant lets a brand read, one switch per group.
+///
+/// Category scope answers "which beauty areas"; this answers "how much of
+/// them". The Permission Center in Hallie renders one row per value, so a
+/// shopper can hand a brand their notes without handing over their shelf.
+enum ConsentSignal {
+  /// Stated preferences and quiz answers inside the granted categories.
+  PREFERENCES
+  /// Products of this brand's own that the shopper owns, named in full.
+  COLLECTION
+  /// Ratings and outcomes on this brand's own products.
+  PRODUCT_FEEDBACK
+  /// De-identified outcome aggregates from everything else they own.
+  CROSS_BRAND
+  /// Reactions, sensitivities and the cautions that follow from them.
+  SENSITIVITIES
+  /// Budget band, occasions, how much they get through.
+  INTENT
+  /// Where they bought it. Off unless the shopper turns it on.
+  RETAILERS
+}
+
+/// Where a shelf product's notes or ingredients came from.
+enum AttributeSource {
+  /// Matched to a product in a Halite brand catalog. Trustworthy.
+  CATALOG
+  /// Looked up from the brand and name at sync time. A brand should weigh
+  /// these lower — the lookup can be wrong, and a wrong attribute that
+  /// recurs twice becomes a signal.
+  INFERRED
+  /// Nothing resolved. Contributes a product type and nothing else.
+  NONE
+}
+
 model ConsentGrant {
-  id         String        @id @default(cuid())
+  id         String          @id @default(cuid())
   brandId    String
   consumerId String
   // Snapshot of the brand's focus areas at grant time. The brand cannot
   // widen its own scope later without asking the consumer again.
   categories BeautyArea[]
-  purpose    String        @default("product_recommendations")
-  status     ConsentStatus @default(ACTIVE)
+  /// The signal groups this grant covers. Everything except RETAILERS is on
+  /// by default; that one is opt-in only, and only the shopper can add it.
+  signals    ConsentSignal[] @default([PREFERENCES, COLLECTION, PRODUCT_FEEDBACK, CROSS_BRAND, SENSITIVITIES, INTENT])
+  purpose    String          @default("product_recommendations")
+  status     ConsentStatus   @default(ACTIVE)
   // Where the consumer was when they connected — pdp, quiz, collection…
   surface    String?
-  grantedAt  DateTime      @default(now())
+  grantedAt  DateTime        @default(now())
   revokedAt  DateTime?
   // Unused in the pilot. Reserved so time-limited grants do not need a
   // second migration; a null expiry means "until revoked".
   expiresAt  DateTime?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
   consumer        Consumer           @relation(fields: [consumerId], references: [id], onDelete: Cascade)
@@ -923,4 +968,113 @@ model ConnectEvent {
   @@index([consumerId, occurredAt(sort: Desc)])
   @@index([recommendationId])
   @@map("connect_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Hallie mirror
+//
+// Hallie owns the shopper's shelf and their daily logs. Connect reads the
+// context live, so it is never stale — but the brand dashboard aggregates,
+// and aggregating across a foreign schema on every page load is neither
+// fast nor safe. So a job mirrors the parts a brand can see into these
+// tables every few days, and the dashboard reads only from here.
+//
+// Nothing in this mirror is brand-identifying on its own. A shelf product
+// keeps its resolution and its attributes; the brand and product name the
+// shopper typed stay in Hallie.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// One product on a shopper's Hallie shelf, resolved once rather than per log.
+model HallieShelfProduct {
+  id              String           @id @default(cuid())
+  consumerId      String
+  /// The row this mirrors, in Hallie's own schema.
+  hallieProductId String
+  beautyArea      BeautyArea?
+  category        ProductCategory?
+  /// Hallie's own free-text type ("eau de parfum", "body lotion"). Kept
+  /// because it survives when nothing else resolves.
+  productType     String?
+  /// The Halite catalog product this matched, when it matched one. This is
+  /// also how "did the requesting brand sell it" is answered.
+  productId       String?
+  /// Notes for fragrance, ingredients everywhere else. Capped on read.
+  attributes      String[]
+  attributeSource AttributeSource  @default(NONE)
+  enrichedAt      DateTime?
+  firstSeenAt     DateTime         @default(now())
+  lastSeenAt      DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  consumer Consumer        @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  product  Product?        @relation(fields: [productId], references: [id])
+  logItems HallieLogItem[]
+
+  @@unique([consumerId, hallieProductId])
+  @@index([consumerId])
+  @@index([productId])
+  @@map("hallie_shelf_products")
+}
+
+/// One logging session in Hallie — a day, in one category.
+model HallieLog {
+  id            String      @id @default(cuid())
+  consumerId    String
+  hallieEntryId String
+  /// Hallie's own category string: skincare, body, hair, makeup, perfume.
+  category      String
+  beautyArea    BeautyArea?
+  loggedAt      DateTime
+  createdAt     DateTime    @default(now())
+
+  consumer Consumer        @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  items    HallieLogItem[]
+
+  @@unique([consumerId, hallieEntryId])
+  @@index([consumerId, loggedAt(sort: Desc)])
+  @@map("hallie_logs")
+}
+
+/// What the shopper said about one product on one day.
+model HallieLogItem {
+  id              String   @id @default(cuid())
+  logId           String
+  hallieItemId    String
+  shelfProductId  String?
+  /// Hallie's own scale, carried through rather than flattened to a
+  /// three-state reaction — a 3/5 and a 1/5 are not the same thing.
+  rating          Int?
+  wouldRepurchase Boolean?
+  outcomeTags     String[]
+  /// Makeup only: how long it lasted, how it looked by the end of the day.
+  wearDuration    String?
+  endOfDayLook    String?
+  createdAt       DateTime @default(now())
+
+  log          HallieLog           @relation(fields: [logId], references: [id], onDelete: Cascade)
+  shelfProduct HallieShelfProduct? @relation(fields: [shelfProductId], references: [id], onDelete: SetNull)
+
+  @@unique([logId, hallieItemId])
+  @@index([shelfProductId])
+  @@map("hallie_log_items")
+}
+
+/// One pass of the mirror job, for observability and for backing off.
+model HallieSyncRun {
+  id               String    @id @default(cuid())
+  consumerId       String
+  startedAt        DateTime  @default(now())
+  finishedAt       DateTime?
+  ok               Boolean   @default(false)
+  logsPulled       Int       @default(0)
+  itemsPulled      Int       @default(0)
+  productsResolved Int       @default(0)
+  productsEnriched Int       @default(0)
+  error            String?
+
+  consumer Consumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+
+  @@index([consumerId, startedAt(sort: Desc)])
+  @@map("hallie_sync_runs")
 }

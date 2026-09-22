@@ -6,6 +6,7 @@ import type { BeautyArea, ConnectEventType } from '@halite/db'
 import { ApiError } from '../lib/errors.js'
 import { requireBrandKey, authorizedCategories } from '../lib/connect-auth.js'
 import { buildConnectContext } from '../lib/connect-context.js'
+import { SYNC_INTERVAL_DAYS, purgeMirrorFor } from '../lib/hallie-sync.js'
 import { matchCatalog } from '../lib/connect-match.js'
 import { mirrorToHallieCollection } from '../lib/hallie-collection.js'
 import { provisionHallieTestingAccount } from '../lib/hallie-provisioning.js'
@@ -45,7 +46,7 @@ export function scoreToRating(score: number): number {
 async function requireGrant(brandId: string, publicConsumerId: string) {
   const consumer = await prisma.consumer.findUnique({
     where: { publicId: publicConsumerId },
-    select: { id: true, publicId: true },
+    select: { id: true, publicId: true, lastHallieSyncAt: true },
   })
   if (!consumer) throw new ApiError(404, 'Unknown consumer')
 
@@ -388,6 +389,7 @@ export async function connectRoutes(server: FastifyInstance) {
       consumerId: consumer.id,
       brandId: brand.id,
       categories,
+      signals: grant.signals,
     })
 
     await prisma.consentAccessLog.create({
@@ -399,8 +401,11 @@ export async function connectRoutes(server: FastifyInstance) {
       permission: {
         purpose: grant.purpose,
         categories,
+        signals: grant.signals,
         granted_at: grant.grantedAt.toISOString(),
         expires_at: grant.expiresAt?.toISOString() ?? null,
+        last_synced_at: consumer.lastHallieSyncAt?.toISOString() ?? null,
+        sync_interval_days: SYNC_INTERVAL_DAYS,
         raw_data_access: false,
       },
     })
@@ -426,6 +431,7 @@ export async function connectRoutes(server: FastifyInstance) {
       consumerId: consumer.id,
       brandId: brand.id,
       categories,
+      signals: grant.signals,
     })
     const { items, scored } = await matchCatalog({
       brandId: brand.id,
@@ -525,7 +531,7 @@ export async function connectRoutes(server: FastifyInstance) {
     const { consumer, grant } = await requireGrant(brand.id, body.consumer_id)
 
     const categories = authorizedCategories(brand, grant.categories)
-    const context = await buildConnectContext({ consumerId: consumer.id, brandId: brand.id, categories })
+    const context = await buildConnectContext({ consumerId: consumer.id, brandId: brand.id, categories, signals: grant.signals })
     const { items, scored } = await matchCatalog({
       brandId: brand.id, context, categories,
       options: {
@@ -746,6 +752,14 @@ export async function connectRoutes(server: FastifyInstance) {
       where: { brandId: brand.id, consumerId: consumer.id, status: 'ACTIVE' },
       data: { status: 'REVOKED', revokedAt: new Date() },
     })
+
+    // The mirror exists to serve connected brands. With none left, there is
+    // nothing it is for, so it goes rather than sitting on disk.
+    const stillConnected = await prisma.consentGrant.count({
+      where: { consumerId: consumer.id, status: 'ACTIVE' },
+    })
+    if (stillConnected === 0) await purgeMirrorFor(consumer.id)
+
     return reply.send({ ok: true })
   })
 }
