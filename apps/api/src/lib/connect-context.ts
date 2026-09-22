@@ -56,8 +56,8 @@ export interface ProductFeedback {
   /** Makeup only, and null everywhere else. */
   wear_duration: string | null
   end_of_day_look: string | null
-  first_logged: string
-  last_logged: string
+  first_logged: string | null
+  last_logged: string | null
 }
 
 /**
@@ -250,6 +250,7 @@ export async function buildConnectContext(opts: {
         select: {
           id: true, productId: true, beautyArea: true, category: true, productType: true,
           attributes: true, attributeSource: true,
+          rating: true, feedbackRating: true, wouldRepurchase: true, outcomeTags: true,
           product: { select: { id: true, name: true, externalId: true, brandId: true, category: true } },
           logItems: {
             select: {
@@ -417,13 +418,23 @@ export async function buildConnectContext(opts: {
       if (!prod || prod.brandId !== brandId) continue
       if (sp.beautyArea && !inScope(sp.beautyArea, categories)) continue
 
-      const ratings = sp.logItems.map(i => i.rating).filter((r): r is number => typeof r === 'number')
+      // Shelf rating is out of ten, feedbackRating out of five; both are
+      // expressed on the five-point scale the payload reports.
+      const shelfRating = sp.rating != null ? sp.rating / 2 : sp.feedbackRating
+      const ratings = [
+        ...(shelfRating != null ? [shelfRating] : []),
+        ...sp.logItems.map(i => i.rating).filter((r): r is number => typeof r === 'number'),
+      ]
       const dates = sp.logItems.map(i => i.log.loggedAt).sort((a, b) => a.getTime() - b.getTime())
-      if (dates.length === 0) continue
+      // A product they rated but have not logged still counts — the rating
+      // is the feedback, and dropping it would hide their loudest signal.
+      if (dates.length === 0 && ratings.length === 0) continue
 
       // The most recent answer wins: someone who repurchased once and then
       // said no has changed their mind, and the brand should see the latter.
-      const repurchase = [...sp.logItems].reverse().find(i => i.wouldRepurchase !== null)?.wouldRepurchase ?? null
+      const repurchase = sp.wouldRepurchase
+        ?? [...sp.logItems].reverse().find(i => i.wouldRepurchase !== null)?.wouldRepurchase
+        ?? null
       const avg = mean(ratings)
 
       product_feedback.push({
@@ -438,11 +449,11 @@ export async function buildConnectContext(opts: {
         // Derived from the rating rather than stored twice, so the two can
         // never disagree.
         outcome: avg == null ? null : avg >= 4 ? 'POSITIVE' : avg <= 2 ? 'NEGATIVE' : 'NEUTRAL',
-        outcome_tags: [...new Set(sp.logItems.flatMap(i => i.outcomeTags))].slice(0, 10),
+        outcome_tags: [...new Set([...sp.outcomeTags, ...sp.logItems.flatMap(i => i.outcomeTags)])].slice(0, 10),
         wear_duration: [...sp.logItems].reverse().find(i => i.wearDuration)?.wearDuration ?? null,
         end_of_day_look: [...sp.logItems].reverse().find(i => i.endOfDayLook)?.endOfDayLook ?? null,
-        first_logged: dates[0]!.toISOString(),
-        last_logged: dates[dates.length - 1]!.toISOString(),
+        first_logged: dates[0]?.toISOString() ?? null,
+        last_logged: dates[dates.length - 1]?.toISOString() ?? null,
       })
     }
     product_feedback.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0))
@@ -485,6 +496,10 @@ export async function buildConnectContext(opts: {
         ratings: [], repurchase: [], tags: new Set<string>(), products: 0,
       }
       bucket.products++
+      const shelfRating = sp.rating != null ? sp.rating / 2 : sp.feedbackRating
+      if (shelfRating != null) bucket.ratings.push(shelfRating)
+      if (sp.wouldRepurchase !== null) bucket.repurchase.push(sp.wouldRepurchase)
+      for (const t of sp.outcomeTags) bucket.tags.add(t)
       for (const it of sp.logItems) {
         if (typeof it.rating === 'number') bucket.ratings.push(it.rating)
         if (it.wouldRepurchase !== null) bucket.repurchase.push(it.wouldRepurchase)

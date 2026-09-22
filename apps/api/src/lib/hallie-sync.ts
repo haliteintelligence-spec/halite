@@ -26,13 +26,17 @@ const LIVE = 'ACTIVE' as const
 
 /** Hallie's category strings onto Halite's beauty areas. */
 const CATEGORY_AREA: Record<string, BeautyArea> = {
-  skincare: 'SKINCARE',
-  body: 'BODY',
-  hair: 'HAIR',
+  skin_care: 'SKINCARE',
+  body_care: 'BODY',
+  hair_care: 'HAIR',
   makeup: 'MAKEUP',
   perfume: 'FRAGRANCE',
   nails: 'NAILS',
   wellness: 'WELLNESS',
+  // Older rows, and anything written before the _care suffix settled.
+  skincare: 'SKINCARE',
+  body: 'BODY',
+  hair: 'HAIR',
 }
 
 type HallieProductRow = {
@@ -41,6 +45,15 @@ type HallieProductRow = {
   normalizedName: string | null
   categories: string | null
   productTypes: string | null
+  /** Hallie already looks these up. Free, and better than asking a model. */
+  scentNotes: string | null
+  productFacts: string | null
+  rating: number | null
+  feedbackRating: number | null
+  wouldRepurchase: boolean | null
+  feedbackOutcomeTags: string | null
+  feedbackTextureTags: string | null
+  feedbackReactionTags: string | null
 }
 
 type HallieLogRow = {
@@ -51,13 +64,22 @@ type HallieLogRow = {
   createdAt: Date | null
 }
 
+/**
+ * Hallie stores every tag family as JSON in a text column, so each one is
+ * parsed rather than read straight through.
+ */
 type HallieItemRow = {
   id: string
   logEntryId: string
   productId: string | null
   rating: number | null
   wouldRepurchase: boolean | null
-  outcomeTags: string[] | null
+  outcomeTags: string | null
+  reactionTags: string | null
+  scentTags: string | null
+  textureTags: string | null
+  projectionTags: string | null
+  feelingTags: string | null
   wearDuration: string | null
   endOfDayLook: string | null
 }
@@ -70,6 +92,30 @@ function parseJsonArray(raw: string | null): string[] {
     if (v && typeof v === 'object') return Object.values(v).filter((x): x is string => typeof x === 'string')
   } catch { /* Hallie writes these by hand; a bad row should not stop a sync. */ }
   return []
+}
+
+/**
+ * Notes and ingredients Hallie already resolved for a shelf product.
+ *
+ * `scentNotes` is a JSON array for fragrance; `productFacts` carries
+ * ingredient data for everything else. Both are fetched when the shopper
+ * adds the product, so this is real sourced data rather than an inference —
+ * it is marked CATALOG for that reason.
+ */
+function hallieAttributes(row: { scentNotes: string | null; productFacts: string | null }): string[] {
+  const out = new Set<string>()
+  for (const n of parseJsonArray(row.scentNotes)) out.add(n.toLowerCase())
+
+  if (row.productFacts) {
+    try {
+      const facts = JSON.parse(row.productFacts) as Record<string, unknown>
+      for (const key of ['keyIngredients', 'ingredients', 'actives', 'notes']) {
+        const v = facts[key]
+        if (Array.isArray(v)) for (const x of v) if (typeof x === 'string') out.add(x.toLowerCase())
+      }
+    } catch { /* Written by a lookup that can fail; a bad row is not fatal. */ }
+  }
+  return [...out].slice(0, 12)
 }
 
 /** Loose match key: lowercase, punctuation stripped, runs of space collapsed. */
@@ -138,7 +184,9 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
 
     // ── Shelf ───────────────────────────────────────────────────────
     const shelfRows = await prisma.$queryRaw<HallieProductRow[]>`
-      SELECT id, "normalizedBrand", "normalizedName", categories, "productTypes"
+      SELECT id, "normalizedBrand", "normalizedName", categories, "productTypes",
+             "scentNotes", "productFacts", rating, "feedbackRating", "wouldRepurchase",
+             "feedbackOutcomeTags", "feedbackTextureTags", "feedbackReactionTags"
       FROM hallie_testing.hallie_testing_products
       WHERE "userId" = ${hallieUserId} AND "removedAt" IS NULL
     `
@@ -191,9 +239,23 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
           productType, productId: hit.id, attributes: attrs, source: 'CATALOG',
         })
         counts.productsResolved++
-      } else {
-        needEnrich.push({ row, area })
+        continue
       }
+
+      // Hallie fetches notes and facts when a product is added. Reading them
+      // costs nothing and is better sourced than a model's guess, so it is
+      // tried before falling back to one.
+      const known = hallieAttributes(row)
+      if (known.length > 0) {
+        resolved.push({
+          row, area, category: null, productType,
+          productId: null, attributes: known, source: 'CATALOG',
+        })
+        counts.productsResolved++
+        continue
+      }
+
+      needEnrich.push({ row, area })
     }
 
     // Only enrich what we have not enriched before — a shelf barely changes
@@ -223,6 +285,17 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
 
     const shelfIds = new Map<string, string>()
     for (const r of resolved) {
+      const feedback = {
+        rating: r.row.rating,
+        feedbackRating: r.row.feedbackRating,
+        wouldRepurchase: r.row.wouldRepurchase,
+        outcomeTags: [...new Set([
+          ...parseJsonArray(r.row.feedbackOutcomeTags),
+          ...parseJsonArray(r.row.feedbackTextureTags),
+          ...parseJsonArray(r.row.feedbackReactionTags),
+        ].map(t => t.toLowerCase()))].slice(0, 20),
+      }
+
       const saved = await prisma.hallieShelfProduct.upsert({
         where: { consumerId_hallieProductId: { consumerId, hallieProductId: r.row.id } },
         create: {
@@ -230,11 +303,13 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
           beautyArea: r.area, category: r.category, productType: r.productType,
           productId: r.productId, attributes: r.attributes, attributeSource: r.source,
           enrichedAt: r.source === 'INFERRED' ? new Date() : null,
+          ...feedback,
         },
         update: {
           beautyArea: r.area, category: r.category, productType: r.productType,
           productId: r.productId, attributes: r.attributes, attributeSource: r.source,
           lastSeenAt: new Date(),
+          ...feedback,
         },
         select: { id: true },
       })
@@ -252,7 +327,8 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
     const itemRows = logRows.length
       ? await prisma.$queryRaw<HallieItemRow[]>`
           SELECT id, "logEntryId", "productId", rating, "wouldRepurchase",
-                 "outcomeTags", "wearDuration", "endOfDayLook"
+                 "outcomeTags", "reactionTags", "scentTags", "textureTags",
+                 "projectionTags", "feelingTags", "wearDuration", "endOfDayLook"
           FROM hallie_testing.hallie_testing_log_items
           WHERE "logEntryId" = ANY(${logRows.map(l => l.id)})
         `
@@ -280,20 +356,31 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
       counts.logsPulled++
 
       for (const it of itemsByLog.get(log.id) ?? []) {
+        const tags = [...new Set([
+          ...parseJsonArray(it.outcomeTags),
+          ...parseJsonArray(it.reactionTags),
+          ...parseJsonArray(it.scentTags),
+          ...parseJsonArray(it.textureTags),
+          ...parseJsonArray(it.projectionTags),
+          ...parseJsonArray(it.feelingTags),
+        ].map(t => t.toLowerCase()))].slice(0, 20)
+        // Also JSON in a text column, and single-valued in practice.
+        const endOfDay = parseJsonArray(it.endOfDayLook)[0] ?? null
+
         await prisma.hallieLogItem.upsert({
           where: { logId_hallieItemId: { logId: saved.id, hallieItemId: it.id } },
           create: {
             logId: saved.id, hallieItemId: it.id,
             shelfProductId: it.productId ? shelfIds.get(it.productId) ?? null : null,
             rating: it.rating, wouldRepurchase: it.wouldRepurchase,
-            outcomeTags: it.outcomeTags ?? [],
-            wearDuration: it.wearDuration, endOfDayLook: it.endOfDayLook,
+            outcomeTags: tags,
+            wearDuration: it.wearDuration, endOfDayLook: endOfDay,
           },
           update: {
             shelfProductId: it.productId ? shelfIds.get(it.productId) ?? null : null,
             rating: it.rating, wouldRepurchase: it.wouldRepurchase,
-            outcomeTags: it.outcomeTags ?? [],
-            wearDuration: it.wearDuration, endOfDayLook: it.endOfDayLook,
+            outcomeTags: tags,
+            wearDuration: it.wearDuration, endOfDayLook: endOfDay,
           },
         })
         counts.itemsPulled++

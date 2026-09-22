@@ -1001,6 +1001,14 @@ model HallieShelfProduct {
   productId       String?
   /// Notes for fragrance, ingredients everywhere else. Capped on read.
   attributes      String[]
+  /// Hallie rates a product once, on the shelf, rather than per log — so
+  /// this is where a rating actually lives. Two scales: `rating` is out of
+  /// ten, `feedbackRating` out of five, and both are carried rather than
+  /// flattened so neither has to be guessed at downstream.
+  rating          Float?
+  feedbackRating  Int?
+  wouldRepurchase Boolean?
+  outcomeTags     String[]
   attributeSource AttributeSource  @default(NONE)
   enrichedAt      DateTime?
   firstSeenAt     DateTime         @default(now())

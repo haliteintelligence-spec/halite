@@ -125,3 +125,10 @@ CREATE TABLE "seasonal_nudges" (
 CREATE INDEX "seasonal_nudges_consumerId_sentAt_idx" ON "seasonal_nudges"("consumerId", "sentAt" DESC);
 
 ALTER TABLE "seasonal_nudges" ADD CONSTRAINT "seasonal_nudges_consumerId_fkey" FOREIGN KEY ("consumerId") REFERENCES "consumers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Ratings live on the shelf product in Hallie, not on a log item.
+ALTER TABLE "hallie_shelf_products"
+  ADD COLUMN "rating" DOUBLE PRECISION,
+  ADD COLUMN "feedbackRating" INTEGER,
+  ADD COLUMN "wouldRepurchase" BOOLEAN,
+  ADD COLUMN "outcomeTags" TEXT[];
