@@ -2,6 +2,11 @@ import { prisma } from '@halite/db'
 import type { BeautyArea, ProductCategory, ProductReaction, AttributeSource, ConsentSignal } from '@halite/db'
 import { readHalliePreferences } from './hallie-preferences.js'
 import { readSeasonal, type SeasonalRead } from './seasonal.js'
+import {
+  buildRoutines,
+  type RoutineView, type LayeringView, type CoUse,
+  type ReplenishmentItem, type ReplenishmentCadence,
+} from './connect-routines.js'
 
 /**
  * Builds the permissioned context a partner brand receives for a consumer.
@@ -144,6 +149,19 @@ export interface ConnectContext {
    * suits them in July, it is just not what they will reach for.
    */
   seasonal: SeasonalRead | null
+  /** Routines the shopper built, and the days they actually wore them. */
+  routines: RoutineView[]
+  layerings: LayeringView[]
+  /** How the brand's own products perform alongside what they are layered with. */
+  co_use: CoUse[]
+  /**
+   * Yours by date, everyone else's by rhythm — enough to time a reorder and
+   * size a subscription without handing over a dated map of a whole shelf.
+   */
+  replenishment: {
+    yours: ReplenishmentItem[]
+    cadence: ReplenishmentCadence[]
+  }
   /** Which signal groups this grant actually carried. */
   signals: ConsentSignal[]
   intent: {
@@ -408,6 +426,16 @@ export async function buildConnectContext(opts: {
     ? await readSeasonal({ consumerId, areas: categories })
     : null
 
+  // Routines and replenishment ride on the same two switches the ratings
+  // do: COLLECTION says what they own, PRODUCT_FEEDBACK says how it went.
+  const routineData = (allows('PRODUCT_FEEDBACK') || allows('COLLECTION'))
+    ? await buildRoutines({ consumerId, brandId, areas: categories })
+    : { routines: [], layerings: [], co_use: [], replenishment: { yours: [], cadence: [] } }
+
+  // Cross-brand cadence is the one part that describes other people's
+  // products, so it needs the switch that covers them.
+  if (!allows('CROSS_BRAND')) routineData.replenishment.cadence = []
+
   // ── Per-product feedback, for this brand's own catalog ──────────────
   const mean = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null)
 
@@ -418,9 +446,11 @@ export async function buildConnectContext(opts: {
       if (!prod || prod.brandId !== brandId) continue
       if (sp.beautyArea && !inScope(sp.beautyArea, categories)) continue
 
-      // Shelf rating is out of ten, feedbackRating out of five; both are
-      // expressed on the five-point scale the payload reports.
-      const shelfRating = sp.rating != null ? sp.rating / 2 : sp.feedbackRating
+      // Two scales, and where they disagree the feedback form wins: `rating`
+      // is the quick star on the shelf, `feedbackRating` is the considered
+      // answer given alongside outcome tags. Vanilla 28 is rated 5/10 and
+      // also marked "loved_it" at 5/5 — reporting 2.5 there would be wrong.
+      const shelfRating = sp.feedbackRating ?? (sp.rating != null ? sp.rating / 2 : null)
       const ratings = [
         ...(shelfRating != null ? [shelfRating] : []),
         ...sp.logItems.map(i => i.rating).filter((r): r is number => typeof r === 'number'),
@@ -496,7 +526,7 @@ export async function buildConnectContext(opts: {
         ratings: [], repurchase: [], tags: new Set<string>(), products: 0,
       }
       bucket.products++
-      const shelfRating = sp.rating != null ? sp.rating / 2 : sp.feedbackRating
+      const shelfRating = sp.feedbackRating ?? (sp.rating != null ? sp.rating / 2 : null)
       if (shelfRating != null) bucket.ratings.push(shelfRating)
       if (sp.wouldRepurchase !== null) bucket.repurchase.push(sp.wouldRepurchase)
       for (const t of sp.outcomeTags) bucket.tags.add(t)
@@ -581,6 +611,10 @@ export async function buildConnectContext(opts: {
     product_feedback,
     outcome_aggregates,
     seasonal,
+    routines: routineData.routines,
+    layerings: routineData.layerings,
+    co_use: routineData.co_use,
+    replenishment: routineData.replenishment,
     signals: grantSignals,
     confidence,
     generated_at: new Date().toISOString(),

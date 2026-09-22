@@ -385,6 +385,8 @@ model Consumer {
   hallieLogs      HallieLog[]
   hallieSyncRuns  HallieSyncRun[]
   seasonalNudges  SeasonalNudge[]
+  hallieRoutines  HallieRoutine[]
+  hallieLayerings HallieLayering[]
 
   /// When the Hallie mirror last completed for this consumer. Null means
   /// never synced, which the job treats as due.
@@ -1009,6 +1011,18 @@ model HallieShelfProduct {
   feedbackRating  Int?
   wouldRepurchase Boolean?
   outcomeTags     String[]
+  /// What is left in the bottle. `initialLevel` is where it started,
+  /// `statedLevel` is the last time the shopper corrected it by hand, and
+  /// the estimate is computed on read from those two plus how often it
+  /// gets logged — never stored, so it cannot go stale.
+  initialLevel    Int?
+  statedLevel     Int?
+  statedLevelAt   DateTime?
+  isEmpty         Boolean          @default(false)
+  emptiedAt       DateTime?
+  repurchasedAt   DateTime?
+  sizeValue       Float?
+  sizeUnit        String?
   attributeSource AttributeSource  @default(NONE)
   enrichedAt      DateTime?
   firstSeenAt     DateTime         @default(now())
@@ -1016,9 +1030,10 @@ model HallieShelfProduct {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  consumer Consumer        @relation(fields: [consumerId], references: [id], onDelete: Cascade)
-  product  Product?        @relation(fields: [productId], references: [id])
-  logItems HallieLogItem[]
+  consumer     Consumer            @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  product      Product?            @relation(fields: [productId], references: [id])
+  logItems     HallieLogItem[]
+  routineItems HallieRoutineItem[]
 
   @@unique([consumerId, hallieProductId])
   @@index([consumerId])
@@ -1107,4 +1122,65 @@ model SeasonalNudge {
 
   @@index([consumerId, sentAt(sort: Desc)])
   @@map("seasonal_nudges")
+}
+
+/// A routine the shopper assembled in Hallie — their own stack, not one we
+/// suggested. Recommendations shown to them are deliberately not mirrored;
+/// a brand should see what someone actually wears.
+model HallieRoutine {
+  id            String   @id @default(cuid())
+  consumerId    String
+  hallieStackId String
+  name          String?
+  timeOfDay     String?
+  isEveryday    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  consumer Consumer            @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  items    HallieRoutineItem[]
+
+  @@unique([consumerId, hallieStackId])
+  @@index([consumerId])
+  @@map("hallie_routines")
+}
+
+model HallieRoutineItem {
+  id             String  @id @default(cuid())
+  routineId      String
+  shelfProductId String?
+  /// Order in the routine. This is the layering information — step 2 of 3
+  /// means something different from step 1.
+  position       Int
+
+  routine      HallieRoutine       @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  shelfProduct HallieShelfProduct? @relation(fields: [shelfProductId], references: [id], onDelete: SetNull)
+
+  @@unique([routineId, position])
+  @@index([shelfProductId])
+  @@map("hallie_routine_items")
+}
+
+/// One dated combination the shopper actually put on, with their own reason.
+///
+/// Distinct from a routine: a routine is the intent, this is the day. The
+/// gap between them is usually where the interesting behaviour is.
+model HallieLayering {
+  id              String   @id @default(cuid())
+  consumerId      String
+  hallieChoiceId  String
+  dayKey          String
+  slot            String?
+  /// Mirror ids, in the order they were layered.
+  shelfProductIds String[]
+  why             String?
+  moods           String[]
+  occasions       String[]
+  createdAt       DateTime @default(now())
+
+  consumer Consumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+
+  @@unique([consumerId, hallieChoiceId])
+  @@index([consumerId, dayKey])
+  @@map("hallie_layerings")
 }

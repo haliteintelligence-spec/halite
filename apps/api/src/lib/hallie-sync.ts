@@ -54,6 +54,13 @@ type HallieProductRow = {
   feedbackOutcomeTags: string | null
   feedbackTextureTags: string | null
   feedbackReactionTags: string | null
+  initialLevel: number | null
+  currentLevelOverride: number | null
+  currentLevelOverrideAt: Date | null
+  isEmpty: boolean | null
+  emptiedAt: Date | null
+  sizeValue: number | null
+  sizeUnit: string | null
 }
 
 type HallieLogRow = {
@@ -186,7 +193,9 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
     const shelfRows = await prisma.$queryRaw<HallieProductRow[]>`
       SELECT id, "normalizedBrand", "normalizedName", categories, "productTypes",
              "scentNotes", "productFacts", rating, "feedbackRating", "wouldRepurchase",
-             "feedbackOutcomeTags", "feedbackTextureTags", "feedbackReactionTags"
+             "feedbackOutcomeTags", "feedbackTextureTags", "feedbackReactionTags",
+             "initialLevel", "currentLevelOverride", "currentLevelOverrideAt",
+             "isEmpty", "emptiedAt", "sizeValue", "sizeUnit"
       FROM hallie_testing.hallie_testing_products
       WHERE "userId" = ${hallieUserId} AND "removedAt" IS NULL
     `
@@ -294,6 +303,13 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
           ...parseJsonArray(r.row.feedbackTextureTags),
           ...parseJsonArray(r.row.feedbackReactionTags),
         ].map(t => t.toLowerCase()))].slice(0, 20),
+        initialLevel: r.row.initialLevel,
+        statedLevel: r.row.currentLevelOverride,
+        statedLevelAt: r.row.currentLevelOverrideAt,
+        isEmpty: r.row.isEmpty ?? false,
+        emptiedAt: r.row.emptiedAt,
+        sizeValue: r.row.sizeValue,
+        sizeUnit: r.row.sizeUnit,
       }
 
       const saved = await prisma.hallieShelfProduct.upsert({
@@ -385,6 +401,94 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
         })
         counts.itemsPulled++
       }
+    }
+
+    // ── Routines the shopper built ──────────────────────────────────
+    // Their own stacks only. hallie_testing_routine_shown holds what we
+    // suggested to them, and that is not what a brand should be reading.
+    const stacks = await prisma.$queryRaw<Array<{
+      id: string; name: string | null; timeOfDay: string | null; isEveryday: boolean | null
+    }>>`
+      SELECT id, name, "timeOfDay", "isEveryday"
+      FROM hallie_testing.hallie_testing_stacks
+      WHERE "userId" = ${hallieUserId}
+    `
+    for (const st of stacks) {
+      const saved = await prisma.hallieRoutine.upsert({
+        where: { consumerId_hallieStackId: { consumerId, hallieStackId: st.id } },
+        create: {
+          consumerId, hallieStackId: st.id,
+          name: st.name, timeOfDay: st.timeOfDay, isEveryday: st.isEveryday ?? false,
+        },
+        update: { name: st.name, timeOfDay: st.timeOfDay, isEveryday: st.isEveryday ?? false },
+        select: { id: true },
+      })
+      const items = await prisma.$queryRaw<Array<{ productId: string | null; position: number }>>`
+        SELECT "productId", position
+        FROM hallie_testing.hallie_testing_stack_items
+        WHERE "stackId" = ${st.id}
+        ORDER BY position
+      `
+      // Rewritten wholesale: a routine reordered in Hallie should not leave
+      // a stale step behind here.
+      await prisma.hallieRoutineItem.deleteMany({ where: { routineId: saved.id } })
+      for (const it of items) {
+        await prisma.hallieRoutineItem.create({
+          data: {
+            routineId: saved.id,
+            position: it.position,
+            shelfProductId: it.productId ? shelfIds.get(it.productId) ?? null : null,
+          },
+        })
+      }
+    }
+
+    // ── What they actually put on, on a given day ───────────────────
+    const layerings = await prisma.$queryRaw<Array<{
+      id: string; dayKey: string | null; slot: string | null; productIds: string | null
+      why: string | null; moods: string | null; occasions: string | null
+    }>>`
+      SELECT id, "dayKey", slot, "productIds", why, moods, occasions
+      FROM hallie_testing.hallie_testing_layering_choices
+      WHERE "userId" = ${hallieUserId} AND "dismissedAt" IS NULL
+    `
+    for (const ly of layerings) {
+      const ids = parseJsonArray(ly.productIds)
+        .map(id => shelfIds.get(id))
+        .filter((id): id is string => Boolean(id))
+      await prisma.hallieLayering.upsert({
+        where: { consumerId_hallieChoiceId: { consumerId, hallieChoiceId: ly.id } },
+        create: {
+          consumerId, hallieChoiceId: ly.id,
+          dayKey: ly.dayKey ?? '', slot: ly.slot,
+          shelfProductIds: ids,
+          why: ly.why,
+          moods: parseJsonArray(ly.moods),
+          occasions: parseJsonArray(ly.occasions),
+        },
+        update: {
+          slot: ly.slot, shelfProductIds: ids, why: ly.why,
+          moods: parseJsonArray(ly.moods),
+          occasions: parseJsonArray(ly.occasions),
+        },
+      })
+    }
+
+    // ── Empties, which are what calibrate a burn rate ────────────────
+    const empties = await prisma.$queryRaw<Array<{
+      productId: string; emptiedAt: Date | null; repurchasedAt: Date | null
+    }>>`
+      SELECT "productId", "emptiedAt", "repurchasedAt"
+      FROM hallie_testing.hallie_testing_product_empty_events
+      WHERE "userId" = ${hallieUserId}
+    `
+    for (const e of empties) {
+      const id = shelfIds.get(e.productId)
+      if (!id) continue
+      await prisma.hallieShelfProduct.update({
+        where: { id },
+        data: { isEmpty: true, emptiedAt: e.emptiedAt, repurchasedAt: e.repurchasedAt },
+      })
     }
 
     await prisma.consumer.update({
