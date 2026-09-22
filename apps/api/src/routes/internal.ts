@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { prisma, Prisma } from '@halite/db'
 import { runDueSyncs, syncConsumerFromHallie, findConsumersDueForSync, SYNC_INTERVAL_DAYS } from '../lib/hallie-sync.js'
+import { runSeasonalNudges, findSeasonalNudges } from '../lib/seasonal-nudge.js'
 
 const eventSchema = z.object({
   userId: z.string(),
@@ -68,5 +69,23 @@ export async function internalRoutes(server: FastifyInstance) {
     const { consumerId } = z.object({ consumerId: z.string() }).parse(request.params)
     const counts = await syncConsumerFromHallie(consumerId)
     return { ok: true, ...counts }
+  })
+
+  // ── Seasonal nudges ─────────────────────────────────────────────────
+  // Dry by default: the queue builds, nothing sends, until
+  // SEASONAL_NUDGES_ENABLED is set. Review the candidates first — this is
+  // the one thing here that puts a message in somebody's inbox.
+  server.get('/internal/seasonal/candidates', async (request) => {
+    const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(500).optional() })
+      .parse(request.query ?? {})
+    const candidates = await findSeasonalNudges(limit ?? 100)
+    return { candidates, count: candidates.length, enabled: process.env.SEASONAL_NUDGES_ENABLED === 'true' }
+  })
+
+  server.post('/internal/seasonal/run', async (request) => {
+    const { limit } = z.object({ limit: z.number().int().min(1).max(500).optional() })
+      .parse(request.body ?? {})
+    const result = await runSeasonalNudges({ limit: limit ?? 200 })
+    return { ...result, candidates: result.candidates.length }
   })
 }

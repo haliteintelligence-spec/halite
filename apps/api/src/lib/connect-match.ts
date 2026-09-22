@@ -206,6 +206,27 @@ export async function matchCatalog(opts: {
       }
     }
 
+    // ── Timing ───────────────────────────────────────────────────────
+    // Deliberately smaller than fit. Being right for the weather is worth a
+    // nudge up the page; it is never worth surfacing something that does not
+    // suit them, and it never pushes a product out of reach.
+    const seasonal = context.seasonal
+    if (seasonal && seasonal.confidence >= 0.3) {
+      const favoured = seasonal.favour.filter(f => attrs.includes(f.attribute))
+      const damped = seasonal.damp.filter(d => attrs.includes(d.attribute))
+
+      if (favoured.length) {
+        const lift = Math.min(0.14, favoured.reduce((a, f) => a + f.weight * 0.07, 0)) * seasonal.confidence
+        score += lift
+        if (seasonal.reason && lift >= 0.04) reasons.push(seasonal.reason)
+      }
+      if (damped.length) {
+        // Eased, not excluded — this is the wrong month for it, not the
+        // wrong product, and a shopper who wants it should still find it.
+        score -= Math.min(0.10, damped.reduce((a, d) => a + d.weight * 0.05, 0)) * seasonal.confidence
+      }
+    }
+
     if (!warnings.length && hitsLiked.length) {
       reasons.push('None of your avoidances are in it')
     }

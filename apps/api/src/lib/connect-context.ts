@@ -1,6 +1,7 @@
 import { prisma } from '@halite/db'
 import type { BeautyArea, ProductCategory, ProductReaction, AttributeSource, ConsentSignal } from '@halite/db'
 import { readHalliePreferences } from './hallie-preferences.js'
+import { readSeasonal, type SeasonalRead } from './seasonal.js'
 
 /**
  * Builds the permissioned context a partner brand receives for a consumer.
@@ -136,6 +137,13 @@ export interface ConnectContext {
   product_feedback: ProductFeedback[]
   /** De-identified, across everything else they own. */
   outcome_aggregates: OutcomeAggregate[]
+  /**
+   * What the weather is asking of them now, and which way they are moving.
+   *
+   * Timing rather than fit: a product that suits them in February still
+   * suits them in July, it is just not what they will reach for.
+   */
+  seasonal: SeasonalRead | null
   /** Which signal groups this grant actually carried. */
   signals: ConsentSignal[]
   intent: {
@@ -393,6 +401,12 @@ export async function buildConnectContext(opts: {
     (stated.found ? 6 : 0)
   const confidence = Math.min(0.95, Math.round((signals / 20) * 100) / 100)
 
+  // Seasonality reads the same mirror the aggregates do, so it rides on
+  // PRODUCT_FEEDBACK rather than asking for a switch of its own.
+  const seasonal = (allows('PRODUCT_FEEDBACK') || allows('CROSS_BRAND'))
+    ? await readSeasonal({ consumerId, areas: categories })
+    : null
+
   // ── Per-product feedback, for this brand's own catalog ──────────────
   const mean = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null)
 
@@ -551,6 +565,7 @@ export async function buildConnectContext(opts: {
     intent: { budget_max: budgetMax, currency },
     product_feedback,
     outcome_aggregates,
+    seasonal,
     signals: grantSignals,
     confidence,
     generated_at: new Date().toISOString(),

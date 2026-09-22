@@ -108,3 +108,20 @@ ALTER TABLE "hallie_log_items" ADD CONSTRAINT "hallie_log_items_logId_fkey" FORE
 ALTER TABLE "hallie_log_items" ADD CONSTRAINT "hallie_log_items_shelfProductId_fkey" FOREIGN KEY ("shelfProductId") REFERENCES "hallie_shelf_products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE "hallie_sync_runs" ADD CONSTRAINT "hallie_sync_runs_consumerId_fkey" FOREIGN KEY ("consumerId") REFERENCES "consumers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable: seasonal nudges, for the cooldown.
+CREATE TABLE "seasonal_nudges" (
+    "id" TEXT NOT NULL,
+    "consumerId" TEXT NOT NULL,
+    "direction" TEXT NOT NULL,
+    "season" TEXT,
+    "favour" TEXT[],
+    "confidence" DOUBLE PRECISION NOT NULL,
+    "sentAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "seasonal_nudges_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "seasonal_nudges_consumerId_sentAt_idx" ON "seasonal_nudges"("consumerId", "sentAt" DESC);
+
+ALTER TABLE "seasonal_nudges" ADD CONSTRAINT "seasonal_nudges_consumerId_fkey" FOREIGN KEY ("consumerId") REFERENCES "consumers"("id") ON DELETE CASCADE ON UPDATE CASCADE;

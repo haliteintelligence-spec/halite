@@ -384,6 +384,7 @@ model Consumer {
   hallieShelf     HallieShelfProduct[]
   hallieLogs      HallieLog[]
   hallieSyncRuns  HallieSyncRun[]
+  seasonalNudges  SeasonalNudge[]
 
   /// When the Hallie mirror last completed for this consumer. Null means
   /// never synced, which the job treats as due.
@@ -1077,4 +1078,25 @@ model HallieSyncRun {
 
   @@index([consumerId, startedAt(sort: Desc)])
   @@map("hallie_sync_runs")
+}
+
+/// One seasonal nudge sent to one shopper.
+///
+/// Its own table rather than a ConsumerEvent because a nudge is not a
+/// brand's event — it originates with Halite, it belongs to no brand, and
+/// ConsumerEvent requires one. The cooldown query reads this back.
+model SeasonalNudge {
+  id         String   @id @default(cuid())
+  consumerId String
+  direction  String
+  season     String?
+  /// What they were moving toward when it fired, for reading back later.
+  favour     String[]
+  confidence Float
+  sentAt     DateTime @default(now())
+
+  consumer Consumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+
+  @@index([consumerId, sentAt(sort: Desc)])
+  @@map("seasonal_nudges")
 }

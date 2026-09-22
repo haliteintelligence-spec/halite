@@ -5,6 +5,7 @@ import { ApiError } from '../lib/errors.js'
 import { requireBrandAdmin } from '../lib/auth.js'
 import { buildConnectContext } from '../lib/connect-context.js'
 import { matchCatalog } from '../lib/connect-match.js'
+import { readSeasonal } from '../lib/seasonal.js'
 
 /**
  * Brand-admin views over Connect: the performance dashboard, the roster of
@@ -296,7 +297,7 @@ export async function connectAdminRoutes(server: FastifyInstance) {
         }
       }
 
-      const context = await buildConnectContext({ consumerId: consumer.id, brandId, categories })
+      const context = await buildConnectContext({ consumerId: consumer.id, brandId, categories, signals: grant.signals })
       const { items } = await matchCatalog({ brandId, context, categories, options: { limit: 5 } })
 
       const activity = await prisma.connectEvent.findMany({
@@ -665,5 +666,69 @@ export async function connectAdminRoutes(server: FastifyInstance) {
         _publicIds: publicIdOf.size,
       }
     }
+  )
+
+  // ── Who is mid-turn ─────────────────────────────────────────────────
+  // The dashboard's "time to reach out" list. Seasonality is a timing
+  // signal, and timing is only useful before the moment passes — so this
+  // surfaces the shoppers whose own logs show them changing what they
+  // reach for, while the change is still happening.
+  //
+  // Brand-facing only. Nothing here sends anything to anyone.
+  server.get(
+    '/:brandId/connect/transitions',
+    { preHandler: requireBrandAdmin },
+    async (request) => {
+      const { brandId } = request.params as { brandId: string }
+      const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(200).optional() })
+        .parse(request.query ?? {})
+
+      const brand = await prisma.brand.findUnique({
+        where: { id: brandId },
+        select: { focusAreas: true },
+      })
+      if (!brand) throw new ApiError(404, 'Not found')
+
+      const grants = await prisma.consentGrant.findMany({
+        where: { brandId, status: 'ACTIVE' },
+        select: {
+          categories: true,
+          consumer: {
+            select: {
+              id: true, publicId: true, email: true, lastHallieSyncAt: true,
+              endUsers: { where: { brandId }, select: { firstName: true, lastName: true }, take: 1 },
+            },
+          },
+        },
+        take: limit ?? 100,
+      })
+
+      const rows = []
+      for (const g of grants) {
+        const areas = g.categories.filter(c => brand.focusAreas.includes(c))
+        if (areas.length === 0) continue
+        const read = await readSeasonal({ consumerId: g.consumer.id, areas })
+        if (!read.in_transition) continue
+
+        const eu = g.consumer.endUsers[0]
+        rows.push({
+          consumerId: g.consumer.publicId,
+          name: eu ? [eu.firstName, eu.lastName].filter(Boolean).join(' ') || null : null,
+          email: g.consumer.email,
+          direction: read.direction,
+          phase: read.phase,
+          season: read.season,
+          reason: read.reason,
+          confidence: read.confidence,
+          // What they are moving toward, so a merchandiser can act on it
+          // without opening the profile.
+          favour: read.favour.slice(0, 5).map(f => f.attribute),
+          lastSyncedAt: g.consumer.lastHallieSyncAt?.toISOString() ?? null,
+        })
+      }
+
+      rows.sort((a, b) => b.confidence - a.confidence)
+      return { transitions: rows, count: rows.length }
+    },
   )
 }
