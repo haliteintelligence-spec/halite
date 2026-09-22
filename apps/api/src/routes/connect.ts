@@ -570,8 +570,13 @@ export async function connectRoutes(server: FastifyInstance) {
   server.post('/v1/events', async (request, reply) => {
     const brand = await requireBrandKey(request)
     const one = z.object({
+      // Three names for the same button, because storefronts call it three
+      // things. They stay distinct on the wire and in ConnectEvent — a like
+      // and a save-for-later may yet turn out to mean different things — and
+      // land in the same Hallie collection.
       event: z.enum([
-        'product_viewed', 'add_to_cart', 'wishlisted',
+        'product_viewed', 'add_to_cart',
+        'wishlisted', 'save_for_later', 'liked', 'favourited', 'favorited',
         'purchase', 'returned', 'rated',
       ]),
       consumer_id: z.string().optional(),
@@ -594,12 +599,17 @@ export async function connectRoutes(server: FastifyInstance) {
     const batch = parsed.events ?? [one.parse(request.body)]
 
     const TYPES: Record<
-      'product_viewed' | 'add_to_cart' | 'wishlisted' | 'purchase' | 'returned' | 'rated',
+      'product_viewed' | 'add_to_cart' | 'wishlisted' | 'save_for_later' | 'liked'
+      | 'favourited' | 'favorited' | 'purchase' | 'returned' | 'rated',
       ConnectEventType
     > = {
       product_viewed: 'PRODUCT_VIEWED',
       add_to_cart: 'ADD_TO_CART',
       wishlisted: 'WISHLISTED',
+      save_for_later: 'WISHLISTED',
+      liked: 'WISHLISTED',
+      favourited: 'WISHLISTED',
+      favorited: 'WISHLISTED',
       purchase: 'PURCHASE',
       returned: 'RETURNED',
       rated: 'RATED',
@@ -658,11 +668,32 @@ export async function connectRoutes(server: FastifyInstance) {
       // a save goes to the wishlist, a purchase to the shelf. This is what
       // makes a profile started on a brand page worth having later — they
       // open Hallie and their shelf is already theirs.
+      const SAVES = ['wishlisted', 'save_for_later', 'liked', 'favourited', 'favorited']
       const toCollection =
-        e.event === 'wishlisted' ? 'wishlist' as const :
-        e.event === 'purchase' ? 'shelf' as const : null
+        SAVES.includes(e.event) ? 'wishlist' as const :
+        e.event === 'purchase' ? 'shelf' as const :
+        e.event === 'returned' ? 'returned' as const : null
 
-      if (toCollection && consumerId && product) {
+      // A purchase whose SKU is not in the brand's catalog used to mirror
+      // nothing at all, which loses exactly the thing worth keeping. The
+      // event's own details stand in: a poorer row, correctly on their
+      // shelf, beats a correct row that does not exist. The sync enriches
+      // it once the catalog catches up.
+      const named = product ?? (
+        typeof e.metadata?.['product_name'] === 'string'
+          ? {
+              name: e.metadata['product_name'] as string,
+              beautyArea: brand.focusAreas[0] ?? 'SKINCARE' as const,
+              category: 'OTHER' as const,
+              price: e.value ?? null,
+              currency: e.currency ?? 'USD',
+              imageUrl: null,
+              id: null,
+            }
+          : null
+      )
+
+      if (toCollection && consumerId && named) {
         const c = await prisma.consumer.findUnique({
           where: { id: consumerId },
           select: { email: true },
@@ -674,7 +705,7 @@ export async function connectRoutes(server: FastifyInstance) {
         // should not be able to write its own rating into someone's profile.
         // A purchase gets none — they own it, and rating it is theirs to do.
         let rating: number | null = null
-        if (toCollection === 'wishlist') try {
+        if (toCollection === 'wishlist' && product) try {
           const grant = await prisma.consentGrant.findUnique({
             where: { brandId_consumerId: { brandId: brand.id, consumerId } },
             select: { categories: true, status: true },
@@ -694,14 +725,18 @@ export async function connectRoutes(server: FastifyInstance) {
         void mirrorToHallieCollection({
           email: c?.email ?? null,
           brandName: brand.name,
-          productName: product.name,
-          beautyArea: product.beautyArea,
-          category: product.category,
-          price: e.value ?? product.price,
-          currency: e.currency ?? product.currency,
-          imageUrl: product.imageUrl,
+          productName: named.name,
+          beautyArea: named.beautyArea,
+          category: named.category,
+          price: e.value ?? named.price,
+          currency: e.currency ?? named.currency,
+          imageUrl: named.imageUrl,
           collection: toCollection,
           rating,
+          // Resolution is a fact about our catalog, not about them: an
+          // unresolved row is still their product, and the next sync fills
+          // in what we could not name today.
+          unresolved: product == null,
         })
       }
     }

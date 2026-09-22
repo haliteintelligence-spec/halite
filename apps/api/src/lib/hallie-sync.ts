@@ -61,6 +61,7 @@ type HallieProductRow = {
   emptiedAt: Date | null
   sizeValue: number | null
   sizeUnit: string | null
+  backupCount: number | null
 }
 
 type HallieLogRow = {
@@ -195,7 +196,7 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
              "scentNotes", "productFacts", rating, "feedbackRating", "wouldRepurchase",
              "feedbackOutcomeTags", "feedbackTextureTags", "feedbackReactionTags",
              "initialLevel", "currentLevelOverride", "currentLevelOverrideAt",
-             "isEmpty", "emptiedAt", "sizeValue", "sizeUnit"
+             "isEmpty", "emptiedAt", "sizeValue", "sizeUnit", "backupCount"
       FROM hallie_testing.hallie_testing_products
       WHERE "userId" = ${hallieUserId} AND "removedAt" IS NULL
     `
@@ -310,6 +311,7 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
         emptiedAt: r.row.emptiedAt,
         sizeValue: r.row.sizeValue,
         sizeUnit: r.row.sizeUnit,
+        backupCount: r.row.backupCount ?? 0,
       }
 
       const saved = await prisma.hallieShelfProduct.upsert({
@@ -488,6 +490,22 @@ export async function syncConsumerFromHallie(consumerId: string): Promise<{
       await prisma.hallieShelfProduct.update({
         where: { id },
         data: { isEmpty: true, emptiedAt: e.emptiedAt, repurchasedAt: e.repurchasedAt },
+      })
+    }
+
+    // Anything Hallie recorded as a return, so the cadence can skip it — a
+    // bottle sent back after three days did not last three days.
+    const returns = await prisma.$queryRaw<Array<{ productId: string }>>`
+      SELECT DISTINCT "productId"
+      FROM hallie_testing.hallie_testing_product_collection_events
+      WHERE "userId" = ${hallieUserId} AND reason = 'returned'
+    `
+    for (const r of returns) {
+      const id = shelfIds.get(r.productId)
+      if (!id) continue
+      await prisma.hallieShelfProduct.update({
+        where: { id },
+        data: { isEmpty: true, wasReturned: true },
       })
     }
 

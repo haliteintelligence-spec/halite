@@ -80,6 +80,8 @@ export interface ReplenishmentItem {
   is_empty: boolean
   emptied_on: string | null
   repurchased: boolean
+  /** Unopened spares. A reorder is not due while these are above zero. */
+  backups: number
 }
 
 /** Cadence for everything the brand did not sell, with the products removed. */
@@ -125,6 +127,8 @@ type ShelfRow = {
   isEmpty: boolean
   emptiedAt: Date | null
   repurchasedAt: Date | null
+  backupCount: number
+  wasReturned: boolean
   product: { id: string; name: string; externalId: string | null; brandId: string } | null
 }
 
@@ -162,6 +166,7 @@ export async function buildRoutines(opts: {
       attributes: true, rating: true, feedbackRating: true,
       initialLevel: true, statedLevel: true, statedLevelAt: true,
       isEmpty: true, emptiedAt: true, repurchasedAt: true,
+      backupCount: true, wasReturned: true,
       product: { select: { id: true, name: true, externalId: true, brandId: true } },
     },
   })
@@ -327,9 +332,14 @@ export async function buildRoutines(opts: {
       is_empty: sp.isEmpty,
       emptied_on: sp.emptiedAt?.toISOString().slice(0, 10) ?? null,
       repurchased: sp.repurchasedAt != null,
+      backups: sp.backupCount,
     })
   }
-  yoursItems.sort((a, b) => (a.days_remaining ?? 1e9) - (b.days_remaining ?? 1e9))
+  // Someone with a spare in the cupboard is not due a reorder, however low
+  // the current bottle is — so they sort behind everyone who is.
+  yoursItems.sort((a, b) =>
+    (a.backups > 0 ? 1 : 0) - (b.backups > 0 ? 1 : 0) ||
+    (a.days_remaining ?? 1e9) - (b.days_remaining ?? 1e9))
 
   // Everything else becomes a rhythm rather than a calendar: how often a
   // product of this type gets replaced, which is what a subscription needs
@@ -343,7 +353,9 @@ export async function buildRoutines(opts: {
     b.n++
     const pw = usesPerWeek(sp.id)
     if (pw != null) b.perWeek.push(pw)
-    if (sp.isEmpty && sp.emptiedAt) {
+    // A return is not a finished bottle, so it teaches nothing about how
+    // long one lasts and is left out of the replacement interval.
+    if (sp.isEmpty && sp.emptiedAt && !sp.wasReturned) {
       b.emptied++
       // Only a finished product tells us how long one lasts.
       const dates = (uses.get(sp.id) ?? []).sort((a, b2) => a.getTime() - b2.getTime())

@@ -1021,6 +1021,13 @@ model HallieShelfProduct {
   isEmpty         Boolean          @default(false)
   emptiedAt       DateTime?
   repurchasedAt   DateTime?
+  /// Unopened spares. Hallie opens one instead of moving the product to
+  /// Empties when the level runs out, so Empties keeps meaning "none left".
+  backupCount     Int              @default(0)
+  /// True when it left the shelf because it went back, not because it ran
+  /// out. A return says nothing about how long a bottle lasts, so the
+  /// replenishment cadence skips it.
+  wasReturned     Boolean          @default(false)
   sizeValue       Float?
   sizeUnit        String?
   attributeSource AttributeSource  @default(NONE)

@@ -93,7 +93,7 @@ function normalizeName(name: string): string {
     .join(' ')
 }
 
-export type HallieCollection = 'shelf' | 'wishlist'
+export type HallieCollection = 'shelf' | 'wishlist' | 'returned'
 
 export async function mirrorToHallieCollection(args: {
   email: string | null
@@ -107,6 +107,12 @@ export async function mirrorToHallieCollection(args: {
   collection: HallieCollection
   /** Hallie rates out of 10. Only set for a wishlist save. */
   rating?: number | null
+  /**
+   * True when the SKU matched nothing in the brand's catalog and the row is
+   * built from the event's own words. The row is still theirs; it just has
+   * no category or image until a later sync fills them in.
+   */
+  unresolved?: boolean
 }): Promise<void> {
   if (!args.email) return
 
@@ -122,6 +128,7 @@ export async function mirrorToHallieCollection(args: {
     const normalizedBrand = normalizeBrand(args.brandName)
     const normalizedName = normalizeName(args.productName)
     const toShelf = args.collection === 'shelf'
+    const returned = args.collection === 'returned'
 
     // Already in their collection?
     const existing = await prisma.$queryRaw<Array<{ id: string; isWishlist: boolean; isEmpty: boolean }>>`
@@ -136,8 +143,47 @@ export async function mirrorToHallieCollection(args: {
     const row = existing[0]
 
     if (row) {
+      // A return takes it off the shelf but leaves it visible in Empties,
+      // where they can still see what they had. The reason is recorded
+      // because it matters downstream: a product returned after three days
+      // would otherwise teach replenishment that a bottle lasts three days.
+      if (returned) {
+        await prisma.$executeRaw`
+          UPDATE hallie_testing.hallie_testing_products
+          SET "isEmpty" = true, "isWishlist" = false, "emptiedAt" = now()
+          WHERE id = ${row.id}
+        `
+        await prisma.$executeRaw`
+          INSERT INTO hallie_testing.hallie_testing_product_collection_events
+            (id, "productId", "userId", "fromCollection", "toCollection", reason, "createdAt")
+          VALUES (${randomUUID()}, ${row.id}, ${userId},
+                  ${row.isWishlist ? 'wishlist' : 'shelf'}, 'empty', 'returned', now())
+        `
+        return
+      }
+
       const from = row.isEmpty ? 'empty' : row.isWishlist ? 'wishlist' : 'shelf'
       const to = toShelf ? 'shelf' : 'wishlist'
+
+      // Buying another one of something already on the shelf is a spare, not
+      // a duplicate row: two rows for one product would split its rating,
+      // its logs and its depletion estimate. Hallie opens it automatically
+      // when the current one runs out.
+      if (toShelf && from === 'shelf') {
+        await prisma.$executeRaw`
+          UPDATE hallie_testing.hallie_testing_products
+          SET "backupCount" = "backupCount" + 1,
+              price = COALESCE(${args.price}, price)
+          WHERE id = ${row.id}
+        `
+        await prisma.$executeRaw`
+          INSERT INTO hallie_testing.hallie_testing_product_collection_events
+            (id, "productId", "userId", "fromCollection", "toCollection", reason, "createdAt")
+          VALUES (${randomUUID()}, ${row.id}, ${userId}, 'shelf', 'shelf', 'backup_added', now())
+        `
+        return
+      }
+
       if (from === to) return
 
       // Only ever promote wishlist → shelf. A save on something they already
@@ -159,6 +205,9 @@ export async function mirrorToHallieCollection(args: {
       `
       return
     }
+
+    // Nothing to return if it was never in their collection.
+    if (returned) return
 
     const productId = randomUUID()
     const inserted = await prisma.$executeRaw`
